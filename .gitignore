@@ -39,3 +39,9 @@ luac.out
 *.x86_64
 *.hex
 
+*.rbxl
+*.rbxlx
+*.rblx
+*.rbxm
+*.autosaves
+.vscode/

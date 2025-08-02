@@ -14,9 +14,9 @@ Config.TOTAL_WIDTH        = Config.CORE_WIDTH + 2 * Config.SAND_RIM_WIDTH
 Config.SEA_LEVEL		  = 1
 Config.MIN_LAND_HEIGHT    = 15      -- minimum height (voxels) of grass plateau
 
--- Noise for plateau
+-- Noise for plateau (TEMPORARILY DISABLED FOR TESTING)
 Config.HEIGHT_NOISE_S     = 150     -- noise scale (higher = smoother hills)
-Config.NOISE_AMPLITUDE    = 50      -- amplitude of noise on plateau
+Config.NOISE_AMPLITUDE    = 0       -- amplitude of noise on plateau (SET TO 0 FOR FLAT TESTING)
 
 -- River parameters
 Config.RIVER_BOTTOM_HEIGHT = 7      -- river bottom height (voxels)

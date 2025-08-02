@@ -15,6 +15,9 @@ local SEED_RIVER     = Config.SEED_RIVER
 
 local RiverGenerator = {}
 
+-- Store generated river paths for occupancy mapping
+RiverGenerator.generatedPaths = {}
+
 -- Convert world X or Z to map index
 local function ix_from_x(x)
 	return math.floor((x + TOTAL_W / 2) / CELL) + 1
@@ -48,6 +51,9 @@ end
 
 -- Stamp a path into the height & material maps
 function RiverGenerator.stamp(height_map, mat_map)
+	-- Clear previous paths
+	RiverGenerator.generatedPaths = {}
+	
 	-- Main stem
 	local theta = math.random() * math.pi
 	local dx, dz = math.cos(theta), math.sin(theta)
@@ -55,7 +61,9 @@ function RiverGenerator.stamp(height_map, mat_map)
 	local pB = Vector3.new( dx * (TOTAL_W/2), SEA_Y,  dz * (TOTAL_W/2))
 
 	local paths = {}
-	table.insert(paths, RiverGenerator.generateRiverPath(pA, pB, 3, TOTAL_W * 0.2))
+	local mainPath = RiverGenerator.generateRiverPath(pA, pB, 3, TOTAL_W * 0.2)
+	table.insert(paths, {path = mainPath, width = RIVER_WIDTH, type = "main"})
+	
 	-- Tributaries
 	local nTrib = math.random(TRIB_MIN, TRIB_MAX)
 	for i = 1, nTrib do
@@ -63,12 +71,16 @@ function RiverGenerator.stamp(height_map, mat_map)
 		local rstart = TOTAL_W/2 * (0.8 + math.random() * 0.2)
 		local startP = Vector3.new(math.cos(ang) * rstart, SEA_Y, math.sin(ang) * rstart)
 		local endP   = pA:Lerp(pB, math.random())
-		table.insert(paths, RiverGenerator.generateRiverPath(startP, endP, 2, TOTAL_W * 0.1))
+		local tribPath = RiverGenerator.generateRiverPath(startP, endP, 2, TOTAL_W * 0.1)
+		table.insert(paths, {path = tribPath, width = Config.TRIB_WIDTH, type = "tributary"})
 	end
 
-	for idx, path in ipairs(paths) do
-		-- pick the width: main stem uses RIVER_WIDTH, tributaries use TRIB_WIDTH
-		local riverW = (idx == 1) and RIVER_WIDTH or Config.TRIB_WIDTH
+	-- Store paths for occupancy mapping
+	RiverGenerator.generatedPaths = paths
+
+	for idx, pathData in ipairs(paths) do
+		local path = pathData.path
+		local riverW = pathData.width
 		local halfW  = riverW / 2
 
 		for i = 1, #path - 1 do
@@ -97,6 +109,11 @@ function RiverGenerator.stamp(height_map, mat_map)
 			end
 		end
 	end
+end
+
+-- Get generated river paths for occupancy mapping
+function RiverGenerator.getRiverPaths()
+	return RiverGenerator.generatedPaths
 end
 
 return RiverGenerator

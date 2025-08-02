@@ -1,7 +1,7 @@
 -- ServerScriptService/PlayerSpawner
 
 -- Controls when players actually spawn, waiting for terrain & prefabs to finish,
--- and ensures no overlap with existing prefabs or other players via a shared occupancy grid.
+-- and ensures no overlap with existing prefabs or other players via the improved occupancy system.
 
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -24,10 +24,6 @@ local PLAYER_RAD      = Config.PLAYER_RADIUS     -- studs
 
 -- Derived for sampling
 local HALF_CORE = CORE_WIDTH / 2
-local CELL_SIZE  = Config.CELL_SIZE
-local TOTAL_W    = Config.TOTAL_WIDTH
-local HALF_T     = TOTAL_W / 2
-local GRID_N     = math.ceil(TOTAL_W / CELL_SIZE)
 
 -- Spawn state
 local terrainDone         = false
@@ -37,17 +33,9 @@ local spawnPoints         = {}  -- Array of {position = Vector3, taken = boolean
 local currentSpawnIndex   = 1   -- Cycles through spawn points in order
 local waitingPlayers      = {}
 
--- Helpers: world ↔ grid index
-local function worldToI(x)
-	return math.floor((x + HALF_T) / CELL_SIZE) + 1
-end
-local function worldToJ(z)
-	return math.floor((z + HALF_T) / CELL_SIZE) + 1
-end
-
--- Sample a random (x,z) within the plateau core
+-- Sample a random (x,z) within the plateau core that's free for players
 local function sampleXZ()
-	local maxAttempts = 1000
+	local maxAttempts = 100 -- Reduced from 1000
 	local attempts = 0
 
 	while attempts < maxAttempts do
@@ -57,12 +45,11 @@ local function sampleXZ()
 		local x = math.cos(angle) * radius
 		local z = math.sin(angle) * radius
 
-		local ix = worldToI(x)
-		local iz = worldToJ(z)
-		if ix >= 1 and ix <= GRID_N and iz >= 1 and iz <= GRID_N then
-			-- check occupancy at that cell
-			if not Occupancy.grid[ix][iz] then
-				return x, z, ix, iz
+		-- Quick check: only use smaller area for initial validation
+		if Occupancy.isAreaFree(x, z, PLAYER_RAD, PLAYER_RAD, 0) then
+			-- More thorough check only if initial passes
+			if Occupancy.isAreaFree(x, z, PLAYER_RAD * 2, PLAYER_RAD * 2, MIN_PLAYER_DIST) then
+				return x, z
 			end
 		end
 	end
@@ -71,33 +58,33 @@ local function sampleXZ()
 	return nil
 end
 
--- Mark occupancy for a player radius around (ix, iz)
-local function markPlayerOccupancy(ix, iz)
-	local rCells = math.ceil(PLAYER_RAD / CELL_SIZE)
-	for dx = -rCells, rCells do
-		for dz = -rCells, rCells do
-			local nx, nz = ix + dx, iz + dz
-			if Occupancy.grid[nx] and Occupancy.grid[nx][nz] ~= nil then
-				Occupancy.grid[nx][nz] = true
-			end
-		end
-	end
+-- Mark occupancy for a player radius
+local function markPlayerOccupancy(x, z)
+	Occupancy.markCircularArea(x, z, PLAYER_RAD + MIN_PLAYER_DIST, Occupancy.OCCUPANCY_TYPES.RESERVED)
 end
 
 -- Find and record spawn points (called only once per server)
 local function computeSpawnPoints()
 	local pts = {}
 	local attempts = 0
-	local maxTotalAttempts = Config.NUM_SPAWN * 20 -- Give up after many attempts
+	local maxTotalAttempts = Config.NUM_SPAWN * 10 -- Reduced from 20 to 10
+	
+	print(string.format("[PlayerSpawner] Computing spawn points, target: %d", Config.NUM_SPAWN))
 
 	while #pts < Config.NUM_SPAWN and attempts < maxTotalAttempts do
 		attempts = attempts + 1
 
-		local x, z, ix, iz = sampleXZ()
-		if x then -- sampleXZ returns nil if it fails, otherwise returns x, z, ix, iz
+		-- Progress update every 100 attempts
+		if attempts % 100 == 0 then
+			print(string.format("[PlayerSpawner] Progress: %d/%d spawn points, %d attempts", 
+				#pts, Config.NUM_SPAWN, attempts))
+		end
+
+		local x, z = sampleXZ()
+		if x then -- sampleXZ returns nil if it fails
 			-- raycast down for Y
-			local origin = Vector3.new(x, HALF_T + 500, z)
-			local hit = workspace:Raycast(origin, Vector3.new(0, -(HALF_T + 500), 0))
+			local origin = Vector3.new(x, HALF_CORE + 500, z)
+			local hit = workspace:Raycast(origin, Vector3.new(0, -(HALF_CORE + 500), 0))
 			local y = (hit and hit.Position.Y or Config.SEA_LEVEL) + 2
 
 			-- Store spawn point with taken status
@@ -105,7 +92,14 @@ local function computeSpawnPoints()
 				position = Vector3.new(x, y, z),
 				taken = false
 			})
-			markPlayerOccupancy(ix, iz)
+			markPlayerOccupancy(x, z)
+		end
+		
+		-- Early exit if we're struggling to find spots
+		if attempts > Config.NUM_SPAWN * 5 and #pts < Config.NUM_SPAWN * 0.5 then
+			print(string.format("[PlayerSpawner] Early exit - only found %d/%d spawn points after %d attempts", 
+				#pts, Config.NUM_SPAWN, attempts))
+			break
 		end
 	end
 

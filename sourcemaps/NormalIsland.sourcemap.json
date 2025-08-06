@@ -1,7 +1,7 @@
 {
   "name": "NormalIsland1",
   "className": "DataModel",
-  "filePaths": ["NormalIsland1.project.json"],
+  "filePaths": ["NormalIsland.project.json"],
   "children": [
     {
       "name": "ReplicatedStorage",

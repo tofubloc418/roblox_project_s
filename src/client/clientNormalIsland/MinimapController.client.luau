@@ -11,7 +11,7 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- Modules
-local sharedModules = ReplicatedStorage:WaitForChild("sharedNormalIsland"):WaitForChild("Modules")
+local sharedModules = ReplicatedStorage:WaitForChild("Modules")
 local MinimapConfig = require(sharedModules:WaitForChild("MinimapConfig"))
 local MinimapRenderer = require(sharedModules:WaitForChild("MinimapRenderer"))
 

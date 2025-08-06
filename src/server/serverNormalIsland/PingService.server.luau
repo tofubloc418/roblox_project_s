@@ -8,7 +8,7 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
 -- Modules
-local sharedModules = ReplicatedStorage:WaitForChild("sharedNormalIsland"):WaitForChild("Modules")
+local sharedModules = ReplicatedStorage:WaitForChild("Modules")
 local MinimapConfig = require(sharedModules:WaitForChild("MinimapConfig"))
 
 -- Create RemoteEvents folder

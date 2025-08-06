@@ -1,0 +1,24 @@
+{
+  "name": "NormalIsland1",
+  "servePlaceIds": [127318922081351],
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+              "ReplicatedStorage": {
+            "Design": {
+              "$path": "src/shared/sharedNormalIsland/Design"
+            },
+            "Modules": {
+              "$path": "src/shared/sharedNormalIsland/Modules"
+            }
+          },
+    "ServerScriptService": {
+      "$path": "src/server/serverNormalIsland"
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "$path": "src/client/clientNormalIsland"
+      }
+    }
+  }
+} 

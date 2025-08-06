@@ -50,114 +50,170 @@ local function pointToPolygonDistance(px, pz, poly)
 	return minDist
 end
 
+-- Sample heights across entire footprint area with proper density
+local function sampleFootprintHeights(footprint, matGrid, occGrid, minX, minZ, VOX_RES, h0mode)
+	local hs = {}
+	
+	-- Calculate footprint bounds
+	local fpMinX, fpMaxX = math.huge, -math.huge
+	local fpMinZ, fpMaxZ = math.huge, -math.huge
+	for _, v in ipairs(footprint) do
+		fpMinX, fpMaxX = math.min(fpMinX, v.X), math.max(fpMaxX, v.X)
+		fpMinZ, fpMaxZ = math.min(fpMinZ, v.Y), math.max(fpMaxZ, v.Y)
+	end
+	
+	-- Sample points across the footprint area
+	local sampleStep = VOX_RES * 2 -- Sample every 2 voxels for better coverage
+	for x = fpMinX, fpMaxX, sampleStep do
+		for z = fpMinZ, fpMaxZ, sampleStep do
+			if pointInPolygon(x, z, footprint) then
+				local ii = math.floor((x - minX) / VOX_RES) + 1
+				local kk = math.floor((z - minZ) / VOX_RES) + 1
+				
+				-- Find the height by looking for any occupied voxel (not just >0.5)
+				if ii >= 1 and ii <= occGrid.Size.X and kk >= 1 and kk <= occGrid.Size.Z then
+					for j = occGrid.Size.Y, 1, -1 do
+						if occGrid[ii][j][kk] > 0.1 then -- Lowered threshold from 0.5 to 0.1
+							local height = (j - 1) * VOX_RES
+							table.insert(hs, height)
+							break
+						end
+					end
+				end
+			end
+		end
+	end
+	
+	-- Try raycast sampling if voxel sampling fails
+	if #hs == 0 then
+		for _, v in ipairs(footprint) do
+			local x, z = v.X, v.Y
+			local origin = Vector3.new(x, 500, z)
+			local dir = Vector3.new(0, -600, 0)
+			local raycastParams = RaycastParams.new()
+			raycastParams.FilterType = Enum.RaycastFilterType.Exclude
+			raycastParams.FilterDescendantsInstances = {}
+			
+			local hit = workspace:Raycast(origin, dir, raycastParams)
+			if hit then
+				table.insert(hs, hit.Position.Y)
+			end
+		end
+	end
+	
+	if #hs == 0 then
+		warn("TerrainUtils: No heights sampled; using MIN_LAND_HEIGHT")
+		return Config.MIN_LAND_HEIGHT
+	end
+	
+	print(string.format("🔍 Sampled %d heights: [%s]", #hs, table.concat(hs, ", ")))
+	
+	local targetHeight
+	if h0mode == "min" then
+		targetHeight = math.min(table.unpack(hs))
+	elseif h0mode == "max" then
+		targetHeight = math.max(table.unpack(hs))
+	else -- "avg"
+		local sum = 0
+		for _, h in ipairs(hs) do sum = sum + h end
+		targetHeight = sum / #hs
+	end
+	
+	print(string.format("🎯 Target height (%s): %.1f", h0mode, targetHeight))
+	return targetHeight
+end
+
+-- Flattens terrain around a 2D footprint polygon with a feathered transition
 -- footprint: Vector2[]; transitionRadius: number; h0mode: "min"|"avg"|"max"; terrain: Terrain
 function TerrainUtils.FlattenPadWithTransition(footprint, transitionRadius, h0mode, terrain)
-	local cellSize = Config.CELL_SIZE
-	local VOX_RES = Config.VOXEL_RES
-
-	-- 1) Compute world‐space bounds with padding
-	local minX, maxX = math.huge, -math.huge
-	local minZ, maxZ = math.huge, -math.huge
-	for _, v in ipairs(footprint) do
-		minX, maxX = math.min(minX, v.X), math.max(maxX, v.X)
-		minZ, maxZ = math.min(minZ, v.Y), math.max(maxZ, v.Y)
+	local minX, minZ, maxX, maxZ = math.huge, math.huge, -math.huge, -math.huge
+	for _, p in ipairs(footprint) do
+		if p.X < minX then minX = p.X end
+		if p.X > maxX then maxX = p.X end
+		if p.Y < minZ then minZ = p.Y end -- 2D footprint uses (X,Y) but we treat Y as Z
+		if p.Y > maxZ then maxZ = p.Y end
 	end
-	minX, minZ = minX - transitionRadius, minZ - transitionRadius
-	maxX, maxZ = maxX + transitionRadius, maxZ + transitionRadius
 
-	-- 2) Build and align Region3 to voxel grid
+	-- 2) Expand by transition radius
+	minX = minX - transitionRadius
+	maxX = maxX + transitionRadius
+	minZ = minZ - transitionRadius
+	maxZ = maxZ + transitionRadius
+
+	-- 3) Use proper Region3 with ExpandToGrid for correct alignment
+	local VOX_RES = 4
 	local region = Region3.new(
 		Vector3.new(minX, 0, minZ),
-		Vector3.new(maxX, Config.MIN_LAND_HEIGHT * 2 + transitionRadius, maxZ)
+		Vector3.new(maxX, 250, maxZ)
 	):ExpandToGrid(VOX_RES)
 
-	-- 3) Read existing voxel materials & occupancy
-	local resolution = VOX_RES
-	local matGrid, occGrid = terrain:ReadVoxels(region, resolution)  -- :contentReference[oaicite:0]{index=0}
+	-- 4) Read existing terrain
+	local origMat, origOcc = terrain:ReadVoxels(region, VOX_RES)
+	local xs, ys, zs = origMat.Size.X, origMat.Size.Y, origMat.Size.Z
+	
+	-- Update aligned bounds based on actual region
+	local alignedMinX = region.CFrame.Position.X - region.Size.X/2
+	local alignedMinZ = region.CFrame.Position.Z - region.Size.Z/2
 
-	-- Dimensions
-	local xs = #matGrid
-	local ys = #matGrid[1]
-	local zs = #matGrid[1][1]
+	-- 5) Sample heights within and around the footprint
+	local h0 = sampleFootprintHeights(footprint, origMat, origOcc, alignedMinX, alignedMinZ, VOX_RES, h0mode)
 
-	-- 4) Build original heightmap by finding highest occupied voxel per column
-	local orig = {}
-	for i = 1, xs do
-		orig[i] = {}
-		for k = 1, zs do
-			local h = 0
-			for j = ys, 1, -1 do
-				if occGrid[i][j][k] then
-					h = (j - 1) * VOX_RES
-					break
-				end
-			end
-			orig[i][k] = h
-		end
-	end
-
-	-- 5) Sample h₀ from footprint corners
-	local hs = {}
-	for _, v in ipairs(footprint) do
-		local ii = math.floor((v.X - minX) / VOX_RES) + 1
-		local jj = math.floor((v.Y - minZ) / VOX_RES) + 1
-		table.insert(hs, orig[ii][jj])
-	end
-	local h0
-	if h0mode == "min" then
-		h0 = math.min(unpack(hs))
-	elseif h0mode == "max" then
-		h0 = math.max(unpack(hs))
-	else
-		local sum = 0
-		for _, h in ipairs(hs) do sum += h end
-		h0 = sum / #hs
-	end
-
-	-- 6) Compute flattened + feathered heights
-	local newH = {}
-	for i = 1, xs do
-		newH[i] = {}
-		for k = 1, zs do
-			local wx = minX + (i - 1) * VOX_RES + VOX_RES/2
-			local wz = minZ + (k - 1) * VOX_RES + VOX_RES/2
-			local oH = orig[i][k]
-			if pointInPolygon(wx, wz, footprint) then
-				newH[i][k] = h0
-			else
-				local d = pointToPolygonDistance(wx, wz, footprint)
-				if d <= transitionRadius then
-					local t = clamp(d / transitionRadius, 0, 1)
-					newH[i][k] = lerp(h0, oH, t)
-				else
-					newH[i][k] = oH
-				end
-			end
-		end
-	end
-
-	-- 7) Smooth heights with 3×3 kernel
+	-- 6) Create height map for each (x,z) position based on distance to footprint
 	local smoothH = {}
 	for i = 1, xs do
 		smoothH[i] = {}
 		for k = 1, zs do
-			local sum, cnt = 0, 0
-			for di = -1, 1 do
-				for dk = -1, 1 do
-					local ni, nk = i + di, k + dk
-					if ni >= 1 and ni <= xs and nk >= 1 and nk <= zs then
-						sum += newH[ni][nk]
-						cnt += 1
+			local worldX = alignedMinX + (i - 1) * VOX_RES
+			local worldZ = alignedMinZ + (k - 1) * VOX_RES
+			local distToFootprint = pointToPolygonDistance(worldX, worldZ, footprint)
+
+			if distToFootprint <= 0 then
+				-- Inside footprint: use target height h0
+				smoothH[i][k] = h0
+			elseif distToFootprint <= transitionRadius then
+				-- Transition zone: blend between h0 and original terrain height
+				local t = distToFootprint / transitionRadius
+				local originalHeight = 0
+				local sampleCount = 0
+				
+				-- Sample original height from voxels at this (x,z)
+				for j = 1, ys do
+					if origOcc[i][j][k] > 0.1 then -- Lowered threshold
+						originalHeight = originalHeight + ((j - 1) * VOX_RES)
+						sampleCount = sampleCount + 1
 					end
 				end
+				
+				if sampleCount > 0 then
+					originalHeight = originalHeight / sampleCount
+				else
+					originalHeight = h0  -- fallback
+				end
+				
+				smoothH[i][k] = lerp(h0, originalHeight, t * t)
+			else
+				-- Outside transition: keep original terrain
+				local originalHeight = 0
+				local sampleCount = 0
+				for j = 1, ys do
+					if origOcc[i][j][k] > 0.1 then -- Lowered threshold
+						originalHeight = originalHeight + ((j - 1) * VOX_RES)
+						sampleCount = sampleCount + 1
+					end
+				end
+				if sampleCount > 0 then
+					smoothH[i][k] = originalHeight / sampleCount
+				else
+					smoothH[i][k] = h0
+				end
 			end
-			smoothH[i][k] = sum / cnt
 		end
 	end
 
-	-- 8) Build new voxel grids and write back
+	-- 8) Build new voxel grids with improved height interpolation
 	local newMat = {}
 	local newOcc = {}
+	
 	for i = 1, xs do
 		newMat[i] = {}
 		newOcc[i] = {}
@@ -165,19 +221,160 @@ function TerrainUtils.FlattenPadWithTransition(footprint, transitionRadius, h0mo
 			newMat[i][j] = {}
 			newOcc[i][j] = {}
 			for k = 1, zs do
-				local h = smoothH[i][k]
-				if (j - 1) * VOX_RES <= h then
+				local voxelY = (j - 1) * VOX_RES
+				local targetH = smoothH[i][k]
+				
+				-- Improved voxel assignment with smooth interpolation
+				if voxelY < targetH - VOX_RES/2 then
+					-- Solid terrain below target height - use sand for visibility
 					newOcc[i][j][k] = 1
-					newMat[i][j][k] = Config.LAND_MAT
+					newMat[i][j][k] = Enum.Material.Sand
+				elseif voxelY <= targetH + VOX_RES/2 then
+					-- Transition zone - use fractional occupancy for smoother terrain
+					local occupancy = clamp((targetH - voxelY) / VOX_RES + 0.5, 0, 1)
+					newOcc[i][j][k] = occupancy
+					newMat[i][j][k] = occupancy > 0.1 and Enum.Material.Sand or Enum.Material.Air
 				else
+					-- Air above target height
 					newOcc[i][j][k] = 0
 					newMat[i][j][k] = Enum.Material.Air
 				end
 			end
 		end
 	end
-	terrain:WriteVoxels(region, resolution, newMat, newOcc)  -- :contentReference[oaicite:1]{index=1}
+	
+	terrain:WriteVoxels(region, VOX_RES, newMat, newOcc)
+	print(string.format("🔨 [TerrainStamp] WriteVoxels completed for region: (%.1f,%.1f) to (%.1f,%.1f)", 
+		region.CFrame.Position.X - region.Size.X/2, region.CFrame.Position.Z - region.Size.Z/2,
+		region.CFrame.Position.X + region.Size.X/2, region.CFrame.Position.Z + region.Size.Z/2))
 
+end
+
+-- Flattens terrain around a 2D footprint polygon to a specific target height
+-- footprint: Vector2[]; transitionRadius: number; targetHeight: number; terrain: Terrain
+function TerrainUtils.FlattenPadToHeight(footprint, transitionRadius, targetHeight, terrain)
+	local minX, minZ, maxX, maxZ = math.huge, math.huge, -math.huge, -math.huge
+	for _, p in ipairs(footprint) do
+		if p.X < minX then minX = p.X end
+		if p.X > maxX then maxX = p.X end
+		if p.Y < minZ then minZ = p.Y end -- 2D footprint uses (X,Y) but we treat Y as Z
+		if p.Y > maxZ then maxZ = p.Y end
+	end
+
+	-- 2) Expand by transition radius
+	minX = minX - transitionRadius
+	maxX = maxX + transitionRadius
+	minZ = minZ - transitionRadius
+	maxZ = maxZ + transitionRadius
+
+	-- 3) Use proper Region3 with ExpandToGrid for correct alignment
+	local VOX_RES = 4
+	local region = Region3.new(
+		Vector3.new(minX, 0, minZ),
+		Vector3.new(maxX, 250, maxZ)
+	):ExpandToGrid(VOX_RES)
+
+	-- 4) Read existing terrain
+	local origMat, origOcc = terrain:ReadVoxels(region, VOX_RES)
+	local xs, ys, zs = origMat.Size.X, origMat.Size.Y, origMat.Size.Z
+	
+	-- Update aligned bounds based on actual region
+	local alignedMinX = region.CFrame.Position.X - region.Size.X/2
+	local alignedMinZ = region.CFrame.Position.Z - region.Size.Z/2
+
+	-- 5) Use the specified target height directly
+	local h0 = targetHeight
+	print(string.format("🎯 Target height (direct): %.1f", h0))
+
+	-- 6) Create height map for each (x,z) position based on distance to footprint
+	local smoothH = {}
+	for i = 1, xs do
+		smoothH[i] = {}
+		for k = 1, zs do
+			local worldX = alignedMinX + (i - 1) * VOX_RES
+			local worldZ = alignedMinZ + (k - 1) * VOX_RES
+			local distToFootprint = pointToPolygonDistance(worldX, worldZ, footprint)
+
+			if distToFootprint <= 0 then
+				-- Inside footprint: use target height h0
+				smoothH[i][k] = h0
+			elseif distToFootprint <= transitionRadius then
+				-- Transition zone: blend between h0 and original terrain height
+				local t = distToFootprint / transitionRadius
+				local originalHeight = 0
+				local sampleCount = 0
+				
+				-- Sample original height from voxels at this (x,z)
+				for j = 1, ys do
+					if origOcc[i][j][k] > 0.1 then -- Lowered threshold
+						originalHeight = originalHeight + ((j - 1) * VOX_RES)
+						sampleCount = sampleCount + 1
+					end
+				end
+				
+				if sampleCount > 0 then
+					originalHeight = originalHeight / sampleCount
+				else
+					originalHeight = h0  -- fallback
+				end
+				
+				smoothH[i][k] = lerp(h0, originalHeight, t * t)
+			else
+				-- Outside transition: keep original terrain
+				local originalHeight = 0
+				local sampleCount = 0
+				for j = 1, ys do
+					if origOcc[i][j][k] > 0.1 then -- Lowered threshold
+						originalHeight = originalHeight + ((j - 1) * VOX_RES)
+						sampleCount = sampleCount + 1
+					end
+				end
+				if sampleCount > 0 then
+					smoothH[i][k] = originalHeight / sampleCount
+				else
+					smoothH[i][k] = h0
+				end
+			end
+		end
+	end
+
+	-- 8) Build new voxel grids with improved height interpolation
+	local newMat = {}
+	local newOcc = {}
+	
+	for i = 1, xs do
+		newMat[i] = {}
+		newOcc[i] = {}
+		for j = 1, ys do
+			newMat[i][j] = {}
+			newOcc[i][j] = {}
+			for k = 1, zs do
+				local voxelY = (j - 1) * VOX_RES
+				local targetH = smoothH[i][k]
+				
+				-- Improved voxel assignment with smooth interpolation
+				if voxelY < targetH - VOX_RES/2 then
+					-- Solid terrain below target height - use sand for visibility
+					newOcc[i][j][k] = 1
+					newMat[i][j][k] = Enum.Material.Sand
+				elseif voxelY <= targetH + VOX_RES/2 then
+					-- Transition zone - use fractional occupancy for smoother terrain
+					local occupancy = clamp((targetH - voxelY) / VOX_RES + 0.5, 0, 1)
+					newOcc[i][j][k] = occupancy
+					newMat[i][j][k] = occupancy > 0.1 and Enum.Material.Sand or Enum.Material.Air
+				else
+					-- Air above target height
+					newOcc[i][j][k] = 0
+					newMat[i][j][k] = Enum.Material.Air
+				end
+			end
+		end
+	end
+	
+	terrain:WriteVoxels(region, VOX_RES, newMat, newOcc)
+	print(string.format("🔨 [TerrainStamp] WriteVoxels completed for region: (%.1f,%.1f) to (%.1f,%.1f)", 
+		region.CFrame.Position.X - region.Size.X/2, region.CFrame.Position.Z - region.Size.Z/2,
+		region.CFrame.Position.X + region.Size.X/2, region.CFrame.Position.Z + region.Size.Z/2))
 
 end
 

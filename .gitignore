@@ -45,3 +45,5 @@ luac.out
 *.rbxm
 *.autosaves
 .vscode/
+
+kitchen/

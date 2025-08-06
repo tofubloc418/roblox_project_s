@@ -7,8 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Turn off automatic character loading
 Players.CharacterAutoLoads = true
 
--- Wait for the Design folder to be replicated
-local IslandConfig = require(ReplicatedStorage.Design.IslandConfig)
+-- Wait for the Structure folder to be replicated
+local IslandConfig = require(ReplicatedStorage.Structure.IslandConfig)
 local Occupancy  = require(ReplicatedStorage.Modules.OccupancyMap)
 
 -- CONFIG: must match your terrain settings

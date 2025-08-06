@@ -7,8 +7,8 @@
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
               "ReplicatedStorage": {
-            "Design": {
-              "$path": "src/shared/sharedNormalIsland/Design"
+            "Structure": {
+              "$path": "src/shared/sharedNormalIsland/Structure"
             },
             "Modules": {
               "$path": "src/shared/sharedNormalIsland/Modules"

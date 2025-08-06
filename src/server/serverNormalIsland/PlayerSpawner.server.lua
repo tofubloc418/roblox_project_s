@@ -4,19 +4,15 @@
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Turn off automatic character loading
 Players.CharacterAutoLoads = true
 
--- Wait for the Structure folder to be replicated
 local IslandConfig = require(ReplicatedStorage.Structure.IslandConfig)
-local Occupancy  = require(ReplicatedStorage.Modules.OccupancyMap)
+local Occupancy  = require(ReplicatedStorage.Structure.OccupancyMap)
 
--- CONFIG: must match your terrain settings
 local BOUNDARY_WIDTH   = IslandConfig.boundarySize.X   -- studs
 local MIN_PLAYER_DIST  = 30                           -- studs
 local PLAYER_RAD       = 2                            -- studs
 
--- Derived for sampling
 local HALF_BOUNDARY = BOUNDARY_WIDTH / 2
 
 -- Spawn state

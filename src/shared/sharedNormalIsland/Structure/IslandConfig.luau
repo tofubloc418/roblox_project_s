@@ -1,15 +1,15 @@
 local IslandConfig = {}
 
--- Water and terrain settings
-IslandConfig.spawnRadius = 50
-IslandConfig.boundarySize = Vector3.new(2048, 100, 2048)
-IslandConfig.boundaryCenter = Vector3.new(0, 50, 0)
+-- Island dimensions (all centered at 0, 50, 0)
+IslandConfig.coreSize = Vector3.new(1900, 100, 1900) -- Land area where players spawn and spend time
+IslandConfig.sandRimWidth = 100 -- Width of sand rim around core
+IslandConfig.oceanWidth = 300 -- Width of ocean around sand rim
+IslandConfig.totalSize = Vector3.new(2200, 100, 2200) -- Total island size including ocean
 
--- Environment settings
-IslandConfig.fogDistance = 150
-IslandConfig.timeOfDay = "14:00:00"
-IslandConfig.ambientColor = Color3.fromRGB(138, 138, 138)
-IslandConfig.skyboxId = "rbxasset://sky/sky512_hr"
+-- Spawn settings (only in core area)
+IslandConfig.spawnRadius = 50
+IslandConfig.spawnAreaSize = IslandConfig.coreSize -- Players spawn only in core area
+IslandConfig.spawnAreaCenter = Vector3.new(0, 300, 0) -- Spawn area is centered at 0, 300, 0
 
 -- Spawn points for players
 IslandConfig.spawnPoints = {}

@@ -9,7 +9,7 @@ Players.CharacterAutoLoads = true
 local IslandConfig = require(ReplicatedStorage.Structure.IslandConfig)
 local Occupancy  = require(ReplicatedStorage.Structure.OccupancyMap)
 
-local BOUNDARY_WIDTH   = IslandConfig.boundarySize.X   -- studs
+local BOUNDARY_WIDTH   = IslandConfig.spawnAreaSize.X   -- studs (core area only)
 local MIN_PLAYER_DIST  = 30                           -- studs
 local PLAYER_RAD       = 2                            -- studs
 
@@ -73,7 +73,7 @@ local function computeSpawnPoints()
 			-- raycast down for Y
 			local origin = Vector3.new(x, 500, z)
 			local hit = workspace:Raycast(origin, Vector3.new(0, -1000, 0))
-			local y = (hit and hit.Position.Y or IslandConfig.waterLevel) + 2
+			local y = (hit and hit.Position.Y or 0) + 2
 
 			-- Store spawn point with taken status
 			local spawnPos = Vector3.new(x, y, z)

@@ -8,8 +8,8 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
 -- Modules
-local sharedModules = ReplicatedStorage:WaitForChild("Modules")
-local MinimapConfig = require(sharedModules:WaitForChild("MinimapConfig"))
+local structureModules = ReplicatedStorage:WaitForChild("Structure")
+local MinimapConfig = require(structureModules:WaitForChild("MinimapConfig"))
 
 -- Create RemoteEvents folder
 local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")
@@ -26,7 +26,7 @@ PingRemote.Parent = remoteEvents
 
 -- Type definitions
 type PingData = {
-    Type: string,
+    Type: "LOCATION" | "DANGER" | "HELP",
     Position: Vector3,
     PlayerId: number,
     Timestamp: number,
@@ -199,7 +199,7 @@ local function onPingRequest(player: Player, position: Vector3?, pingTypeStr: st
     
     -- Create ping data
     local pingData: MinimapConfig.PingData = {
-        Type = pingType,
+        Type = pingType :: "LOCATION" | "DANGER" | "HELP",
         Position = position,
         PlayerId = player.UserId,
         Timestamp = now,

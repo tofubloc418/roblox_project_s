@@ -4,7 +4,7 @@
 local M = {
 	grid = {},   -- 2D array of occupancy values
 	cellSize = 10,
-	totalWidth = 2048,
+	totalWidth = 1900, -- Spawn area width (core land area only)
 }
 
 -- Occupancy types

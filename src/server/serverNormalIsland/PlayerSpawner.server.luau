@@ -177,6 +177,11 @@ Players.PlayerAdded:Connect(function(player)
 
 	player.CharacterAdded:Connect(function(char)
 		handlePlayerSpawn(player)
+		-- Boost movement speed on spawn
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if humanoid then
+			humanoid.WalkSpeed = 100 -- very fast
+		end
 	end)
 	
 	-- Clean up disconnected players when new player joins

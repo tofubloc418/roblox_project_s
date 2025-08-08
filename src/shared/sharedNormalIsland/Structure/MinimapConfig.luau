@@ -22,7 +22,7 @@ MinimapConfig.WorldBounds = {
 -- Minimap display settings
 MinimapConfig.Minimap = {
     Size = UDim2.new(0, 250, 0, 250),
-    Position = UDim2.new(1, -260, 0, 10), -- Top-right corner
+    Position = UDim2.new(0, 20, 0, 20), -- Top-left corner with equal 20px margins
     BackgroundColor = Color3.fromRGB(20, 25, 30),
     BorderColor = Color3.fromRGB(100, 110, 120),
     BorderSize = 2,
@@ -41,9 +41,10 @@ MinimapConfig.FullMap = {
 -- Player icon settings
 MinimapConfig.PlayerIcon = {
     Size = UDim2.new(0, 20, 0, 20),
-    Image = "rbxassetid://6034684949", -- Arrow icon
+    Image = "rbxassetid://132741527990568", -- Arrow icon
     Color = Color3.fromRGB(255, 255, 255),
     ZIndex = 5,
+    RotationOffset = 0, -- degrees; flip icon if asset points opposite
 }
 
 -- Ping settings
@@ -83,7 +84,7 @@ MinimapConfig.Controls = {
 
 -- Minimap assets for each island
 MinimapConfig.minimapAssets = {
-    ["NormalIsland1"] = "rbxassetid://121230759887612", -- USING TEST MAP FOR NOW
+    ["NormalIsland1"] = "rbxassetid://93578867554772", -- USING TEST MAP FOR NOW
     ["NormalIsland2"] = "rbxassetid://121230759887612",
     ["NormalIsland3"] = "rbxassetid://121230759887612",
 }

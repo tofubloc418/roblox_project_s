@@ -54,26 +54,25 @@ MinimapConfig.Ping = {
             Icon = "rbxassetid://6031075938", -- Location marker
             Color = Color3.fromRGB(255, 200, 0),
             BeamColor = ColorSequence.new(Color3.fromRGB(255, 200, 0)),
-            Lifetime = 30,
         },
         DANGER = {
             Icon = "rbxassetid://6031075931", -- Warning icon
             Color = Color3.fromRGB(255, 50, 50),
             BeamColor = ColorSequence.new(Color3.fromRGB(255, 50, 50)),
-            Lifetime = 20,
         },
         HELP = {
             Icon = "rbxassetid://6031075933", -- Help icon
             Color = Color3.fromRGB(50, 255, 50),
             BeamColor = ColorSequence.new(Color3.fromRGB(50, 255, 50)),
-            Lifetime = 45,
         },
     },
     IconSize = UDim2.new(0, 24, 0, 24),
     BeamWidth = 2,
-    BeamHeight = 500,
-    MaxPingsPerPlayer = 3,
-    Cooldown = 1,
+    BeamHeight = 1000,
+    MaxPingsPerPlayer = 1,
+    Cooldown = 0.2,
+    LifetimeSeconds = 20,
+    FadeOutSeconds = 10,
 }
 
 -- Input settings

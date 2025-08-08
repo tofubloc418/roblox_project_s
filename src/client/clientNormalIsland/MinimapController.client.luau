@@ -34,8 +34,9 @@ local _minimapImage: ImageLabel
 local _fullMapImage: ImageLabel
 local playerIcon: ImageLabel
 local fullMapPlayerIcon: ImageLabel
-local pingContainer: Frame
+local pingContainer: Frame -- will be child of minimap content
 local fullMapPingContainer: Frame
+local minimapContent: Frame -- content that pans (holds image + pings)
 
 -- Create styled frame with border
 local function createStyledFrame(name: string, size: UDim2, position: UDim2, bgColor: Color3, borderColor: Color3, borderSize: number): Frame
@@ -71,19 +72,6 @@ local function createMapImage(parent: Frame): ImageLabel
     image.ScaleType = Enum.ScaleType.Stretch
     image.Parent = parent
     return image
-end
-
--- Create minimap container (no rotation, just movement tracking)
-local function createMinimapContainer(parent: Frame): Frame
-    local container = Instance.new("Frame")
-    container.Name = "MinimapContainer"
-    container.Size = UDim2.fromScale(1, 1)
-    container.Position = UDim2.fromScale(0, 0)
-    container.BackgroundTransparency = 1
-    container.ClipsDescendants = true -- Clips content to frame bounds
-    container.Parent = parent
-    
-    return container
 end
 
 -- Create player icon with rotation support
@@ -152,25 +140,31 @@ function MinimapController:Initialize()
     mainCorner.CornerRadius = UDim.new(0.5, 0)
     mainCorner.Parent = minimapFrame
     
-    -- Create minimap container (no rotation)
-    local minimapContainer = createMinimapContainer(minimapFrame)
+    -- Create minimap content (pans under mask)
+    minimapContent = Instance.new("Frame")
+    minimapContent.Name = "MinimapContent"
+    local zoomFactor = 3
+    minimapContent.Size = UDim2.fromScale(zoomFactor, zoomFactor)
+    minimapContent.AnchorPoint = Vector2.new(0.5, 0.5)
+    minimapContent.Position = UDim2.fromScale(0.5, 0.5)
+    minimapContent.BackgroundTransparency = 1
+    minimapContent.ClipsDescendants = false
+    minimapContent.Parent = minimapFrame
     
-    -- Add minimap image - static, no rotation, just follows player movement
-    _minimapImage = createMapImage(minimapContainer)
-    local zoomFactor = 3 -- Zoom level for tactical view
-    _minimapImage.Size = UDim2.fromScale(zoomFactor, zoomFactor)
-    _minimapImage.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor
-    _minimapImage.Position = UDim2.fromScale(0.5, 0.5) -- Center position
+    -- Add minimap image (fills content)
+    _minimapImage = createMapImage(minimapContent)
+    _minimapImage.Size = UDim2.fromScale(1, 1)
+    _minimapImage.Position = UDim2.fromScale(0, 0)
     
-    -- Create ping container on top of image
+    -- Create ping container inside content so pings pan with the map
     pingContainer = Instance.new("Frame")
     pingContainer.Name = "PingContainer"
     pingContainer.Size = UDim2.fromScale(1, 1)
     pingContainer.BackgroundTransparency = 1
-    pingContainer.Parent = minimapContainer
+    pingContainer.Parent = minimapContent
     
-    -- Create player icon on top
-    playerIcon = createPlayerIcon(minimapContainer, MinimapConfig.PlayerIcon.Size)
+    -- Create player icon on top (stays centered)
+    playerIcon = createPlayerIcon(minimapFrame, MinimapConfig.PlayerIcon.Size)
     
     -- Create full map frame (hidden by default)
     fullMapFrame = createStyledFrame(
@@ -202,7 +196,7 @@ function MinimapController:Initialize()
     _fullMapImage.ImageColor3 = Color3.new(1, 1, 1)
     _fullMapImage.ScaleType = Enum.ScaleType.Fit
     _fullMapImage.ZIndex = 11
-
+    
     -- Create ping container for full map
     fullMapPingContainer = Instance.new("Frame")
     fullMapPingContainer.Name = "PingContainer"
@@ -210,7 +204,7 @@ function MinimapController:Initialize()
     fullMapPingContainer.BackgroundTransparency = 1
     fullMapPingContainer.ZIndex = 12
     fullMapPingContainer.Parent = fullMapFrame
-
+    
     -- Create player icon for full map
     fullMapPlayerIcon = createPlayerIcon(fullMapFrame, MinimapConfig.PlayerIcon.Size)
     fullMapPlayerIcon.ZIndex = 13
@@ -255,42 +249,17 @@ function MinimapController:UpdateMinimap(forceUpdate: boolean?)
         )
         local rotationDegrees = math.deg(rotation)
         
-        if _minimapImage then
-            -- NO ROTATION: Just move the map to keep player centered
-            -- Position the map so the player's world position is at the center of the view
+        -- Pan content to keep player centered
+        do
             local zoomFactor = 3
             local offsetX = (playerUV.X - 0.5) * zoomFactor
             local offsetY = (playerUV.Y - 0.5) * zoomFactor
-            _minimapImage.Position = UDim2.fromScale(0.5 + offsetX, 0.5 + offsetY)
+            minimapContent.Position = UDim2.fromScale(0.5 + offsetX, 0.5 + offsetY)
         end
         
         -- Keep player icon centered but show rotation
         playerIcon.Position = UDim2.fromScale(0.5, 0.5)
         playerIcon.Rotation = -rotationDegrees + MinimapConfig.PlayerIcon.RotationOffset -- Invert so UI matches character turn direction
-        
-        -- Update ping positions on static minimap
-        for playerId, pingData in pairs(self.playerPings) do
-            local pingIcon = pingContainer:FindFirstChild("PingIcon_" .. tostring(pingData.Timestamp))
-            if pingIcon and pingIcon:IsA("ImageLabel") then
-                -- Get ping and player positions in UV coordinates
-                local pingUV = MinimapConfig.worldToUV(pingData.Position)
-                local currentPlayerUV = MinimapConfig.worldToUV(humanoidRootPart.Position)
-                
-                -- Calculate relative position on minimap (no rotation needed)
-                local zoomFactor = 3
-                local relativePingX = (currentPlayerUV.X - pingUV.X) * zoomFactor + 0.5
-                local relativePingY = (currentPlayerUV.Y - pingUV.Y) * zoomFactor + 0.5
-                
-                -- Check if ping is within visible bounds (circular)
-                local distanceFromCenter = math.sqrt((relativePingX - 0.5)^2 + (relativePingY - 0.5)^2)
-                if distanceFromCenter <= 0.5 then
-                    pingIcon.Position = UDim2.fromScale(relativePingX, relativePingY)
-                    pingIcon.Visible = true
-                else
-                    pingIcon.Visible = false
-                end
-            end
-        end
     end
     
     -- Always update player position on full map if visible
@@ -325,30 +294,43 @@ function MinimapController:ToggleFullMap()
 end
 
 -- Handle ping creation
-function MinimapController:CreatePing(position: Vector3, pingType: "LOCATION" | "DANGER" | "HELP")
-    PingRemote:FireServer(position, pingType)
+function MinimapController:CreatePing(position: Vector3, pingType: string)
+    PingRemote:FireServer(position, (pingType :: any))
 end
 
 -- Handle ping from server
 function MinimapController:OnPingReceived(pingData: MinimapConfig.PingData)
-    -- Store ping data
+    -- Store ping data (single ping per player policy on client side too)
+    -- Clear existing icon for this player if present
+    local existing = self.playerPings[pingData.PlayerId]
+    if existing then
+        local oldMinimap = pingContainer:FindFirstChild("PingIcon_" .. tostring(existing.Timestamp))
+        if oldMinimap then oldMinimap:Destroy() end
+        local oldFull = fullMapPingContainer:FindFirstChild("PingIcon_" .. tostring(existing.Timestamp))
+        if oldFull then oldFull:Destroy() end
+    end
     (self :: any).playerPings[pingData.PlayerId] = pingData
     
     -- Create icons on both maps
     local minimapIcon = createPingIcon(pingContainer, pingData)
     local fullMapIcon = createPingIcon(fullMapPingContainer, pingData)
     
-    -- Set initial positions for full map (minimap will be updated in UpdateMinimap)
+    -- Ensure ZIndex above map images
+    minimapIcon.ZIndex = 6
+    fullMapIcon.ZIndex = 12
+    
+    -- Place using UV (will pan with content on minimap)
     local pingUV = MinimapConfig.worldToUV(pingData.Position)
+    minimapIcon.Position = UDim2.fromScale(1 - pingUV.X, 1 - pingUV.Y)
     fullMapIcon.Position = UDim2.fromScale(1 - pingUV.X, 1 - pingUV.Y)
     
-    -- Schedule removal
-    local lifetime = MinimapConfig.Ping.Types[pingData.Type].Lifetime
-    task.wait(lifetime)
-    
-    minimapIcon:Destroy()
-    fullMapIcon:Destroy()
-    self.playerPings[pingData.PlayerId] = nil
+    -- Schedule removal (icons do NOT fade)
+    local lifetime = MinimapConfig.Ping.LifetimeSeconds
+    task.delay(lifetime, function()
+        if minimapIcon.Parent then minimapIcon:Destroy() end
+        if fullMapIcon.Parent then fullMapIcon:Destroy() end
+        self.playerPings[pingData.PlayerId] = nil
+    end)
 end
 
 -- Input handling
@@ -369,6 +351,7 @@ function MinimapController:SetupInput()
         if input.UserInputType == Enum.UserInputType.MouseButton2 and
            UserInputService:IsKeyDown(MinimapConfig.Controls.PingModifierKey) then
             
+            -- Only allow pinging on FULL MAP
             if not fullMapFrame.Visible then
                 return
             end
@@ -388,16 +371,15 @@ function MinimapController:SetupInput()
                 local relY = (mousePos.Y - imgPos.Y) / imgSize.Y
                 
                 -- Inverse of player icon mapping on the full map (which uses 1-uv)
-                local worldPos = MinimapConfig.uvToWorld(Vector2.new(1 - relX, 1 - relY))
+                local uv = Vector2.new(1 - relX, 1 - relY)
+                local worldPos = MinimapConfig.uvToWorld(uv)
                 self:CreatePing(worldPos, "LOCATION")
             end
         end
     end)
 end
 
--- Start the controller
 function MinimapController:Start()
-    -- Wait for character
     player.CharacterAdded:Connect(function()
         task.wait(1) -- Wait for character to load
         self:Initialize()
@@ -407,15 +389,12 @@ function MinimapController:Start()
         self:Initialize()
     end
     
-    -- Setup input
     self:SetupInput()
     
-    -- Connect to ping events
     PingRemote.OnClientEvent:Connect(function(pingData: MinimapConfig.PingData)
         self:OnPingReceived(pingData)
     end)
     
-    -- Update loop
     RunService.Heartbeat:Connect(function()
         if self.enabled and minimapFrame then
             self:UpdateMinimap()
@@ -423,5 +402,4 @@ function MinimapController:Start()
     end)
 end
 
--- Initialize
 (MinimapController :: any):Start()

@@ -92,9 +92,8 @@ local function createPingBeam(position: Vector3, pingType: string): BasePart?
     beam.Width0 = MinimapConfig.Ping.BeamWidth
     beam.Width1 = MinimapConfig.Ping.BeamWidth * 0.5
     beam.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.3),
-        NumberSequenceKeypoint.new(0.5, 0.1),
-        NumberSequenceKeypoint.new(1, 0.5)
+        NumberSequenceKeypoint.new(0, 0.0),
+        NumberSequenceKeypoint.new(1, 0.0)
     })
     beam.Parent = beamPart
     
@@ -130,7 +129,7 @@ local function createPingBeam(position: Vector3, pingType: string): BasePart?
     
     -- Pulse animation for ground marker
     local pulseSpeed = 2
-    local pulseSize = 1.5
+    local _pulseSize = 1.5
     RunService.Heartbeat:Connect(function()
         if groundMarker.Parent then
             local scale = 1 + math.sin(tick() * pulseSpeed) * 0.2
@@ -139,33 +138,68 @@ local function createPingBeam(position: Vector3, pingType: string): BasePart?
         end
     end)
     
-    -- Schedule cleanup
-    Debris:AddItem(beamPart, pingConfig.Lifetime)
-    Debris:AddItem(groundMarker, pingConfig.Lifetime)
+    -- Schedule cleanup with graceful fade out
+    local TweenService = game:GetService("TweenService")
+    local total = MinimapConfig.Ping.LifetimeSeconds
+    local fade = MinimapConfig.Ping.FadeOutSeconds
+    local baseWidth0 = MinimapConfig.Ping.BeamWidth
+    local baseWidth1 = MinimapConfig.Ping.BeamWidth * 0.5
+    
+    task.delay(math.max(total - fade, 0), function()
+        local fadeInfo = TweenInfo.new(fade, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        -- Drive beam fade via NumberValue
+        local fadeValue = Instance.new("NumberValue")
+        fadeValue.Value = 0
+        fadeValue.Parent = beamPart
+        fadeValue:GetPropertyChangedSignal("Value"):Connect(function()
+            local f = math.clamp(fadeValue.Value, 0, 1)
+            -- Uniform transparency along the beam
+            beam.Transparency = NumberSequence.new(f)
+            -- Thin the beam as it fades
+            beam.Width0 = baseWidth0 * (1 - f)
+            beam.Width1 = baseWidth1 * (1 - f)
+        end)
+        TweenService:Create(fadeValue, fadeInfo, {Value = 1}):Play()
+        
+        -- Fade auxiliary visuals
+        TweenService:Create(light, fadeInfo, {Brightness = 0}):Play()
+        TweenService:Create(groundMarker, fadeInfo, {Transparency = 1}):Play()
+        TweenService:Create(particleEmitter, fadeInfo, {Rate = 0}):Play()
+        
+        task.delay(fade + 0.05, function()
+            if fadeValue then fadeValue:Destroy() end
+        end)
+    end)
+    
+    Debris:AddItem(beamPart, total)
+    Debris:AddItem(groundMarker, total)
     
     return beamPart
 end
 
 -- Handle ping request from client
 local function onPingRequest(player: Player, position: Vector3?, pingTypeStr: string?)
+    print("[PingService] Request from", player.Name, "type:", pingTypeStr, "pos:", position)
     -- Validate inputs
     if not position or not pingTypeStr then
-        warn("Invalid ping request from", player.Name)
+        warn("[PingService] Invalid ping request from", player.Name)
         return
     end
     
     -- Validate ping type
     local pingType = pingTypeStr :: MinimapConfig.PingType
     if not MinimapConfig.Ping.Types[pingType] then
-        warn("Invalid ping type from", player.Name, ":", pingTypeStr)
+        warn("[PingService] Invalid ping type from", player.Name, ":", pingTypeStr)
         return
     end
+    print("[PingService] Type validated:", pingType)
     
     -- Validate position
     if not isValidPingPosition(position) then
-        warn("Invalid ping position from", player.Name, ":", position)
+        warn("[PingService] Invalid ping position from", player.Name, ":", position)
         return
     end
+    print("[PingService] Position validated within bounds")
     
     -- Check cooldown
     local playerData = playerPingData[player]
@@ -179,22 +213,19 @@ local function onPingRequest(player: Player, position: Vector3?, pingTypeStr: st
     
     local now = tick()
     if now - playerData.lastPingTime < MinimapConfig.Ping.Cooldown then
+        print("[PingService] In cooldown; skipping")
         return -- Still in cooldown
     end
     
-    -- Check ping limit
-    if #playerData.pings >= MinimapConfig.Ping.MaxPingsPerPlayer then
-        -- Remove oldest ping
-        local oldestPing = playerData.pings[1]
-        table.remove(playerData.pings, 1)
-        
-        -- Remove old beam if exists
-        local beamKey = string.format("%d_%d", player.UserId, oldestPing.Timestamp)
-        local oldBeam = activePingBeams[beamKey]
-        if oldBeam and oldBeam.Parent then
-            oldBeam:Destroy()
+    -- Always replace existing pings for this player (single active ping policy)
+    do
+        for key, beam in pairs(activePingBeams) do
+            if string.find(key, tostring(player.UserId) .. "_") == 1 then
+                if beam and beam.Parent then beam:Destroy() end
+                activePingBeams[key] = nil
+            end
         end
-        activePingBeams[beamKey] = nil
+        playerData.pings = {}
     end
     
     -- Create ping data
@@ -208,15 +239,20 @@ local function onPingRequest(player: Player, position: Vector3?, pingTypeStr: st
     -- Store ping
     table.insert(playerData.pings, pingData)
     playerData.lastPingTime = now
+    print("[PingService] Stored ping; broadcasting to clients")
+
+    -- Broadcast to all clients immediately
+    PingRemote:FireAllClients(pingData)
     
-    -- Create beam effect
+    -- Create beam effect (visual only)
     local beam = createPingBeam(position, pingType)
     if beam then
         local beamKey = string.format("%d_%d", player.UserId, pingData.Timestamp)
         activePingBeams[beamKey] = beam
+        print("[PingService] Beam created and registered:", beamKey)
         
         -- Clean up after lifetime
-        task.wait(MinimapConfig.Ping.Types[pingType].Lifetime)
+        task.wait(MinimapConfig.Ping.LifetimeSeconds)
         
         -- Remove from storage
         for i, ping in ipairs(playerData.pings) do
@@ -227,10 +263,8 @@ local function onPingRequest(player: Player, position: Vector3?, pingTypeStr: st
         end
         
         activePingBeams[beamKey] = nil
+        print("[PingService] Beam expired and cleaned:", beamKey)
     end
-    
-    -- Broadcast to all clients
-    PingRemote:FireAllClients(pingData)
 end
 
 -- Clean up on player leave

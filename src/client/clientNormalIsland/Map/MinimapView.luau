@@ -55,7 +55,7 @@ function MinimapView.new(parent: Instance): MinimapViewType
         MinimapConfig.Minimap.Position.Y.Offset + shadowOffset
     )
     shadow.AnchorPoint = Vector2.new(0, 0)
-    shadow.BackgroundColor3 = Color3.new(0.117647, 0.062745, 0.007843) -- Black shadow
+    shadow.BackgroundColor3 = Color3.new(0.117647, 0.062745, 0.007843)
     shadow.BackgroundTransparency = 0.8 -- Semi-transparent
     shadow.BorderSizePixel = 0
     shadow.ZIndex = 0 -- Behind everything

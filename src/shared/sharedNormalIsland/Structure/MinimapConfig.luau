@@ -22,11 +22,11 @@ MinimapConfig.WorldBounds = {
 -- Minimap display settings
 MinimapConfig.Minimap = {
     Size = UDim2.new(0, 250, 0, 250),
-    Position = UDim2.new(0, 20, 0, 20), -- Top-left corner with equal 20px margins
-    BackgroundColor = Color3.fromRGB(20, 25, 30),
-    BorderColor = Color3.fromRGB(100, 110, 120),
+    Position = UDim2.new(0, 20, 0, 20),
+    BackgroundColor = Color3.fromRGB(25, 30, 35),
+    BorderColor = Color3.fromRGB(0, 0, 0),
     BorderSize = 2,
-    UpdateThrottle = 0.05, -- Update every 50ms for smooth movement
+    UpdateThrottle = 0.05,
     ZoomFactor = 3,
 }
 

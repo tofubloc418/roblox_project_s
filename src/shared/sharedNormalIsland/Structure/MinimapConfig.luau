@@ -27,6 +27,7 @@ MinimapConfig.Minimap = {
     BorderColor = Color3.fromRGB(100, 110, 120),
     BorderSize = 2,
     UpdateThrottle = 0.05, -- Update every 50ms for smooth movement
+    ZoomFactor = 3,
 }
 
 -- Full map settings

@@ -1,0 +1,39 @@
+# Cursor AI Rules for This Project
+
+## CRITICAL: Directory Usage Rules
+
+### ⛔ DEPRECATED - DO NOT EDIT
+The following directories are **DEPRECATED** and must **NEVER** be edited:
+- `src/client/clientBattleground/`
+- `src/server/serverBattleground/`
+- `src/shared/sharedBattleground/`
+
+**These directories:**
+- Should ONLY be used as reference when EXPLICITLY instructed by the user
+- Must NEVER have new files added
+- Must NEVER have existing files modified
+- Are legacy code that is no longer in use
+
+### ✅ ACTIVE DIRECTORIES
+All new development should happen in:
+- `src/client/clientNormalIsland/` - Client-side code for the island
+- `src/server/serverNormalIsland/` - Server-side code for the island
+- `src/shared/sharedNormalIsland/` - Shared modules for the island
+- `src/client/clientMain/` - Main client code
+- `src/server/serverMain/` - Main server code
+- `src/shared/sharedMain/` - Main shared code
+
+## Project Structure Rules
+
+1. **Always check which directory you're working in** before creating or editing files
+2. **Default to NormalIsland directories** for any island-related features
+3. **Ask for clarification** if unsure whether something belongs in Main or NormalIsland
+4. **Never assume battleground directories** are the right place for new code
+
+## File Naming Conventions
+
+- Use `.luau` extension for all Lua files
+- Use PascalCase for module names
+- Use camelCase for instance/variable names
+- Server scripts should end with `.server.luau`
+- Client scripts should end with `.client.luau`

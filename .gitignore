@@ -47,3 +47,5 @@ luac.out
 .vscode/
 
 kitchen/
+
+sourcemap.json

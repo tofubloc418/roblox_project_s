@@ -4,19 +4,15 @@
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Turn off automatic character loading
 Players.CharacterAutoLoads = true
 
--- Wait for the Design folder to be replicated
-local IslandConfig = require(ReplicatedStorage.Design.IslandConfig)
-local Occupancy  = require(ReplicatedStorage.Modules.OccupancyMap)
+local IslandConfig = require(ReplicatedStorage.Structure.IslandConfig)
+local Occupancy  = require(ReplicatedStorage.Structure.OccupancyMap)
 
--- CONFIG: must match your terrain settings
-local BOUNDARY_WIDTH   = IslandConfig.boundarySize.X   -- studs
+local BOUNDARY_WIDTH   = IslandConfig.spawnAreaSize.X   -- studs (core area only)
 local MIN_PLAYER_DIST  = 30                           -- studs
 local PLAYER_RAD       = 2                            -- studs
 
--- Derived for sampling
 local HALF_BOUNDARY = BOUNDARY_WIDTH / 2
 
 -- Spawn state
@@ -77,7 +73,7 @@ local function computeSpawnPoints()
 			-- raycast down for Y
 			local origin = Vector3.new(x, 500, z)
 			local hit = workspace:Raycast(origin, Vector3.new(0, -1000, 0))
-			local y = (hit and hit.Position.Y or IslandConfig.waterLevel) + 2
+			local y = (hit and hit.Position.Y or 0) + 2
 
 			-- Store spawn point with taken status
 			local spawnPos = Vector3.new(x, y, z)
@@ -181,6 +177,11 @@ Players.PlayerAdded:Connect(function(player)
 
 	player.CharacterAdded:Connect(function(char)
 		handlePlayerSpawn(player)
+		-- Boost movement speed on spawn
+		local humanoid = char:WaitForChild("Humanoid", 5)
+		if humanoid then
+			humanoid.WalkSpeed = 100 -- very fast
+		end
 	end)
 	
 	-- Clean up disconnected players when new player joins

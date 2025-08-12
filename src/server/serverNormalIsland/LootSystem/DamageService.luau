@@ -7,8 +7,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared modules
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
 
 local DamageService = {}
 DamageService.__index = DamageService

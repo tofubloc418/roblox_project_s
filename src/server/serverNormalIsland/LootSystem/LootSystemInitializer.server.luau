@@ -8,12 +8,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 -- Wait for modules to replicate
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
 local ServerModules = script.Parent
 
 -- Shared modules
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
-local RoundState = require(SharedModules:WaitForChild("RoundState"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
+local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 
 -- Server modules
 local LootBoxService = require(ServerModules:WaitForChild("LootBoxService"))

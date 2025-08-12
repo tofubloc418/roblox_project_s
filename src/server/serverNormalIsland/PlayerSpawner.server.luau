@@ -6,8 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 Players.CharacterAutoLoads = true
 
-local IslandConfig = require(ReplicatedStorage.Structure.IslandConfig)
-local Occupancy  = require(ReplicatedStorage.Structure.OccupancyMap)
+local IslandConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("IslandConfig"))
+local Occupancy  = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("OccupancyMap"))
 
 local BOUNDARY_WIDTH   = IslandConfig.spawnAreaSize.X   -- studs (core area only)
 local MIN_PLAYER_DIST  = 30                           -- studs

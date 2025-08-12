@@ -4,8 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
-local structureModules = ReplicatedStorage:WaitForChild("Structure")
-local MinimapConfig = require(structureModules:WaitForChild("MinimapConfig"))
+local MinimapConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MinimapConfig"))
 
 local PingIcons = {}
 

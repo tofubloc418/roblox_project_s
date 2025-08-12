@@ -7,12 +7,11 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared modules
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
-local ItemDefinitions = require(SharedModules:WaitForChild("ItemDefinitions"))
-local LootPools = require(SharedModules:WaitForChild("LootPools"))
-local DropRules = require(SharedModules:WaitForChild("DropRules"))
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
-local RoundState = require(SharedModules:WaitForChild("RoundState"))
+local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
+local LootPools = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootPools"))
+local DropRules = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("DropRules"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
+local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 
 local LootBoxService = {}
 LootBoxService.__index = LootBoxService

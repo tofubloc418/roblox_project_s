@@ -8,9 +8,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 -- Shared modules
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
-local RoundState = require(SharedModules:WaitForChild("RoundState"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
+local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 
 local LootSpawnService = {}
 LootSpawnService.__index = LootSpawnService

@@ -4,14 +4,9 @@
   "tree": {
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
-              "ReplicatedStorage": {
-            "Structure": {
-              "$path": "src/shared/sharedNormalIsland/Structure"
-            },
-            "Modules": {
-              "$path": "src/shared/sharedNormalIsland/Modules"
-            }
-          },
+    "ReplicatedStorage": {
+      "$path": "src/shared/sharedNormalIsland"
+    },
     "ServerScriptService": {
       "$path": "src/server/serverNormalIsland"
     },

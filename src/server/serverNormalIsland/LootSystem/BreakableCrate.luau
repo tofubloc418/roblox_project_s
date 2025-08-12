@@ -8,8 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
 -- Shared modules
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
 
 local BreakableCrate = {}
 BreakableCrate.__index = BreakableCrate

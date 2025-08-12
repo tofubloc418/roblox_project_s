@@ -3,15 +3,13 @@
 	Creates physical pickup instances for dropped items
 ]]
 
-local RunService = game:GetService("RunService")
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 -- Shared modules
-local SharedModules = ReplicatedStorage:WaitForChild("src"):WaitForChild("shared"):WaitForChild("sharedNormalIsland"):WaitForChild("LootSystem")
-local ItemDefinitions = require(SharedModules:WaitForChild("ItemDefinitions"))
-local LootConfig = require(SharedModules:WaitForChild("LootConfig"))
+local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
+local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
 
 local DropFactory = {}
 DropFactory.__index = DropFactory

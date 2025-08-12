@@ -9,7 +9,7 @@ local GuiService = game:GetService("GuiService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local MinimapConfig = require(ReplicatedStorage:WaitForChild("Structure"):WaitForChild("MinimapConfig"))
+local MinimapConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MinimapConfig"))
 local MapMath = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MapMath"))
 
 local PingIcons = require(script.Parent:WaitForChild("PingIcons"))

@@ -3,8 +3,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local structureModules = ReplicatedStorage:WaitForChild("Structure")
-local MinimapConfig = require(structureModules:WaitForChild("MinimapConfig"))
+local MinimapConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MinimapConfig"))
 
 local MapMath = {}
 

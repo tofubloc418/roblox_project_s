@@ -3,7 +3,7 @@
 	Procedurally spawns crates at round start based on configuration
 ]]
 
-local RunService = game:GetService("RunService")
+local _RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
@@ -59,9 +59,6 @@ end
 
 -- Spawn crates for a new round
 function LootSpawnService:SpawnCratesForRound()
-	-- Clear previous crates
-	self:ClearSpawnedCrates()
-	
 	-- Get spawn RNG
 	local roundState = RoundState.Current()
 	local rng = roundState:GetSpawnRng()
@@ -276,16 +273,6 @@ function LootSpawnService:CreateCrate(crateType: string, position: Vector3): Mod
 	return crateModel
 end
 
--- Clear all spawned crates
-function LootSpawnService:ClearSpawnedCrates()
-	for _, crate in ipairs(self.SpawnedCrates) do
-		if crate and crate.Parent then
-			crate:Destroy()
-		end
-	end
-	
-	self.SpawnedCrates = {}
-end
 
 -- Create singleton instance
 local instance = LootSpawnService.new()

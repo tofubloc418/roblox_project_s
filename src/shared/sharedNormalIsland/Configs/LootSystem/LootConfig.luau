@@ -203,25 +203,6 @@ LootConfig.GlobalCaps = {
 	},
 }
 
--- Visual states configuration (stub - will be implemented with actual meshes)
-LootConfig.VisualStates = {
-	["Default"] = {
-		Stage0 = "Stage0", -- Normal appearance child name
-		Stage1 = "Stage1_Cracked", -- Light crack child name
-		Stage2 = "Stage2_Heavy", -- Heavy crack child name
-	},
-	["Normal"] = {
-		Stage0 = "NormalCrate_Clean",
-		Stage1 = "NormalCrate_Damaged",
-		Stage2 = "NormalCrate_Broken",
-	},
-	["WeaponCrate"] = {
-		Stage0 = "WeaponBox_Clean",
-		Stage1 = "WeaponBox_Damaged",
-		Stage2 = "WeaponBox_Broken",
-	},
-}
-
 -- Spawn configuration for procedural generation
 LootConfig.SpawnSettings = {
 	-- How many crates of each type to spawn
@@ -251,7 +232,7 @@ end
 
 -- Helper function to get visual state configuration
 function LootConfig.GetVisualState(crateType: string)
-	return LootConfig.VisualStates[crateType] or LootConfig.VisualStates["Default"]
+	return nil
 end
 
 -- Validate configuration on load

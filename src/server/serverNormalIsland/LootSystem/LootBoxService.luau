@@ -47,7 +47,13 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 	
 	-- Get crate attributes
 	local crateType = crateModel:GetAttribute("CrateType") or "Normal"
-	local crateId = crateModel:GetAttribute("CrateId") or tostring(crateModel:GetDebugId())
+	local crateId = crateModel:GetAttribute("CrateId")
+	if not crateId then
+		-- Generate a stable, non-plugin ID for manual crates
+		local fullName = crateModel:GetFullName()
+		crateId = "manual_" .. fullName
+		crateModel:SetAttribute("CrateId", crateId)
+	end
 	
 	-- Get crate configuration
 	local crateConfig = LootConfig.GetCrateConfig(crateType)

@@ -3,7 +3,6 @@
 	Server script that initializes and wires together all loot system components
 ]]
 
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
@@ -18,8 +17,11 @@ local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChil
 local LootBoxService = require(ServerModules:WaitForChild("LootBoxService"))
 local DropFactory = require(ServerModules:WaitForChild("DropFactory"))
 local LootSpawnService = require(ServerModules:WaitForChild("LootSpawnService"))
-local DamageService = require(ServerModules:WaitForChild("DamageService"))
 local BreakableCrate = require(ServerModules:WaitForChild("BreakableCrate"))
+
+-- Combat modules (DamageService is now in Combat folder)
+local CombatModules = script.Parent.Parent:WaitForChild("Combat")
+local DamageService = require(CombatModules:WaitForChild("DamageService"))
 
 print("Initializing Loot System...")
 
@@ -63,40 +65,31 @@ if LootConfig.DEBUG_MODE then
 				local args = string.split(message, " ")
 				
 				if args[1] == "/damage" and args[2] then
+					-- Minimal testing: apply damage to nearest registered crate
 					local damage = tonumber(args[2]) or 10
-					
-					-- Find nearest crate to player
-					local character = player.Character
-					if character and character.PrimaryPart then
-						local nearestCrate = nil
-						local nearestDistance = math.huge
-						
-						for crateModel, _ in pairs(BreakableCrate.ActiveCrates) do
-							if crateModel and crateModel.Parent then
-								local distance = (crateModel:GetPivot().Position - character.PrimaryPart.Position).Magnitude
-								if distance < nearestDistance then
-									nearestDistance = distance
-									nearestCrate = crateModel
+					local playerChar = player.Character
+					if playerChar and playerChar.PrimaryPart then
+						local nearest, nearestDist
+						for object, _ in pairs(DamageService.DamageableRegistry) do
+							if object and object.Parent and object:GetAttribute("CrateType") then
+								local d = (object:GetPivot().Position - playerChar.PrimaryPart.Position).Magnitude
+								if not nearestDist or d < nearestDist then
+									nearest = object
+									nearestDist = d
 								end
 							end
 						end
-						
-						if nearestCrate and nearestDistance < 20 then
-							DamageService:ApplyDamage(nearestCrate, damage, player, "Melee")
-							print(string.format("Applied %d damage to nearest crate", damage))
+						if nearest and nearestDist < 25 then
+							DamageService:ApplyDamage(nearest, damage, player, "Test")
+							print(string.format("Applied %d test damage to %s", damage, nearest.Name))
 						else
-							warn("No crate nearby to damage")
+							warn("No nearby crate to damage")
 						end
 					end
 				elseif args[1] == "/spawncrates" then
 					-- Spawn procedural crates
 					local count = LootSpawnService:SpawnCratesForRound()
 					print(string.format("Spawned %d crates", count))
-				elseif args[1] == "/clearcrates" then
-					-- Clear all crates
-					BreakableCrate.ClearAll()
-					DropFactory:ClearAllDrops()
-					print("Cleared all crates and drops")
 				elseif args[1] == "/spawncrate" and args[2] then
 					-- Spawn specific crate type at player position
 					local crateType = args[2]
@@ -116,12 +109,11 @@ if LootConfig.DEBUG_MODE then
 	
 	createTestCommands()
 	
-	print([[
+	print([[ 
 	Debug commands available:
-	/damage [amount] - Damage nearest crate
+	/damage [amount] - Damage nearest crate (simple test)
 	/spawncrates - Spawn procedural crates for round
-	/spawncrate [type] - Spawn specific crate type
-	/clearcrates - Clear all crates and drops
+	/spawncrate [type] - Spawn specific crate type at player
 	]])
 end
 
@@ -130,20 +122,10 @@ local function onRoundStart()
 	-- Generate new seed for the round
 	roundState:Initialize()
 	
-	-- Clear previous round's items
-	BreakableCrate.ClearAll()
-	DropFactory:ClearAllDrops()
-	
 	-- Spawn new crates
 	local crateCount = LootSpawnService:SpawnCratesForRound()
 	
 	print(string.format("Round started: Spawned %d crates", crateCount))
-end
-
--- Example: Start a round after 5 seconds (remove in production)
-if LootConfig.DEBUG_MODE then
-	task.wait(5)
-	onRoundStart()
 end
 
 print("Loot System initialized successfully!")

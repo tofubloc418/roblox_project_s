@@ -3,7 +3,6 @@
 	Component that handles crate damage, crack stages, and breaking
 ]]
 
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Debris = game:GetService("Debris")
 
@@ -30,7 +29,7 @@ function BreakableCrate.new(crateModel: Model)
 	self.LootBoxService = nil
 	self.DamageService = nil
 	
-	-- Initialize crack visuals
+	-- Initialize visuals
 	self:UpdateCrackVisuals()
 	
 	return self
@@ -127,74 +126,155 @@ end
 
 -- Update crack visuals
 function BreakableCrate:UpdateCrackVisuals()
-	local visualConfig = LootConfig.GetVisualState(self.CrateType)
+	local primaryPart = self.Model.PrimaryPart or self.Model:FindFirstChildWhichIsA("BasePart")
+	if not primaryPart then
+		return
+	end
 	
-	-- Method 1: Toggle child model visibility
-	local stageNames = {
-		[0] = visualConfig.Stage0 or "Stage0",
-		[1] = visualConfig.Stage1 or "Stage1_Cracked",
-		[2] = visualConfig.Stage2 or "Stage2_Heavy",
-	}
+	-- Ensure consistent container for generated visuals
+	local overlayFolder = self.Model:FindFirstChild("CrackOverlays")
+	if not overlayFolder then
+		overlayFolder = Instance.new("Folder")
+		overlayFolder.Name = "CrackOverlays"
+		overlayFolder.Parent = self.Model
+	end
 	
-	-- Hide all stages first
-	for stage, name in pairs(stageNames) do
-		local stagePart = self.Model:FindFirstChild(name)
-		if stagePart then
-			if stagePart:IsA("BasePart") then
-				stagePart.Transparency = stage == self.CrackStage and 0 or 1
-			elseif stagePart:IsA("Model") then
-				for _, part in ipairs(stagePart:GetDescendants()) do
-					if part:IsA("BasePart") then
-						part.Transparency = stage == self.CrackStage and 0 or 1
-					end
-				end
-			end
+	-- Clear previous overlays
+	for _, child in ipairs(overlayFolder:GetChildren()) do
+		child:Destroy()
+	end
+	
+	-- Base visual: slight transparency proportional to damage
+	local damageRatio = 1 - (self.Health / self.MaxHealth)
+	primaryPart.Transparency = math.min(0.5, damageRatio * 0.5)
+	
+	-- Stage-driven generated imperfections
+	local function createWeld(part)
+		local weld = Instance.new("WeldConstraint")
+		weld.Part0 = primaryPart
+		weld.Part1 = part
+		weld.Parent = part
+	end
+	
+	local function addCrackLine(length: number)
+		local line = Instance.new("Part")
+		line.Name = "CrackLine"
+		line.Anchored = false
+		line.CanCollide = false
+		line.CanQuery = false
+		line.CanTouch = false
+		line.Material = Enum.Material.SmoothPlastic
+		line.Color = Color3.fromRGB(20, 20, 20)
+		line.Transparency = 0.1
+		line.Size = Vector3.new(length, 0.03, 0.03)
+		line.Parent = overlayFolder
+		
+		-- Random position on a face of the primary part
+		local size = primaryPart.Size
+		local faceIndex = math.random(1, 6)
+		local normalVecs = {
+			Vector3.new(0, 1, 0),
+			Vector3.new(0, -1, 0),
+			Vector3.new(1, 0, 0),
+			Vector3.new(-1, 0, 0),
+			Vector3.new(0, 0, 1),
+			Vector3.new(0, 0, -1),
+		}
+		local normal = normalVecs[faceIndex]
+		
+		local half = size * 0.5
+		local localPos = Vector3.new(
+			(math.random() - 0.5) * (size.X - 0.2),
+			(math.random() - 0.5) * (size.Y - 0.2),
+			(math.random() - 0.5) * (size.Z - 0.2)
+		)
+		-- Snap to chosen face by setting the coordinate along the normal to +/- half extent
+		if normal.X ~= 0 then
+			localPos = Vector3.new(math.sign(normal.X) * half.X + (0.01 * normal.X), localPos.Y, localPos.Z)
+		elseif normal.Y ~= 0 then
+			localPos = Vector3.new(localPos.X, math.sign(normal.Y) * half.Y + (0.01 * normal.Y), localPos.Z)
+		else
+			localPos = Vector3.new(localPos.X, localPos.Y, math.sign(normal.Z) * half.Z + (0.01 * normal.Z))
+		end
+		
+		local worldPos = primaryPart.CFrame:PointToWorldSpace(localPos)
+		local tangentA = (math.abs(normal.Y) == 1) and Vector3.new(1, 0, 0) or Vector3.new(0, 1, 0)
+		local tangent = (tangentA:Cross(normal)).Unit
+		local angle = math.random() * math.pi
+		local dir = (tangent * math.cos(angle) + normal:Cross(tangent) * math.sin(angle)).Unit
+		
+		line.CFrame = CFrame.lookAt(worldPos, worldPos + dir) * CFrame.new(line.Size.X * -0.5, 0, 0)
+		createWeld(line)
+	end
+	
+	local function addChip()
+		local chip = Instance.new("WedgePart")
+		chip.Name = "Chip"
+		chip.Anchored = false
+		chip.CanCollide = false
+		chip.CanQuery = false
+		chip.CanTouch = false
+		chip.Material = primaryPart.Material
+		chip.Color = primaryPart.Color:lerp(Color3.new(1,1,1), 0.2)
+		chip.Transparency = 0.1
+		chip.Size = Vector3.new(0.2 + math.random() * 0.2, 0.1 + math.random() * 0.15, 0.2 + math.random() * 0.2)
+		chip.Parent = overlayFolder
+		
+		local size = primaryPart.Size
+		local faceIndex = math.random(1, 6)
+		local normalVecs = {
+			Vector3.new(0, 1, 0),
+			Vector3.new(0, -1, 0),
+			Vector3.new(1, 0, 0),
+			Vector3.new(-1, 0, 0),
+			Vector3.new(0, 0, 1),
+			Vector3.new(0, 0, -1),
+		}
+		local normal = normalVecs[faceIndex]
+		local half = size * 0.5
+		local localPos = Vector3.new(
+			(math.random() - 0.5) * (size.X - 0.2),
+			(math.random() - 0.5) * (size.Y - 0.2),
+			(math.random() - 0.5) * (size.Z - 0.2)
+		)
+		if normal.X ~= 0 then
+			localPos = Vector3.new(math.sign(normal.X) * half.X + (0.01 * normal.X), localPos.Y, localPos.Z)
+		elseif normal.Y ~= 0 then
+			localPos = Vector3.new(localPos.X, math.sign(normal.Y) * half.Y + (0.01 * normal.Y), localPos.Z)
+		else
+			localPos = Vector3.new(localPos.X, localPos.Y, math.sign(normal.Z) * half.Z + (0.01 * normal.Z))
+		end
+		local worldPos = primaryPart.CFrame:PointToWorldSpace(localPos)
+		chip.CFrame = CFrame.new(worldPos) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
+		createWeld(chip)
+	end
+	
+	if self.CrackStage == 0 then
+		-- No overlays
+	elseif self.CrackStage == 1 then
+		for i = 1, math.random(4, 6) do
+			addCrackLine(0.8 + math.random() * 2.0)
+		end
+	elseif self.CrackStage == 2 then
+		for i = 1, math.random(10, 14) do
+			addCrackLine(0.8 + math.random() * 2.5)
+		end
+		for i = 1, math.random(2, 4) do
+			addChip()
 		end
 	end
 	
-	-- If no stage models exist, try alternative methods
-	if not self.Model:FindFirstChild(stageNames[0]) then
-		-- Method 2: Adjust transparency based on damage
-		local primaryPart = self.Model.PrimaryPart or self.Model:FindFirstChildWhichIsA("BasePart")
-		if primaryPart then
-			-- Make more transparent as damaged
-			local damageRatio = 1 - (self.Health / self.MaxHealth)
-			primaryPart.Transparency = math.min(0.5, damageRatio * 0.5)
-			
-			-- Add crack decal if possible (stub)
-			if self.CrackStage > 0 and not primaryPart:FindFirstChild("CrackDecal") then
-				if LootConfig.DEBUG_MODE then
-					print(string.format("Would add crack decal stage %d to crate", self.CrackStage))
-				end
-			end
-		end
-		
-		-- Log what visual update would happen
-		if LootConfig.DEBUG_MODE then
-			print(string.format("Updated crate visuals to stage %d (HP: %d/%d)", 
-				self.CrackStage, self.Health, self.MaxHealth))
-		end
+	if LootConfig.DEBUG_MODE then
+		print(string.format("Updated crate overlays to stage %d (HP: %d/%d)", self.CrackStage, self.Health, self.MaxHealth))
 	end
 end
 
 -- Play crack sound effect
 function BreakableCrate:PlayCrackSound()
-	-- TODO: Play crack sound effect
-	if LootConfig.DEBUG_MODE then
-		print("Would play crack SFX for stage:", self.CrackStage)
-	end
-	
-	-- Stub implementation - create a sound object that would play
-	local sound = Instance.new("Sound")
-	sound.Name = "CrackSound"
-	sound.Volume = 0.5
-	sound.SoundId = "rbxasset://sounds/impact_water_low.mp3" -- Placeholder sound
-	sound.Parent = self.Model.PrimaryPart or self.Model:FindFirstChildWhichIsA("BasePart")
-	
-	-- Don't actually play in stub
-	if false then
+	-- Optionally play a small crack sound if present as a child
+	local sound = self.Model:FindFirstChild("CrackSound")
+	if sound and sound:IsA("Sound") then
 		sound:Play()
-		Debris:AddItem(sound, 2)
 	end
 end
 
@@ -210,7 +290,13 @@ function BreakableCrate:Break(source: any?)
 		print(string.format("Crate %s broken!", self.Model.Name))
 	end
 	
-	-- Play break effects
+	-- 1) Play break sound if provided by authoring
+	local breakSound = self.Model:FindFirstChild("BreakSound")
+	if breakSound and breakSound:IsA("Sound") then
+		breakSound:Play()
+	end
+	
+	-- 2) Play procedural break effects (shatter)
 	self:PlayBreakEffects()
 	
 	-- Roll and drop loot
@@ -226,47 +312,46 @@ function BreakableCrate:Break(source: any?)
 		self.DamageService:UnregisterDamageable(self.Model)
 	end
 	
+	-- Remove the crate after effects
 	BreakableCrate.ActiveCrates[self.Model] = nil
+	if self.Model and self.Model.Parent then
+		self.Model:Destroy()
+	end
 end
 
 -- Play break effects
 function BreakableCrate:PlayBreakEffects()
-	-- TODO: Play break sound effect
-	if LootConfig.DEBUG_MODE then
-		print("Would play break SFX and VFX")
+	local primaryPart = self.Model.PrimaryPart or self.Model:FindFirstChildWhichIsA("BasePart")
+	if not primaryPart then
+		return
 	end
 	
-	-- Stub implementation - create effects that would play
-	local primaryPart = self.Model.PrimaryPart or self.Model:FindFirstChildWhichIsA("BasePart")
-	if primaryPart then
-		-- Sound effect
-		local sound = Instance.new("Sound")
-		sound.Name = "BreakSound"
-		sound.Volume = 1
-		sound.SoundId = "rbxasset://sounds/impact_wood_low.mp3" -- Placeholder sound
-		sound.Parent = primaryPart
+	-- Simple shatter: spawn small shards that fly outwards briefly
+	local shardCount = math.random(10, 16)
+	for i = 1, shardCount do
+		local shard = Instance.new("WedgePart")
+		shard.Name = "Shard"
+		shard.Size = Vector3.new(0.25 + math.random() * 0.25, 0.15 + math.random() * 0.2, 0.25 + math.random() * 0.25)
+		shard.Material = primaryPart.Material
+		shard.Color = primaryPart.Color
+		shard.CanCollide = false
+		shard.CanQuery = false
+		shard.CanTouch = false
+		shard.Anchored = false
+		shard.CFrame = primaryPart.CFrame * CFrame.new(
+			(math.random() - 0.5) * (primaryPart.Size.X * 0.4),
+			(math.random() - 0.5) * (primaryPart.Size.Y * 0.4),
+			(math.random() - 0.5) * (primaryPart.Size.Z * 0.4)
+		) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
+		shard.Parent = workspace
 		
-		-- Particle effect (stub)
-		local attachment = Instance.new("Attachment")
-		attachment.Parent = primaryPart
+		-- Give it an outward impulse
+		local dir = (shard.Position - primaryPart.Position).Unit
+		local speed = 20 + math.random() * 25
+		shard.AssemblyLinearVelocity = dir * speed + Vector3.new(0, 15 + math.random() * 10, 0)
+		shard.AssemblyAngularVelocity = Vector3.new(math.random() * 10, math.random() * 10, math.random() * 10)
 		
-		local particleEmitter = Instance.new("ParticleEmitter")
-		particleEmitter.Texture = "rbxasset://textures/particles/smoke_main.dds"
-		particleEmitter.Rate = 100
-		particleEmitter.Lifetime = NumberRange.new(0.5, 1)
-		particleEmitter.Speed = NumberRange.new(5, 10)
-		particleEmitter.SpreadAngle = Vector2.new(45, 45)
-		particleEmitter.Parent = attachment
-		
-		-- Don't actually play in stub
-		if false then
-			sound:Play()
-			particleEmitter.Enabled = true
-			task.wait(0.1)
-			particleEmitter.Enabled = false
-			Debris:AddItem(attachment, 2)
-			Debris:AddItem(sound, 2)
-		end
+		Debris:AddItem(shard, 2)
 	end
 end
 

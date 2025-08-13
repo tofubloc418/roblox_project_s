@@ -6,6 +6,7 @@
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local Players = game:GetService("Players")
 
 -- Shared modules
 local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
@@ -180,31 +181,98 @@ end
 
 -- Setup pickup interaction (stub)
 function DropFactory:SetupPickupInteraction(dropModel: Instance)
-	-- TODO: Add ProximityPrompt or ClickDetector for pickup
-	-- TODO: Connect to inventory system
+	-- Auto-pickup when a player walks very close to the drop
+	local primaryPart
+	if dropModel:IsA("Model") then
+		primaryPart = dropModel.PrimaryPart or dropModel:FindFirstChildWhichIsA("BasePart")
+	elseif dropModel:IsA("BasePart") then
+		primaryPart = dropModel
+	end
+	if not primaryPart then
+		return
+	end
+
+	-- Ensure touch events are permitted
+	primaryPart.CanTouch = true
+
+	-- Helper to resolve a player from a touched part
+	local function getPlayerFromHit(hit: BasePart): Player?
+		local model = hit:FindFirstAncestorOfClass("Model")
+		if model then
+			return Players:GetPlayerFromCharacter(model)
+		end
+		return nil
+	end
+
+	-- Fast path: pick up on physical contact
+	primaryPart.Touched:Connect(function(hit)
+		if dropModel.Parent and not dropModel:GetAttribute("PickedUp") then
+			local player = getPlayerFromHit(hit)
+			if player then
+				dropModel:SetAttribute("PickedUp", true)
+				self:Pickup(dropModel, player)
+			end
+		end
+	end)
+
+	-- Poll nearby players and auto-pickup when within small radius
+	task.spawn(function()
+		local pickupRadius = 3.0 -- very close, practically on top
+		while dropModel.Parent do
+			task.wait(0.1)
+			if dropModel:GetAttribute("PickedUp") then
+				break
+			end
+			for _, player in ipairs(Players:GetPlayers()) do
+				local char = player.Character
+				local hrp = char and (char:FindFirstChild("HumanoidRootPart") :: any) or (char and char.PrimaryPart)
+				if hrp and (hrp.Position - primaryPart.Position).Magnitude <= pickupRadius then
+					if not dropModel:GetAttribute("PickedUp") then
+						dropModel:SetAttribute("PickedUp", true)
+						self:Pickup(dropModel, player)
+					end
+					return
+				end
+			end
+		end
+	end)
+end
+
+-- Minimal inventory pickup: adds count to a simple per-player Inventory folder
+function DropFactory:Pickup(dropModel: Instance, player: Player)
+	local itemId = dropModel:GetAttribute("ItemId")
+	local stackCount = dropModel:GetAttribute("StackCount") or 1
+	
+	local inventory = player:FindFirstChild("Inventory")
+	if not inventory then
+		inventory = Instance.new("Folder")
+		inventory.Name = "Inventory"
+		inventory.Parent = player
+	end
+	
+	local itemFolder = inventory:FindFirstChild(itemId)
+	if not itemFolder then
+		itemFolder = Instance.new("Folder")
+		itemFolder.Name = tostring(itemId or "unknown")
+		itemFolder.Parent = inventory
+		local countValue = Instance.new("IntValue")
+		countValue.Name = "Count"
+		countValue.Value = 0
+		countValue.Parent = itemFolder
+	end
+	
+	local countValue = itemFolder:FindFirstChild("Count")
+	if countValue then
+		countValue.Value = countValue.Value + stackCount
+	end
 	
 	if LootConfig.DEBUG_MODE then
-		-- Add a simple click detector for testing
-		local clickDetector = Instance.new("ClickDetector")
-		clickDetector.MaxActivationDistance = 10
-		
-		clickDetector.MouseClick:Connect(function(player)
-			local itemId = dropModel:GetAttribute("ItemId")
-			local stackCount = dropModel:GetAttribute("StackCount")
-			
-			print(string.format("Player %s picked up %s x%d", 
-				player.Name, itemId or "unknown", stackCount or 1))
-			
-			-- Remove the drop (in real implementation, add to inventory first)
-			dropModel:Destroy()
-		end)
-		
-		if dropModel:IsA("Model") then
-			clickDetector.Parent = dropModel.PrimaryPart or dropModel:FindFirstChildWhichIsA("BasePart")
-		else
-			clickDetector.Parent = dropModel
-		end
+		print(string.format("Player %s picked up %s x%d (total now %d)",
+			player.Name, itemId or "unknown", stackCount,
+			(countValue and countValue.Value) or stackCount))
 	end
+	
+	dropModel:Destroy()
 end
 
 -- Clear all dropped items (for round reset)

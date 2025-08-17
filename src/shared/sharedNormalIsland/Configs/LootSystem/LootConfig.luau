@@ -67,11 +67,6 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Categories.ATTACHMENT] = 5,
 		},
 		BundleRuleId = "Small",
-		DamageResistance = {
-			["Melee"] = 0.5, -- Fists do 50% damage
-			["Bullet"] = 1.0,
-			["Explosive"] = 1.5, -- Explosives do 150% damage
-		},
 		MaxHealth = 100,
 	},
 	
@@ -187,42 +182,7 @@ LootConfig.CrateTypes = {
 			count = 1,
 		},
 		MaxHealth = 200,
-		DamageResistance = {
-			["Melee"] = 0.2, -- Very resistant to melee
-			["Bullet"] = 0.8,
-			["Explosive"] = 1.2,
-		},
 	},
-}
-
--- Global caps for legendary items per match (optional)
-LootConfig.GlobalCaps = {
-	[ItemDefinitions.Rarities.LEGENDARY] = {
-		[ItemDefinitions.Categories.GUN] = 3, -- Max 3 legendary guns per match
-		[ItemDefinitions.Categories.ARMOR] = 5, -- Max 5 legendary armor pieces
-	},
-}
-
--- Spawn configuration for procedural generation
-LootConfig.SpawnSettings = {
-	-- How many crates of each type to spawn
-	CrateDistribution = {
-		["Normal"] = {min = 15, max = 25},
-		["NormalPlus"] = {min = 5, max = 10},
-		["WeaponCrate"] = {min = 3, max = 6},
-		["GrenadeBox"] = {min = 4, max = 8},
-		["MedicalCrate"] = {min = 4, max = 8},
-		["Elite"] = {min = 1, max = 2},
-	},
-	
-	-- Minimum distance between crates
-	MinSeparation = 10, -- studs
-	
-	-- Height above ground to spawn
-	SpawnHeight = 2,
-	
-	-- Maximum attempts to find valid spawn position
-	MaxSpawnAttempts = 50,
 }
 
 -- Helper function to get crate configuration

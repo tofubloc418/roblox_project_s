@@ -42,7 +42,24 @@ function BreakableCrate:RegisterCrate(crateModel: Model, lootBoxService, damageS
 		return BreakableCrate.ActiveCrates[crateModel]
 	end
 	
-	-- Create new component
+	-- Assign attributes from LootConfig before component construction
+	local crateType = crateModel:GetAttribute("CrateType") or "Normal"
+	local crateCfg = LootConfig.GetCrateConfig(crateType)
+	if crateCfg then
+		crateModel:SetAttribute("CrateId", crateModel:GetAttribute("CrateId") or ("manual_" .. crateModel:GetFullName()))
+		crateModel:SetAttribute("MaxHealth", crateCfg.MaxHealth or 100)
+		crateModel:SetAttribute("Health", crateCfg.MaxHealth or 100)
+		crateModel:SetAttribute("CrackStage", crateModel:GetAttribute("CrackStage") or 0)
+		crateModel:SetAttribute("BundleRuleId", crateCfg.BundleRuleId or "Small")
+		if crateCfg.Whitelist then
+			crateModel:SetAttribute("Whitelist", game:GetService("HttpService"):JSONEncode(crateCfg.Whitelist))
+		end
+		if crateCfg.GuaranteeAtLeast then
+			crateModel:SetAttribute("GuaranteeAtLeast", game:GetService("HttpService"):JSONEncode(crateCfg.GuaranteeAtLeast))
+		end
+	end
+
+	-- Create new component after attributes are set
 	local component = BreakableCrate.new(crateModel)
 	component.LootBoxService = lootBoxService
 	component.DamageService = damageService
@@ -81,7 +98,6 @@ function BreakableCrate:TakeDamage(damage: number, source: any?)
 		return
 	end
 	
-	-- Apply damage
 	local oldHealth = self.Health
 	self.Health = math.max(0, self.Health - damage)
 	self.Model:SetAttribute("Health", self.Health)

@@ -3,7 +3,6 @@
 	Server-side service for rolling and dropping loot from crates
 ]]
 
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 -- Shared modules
@@ -15,9 +14,6 @@ local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChil
 
 local LootBoxService = {}
 LootBoxService.__index = LootBoxService
-
--- Track global caps
-local globalDropCounts = {}
 
 function LootBoxService.new()
 	local self = setmetatable({}, LootBoxService)
@@ -31,7 +27,6 @@ end
 -- Initialize the service
 function LootBoxService:Initialize(dropFactory)
 	self.DropFactory = dropFactory
-	globalDropCounts = {} -- Reset global counts
 	
 	if LootConfig.DEBUG_MODE then
 		print("LootBoxService initialized")
@@ -183,31 +178,22 @@ function LootBoxService:RollRarity(crateConfig, rng: Random): string?
 		return ItemDefinitions.Rarities.COMMON
 	end
 	
-	-- Calculate total weight
 	local totalWeight = 0
 	for _, weight in pairs(rarityWeights) do
 		totalWeight = totalWeight + weight
 	end
-	
 	if totalWeight <= 0 then
 		return ItemDefinitions.Rarities.COMMON
 	end
 	
-	-- Roll
 	local roll = rng:NextNumber() * totalWeight
 	local currentWeight = 0
-	
 	for rarity, weight in pairs(rarityWeights) do
 		currentWeight = currentWeight + weight
 		if roll <= currentWeight then
-			-- Check global caps if applicable
-			if self:CheckGlobalCap(rarity) then
-				return rarity
-			end
+			return rarity
 		end
 	end
-	
-	-- Fallback
 	return ItemDefinitions.Rarities.COMMON
 end
 
@@ -230,31 +216,38 @@ function LootBoxService:RollItem(category: string, rarity: string, crateConfig, 
 	end
 	
 	-- Use pool weights
-	return LootPools.GetWeightedRandomItem(category, rarity, rng)
+	local itemId = LootPools.GetWeightedRandomItem(category, rarity, rng)
+	if not itemId then
+		-- Fallback: pick any random item from the database
+		itemId = self:GetAnyRandomItem(rng)
+		if LootConfig.DEBUG_MODE and itemId then
+			print(string.format("[LootSpawn] Fallback selected item '%s'", tostring(itemId)))
+		end
+	end
+	return itemId
 end
 
--- Check if global cap allows this rarity
-function LootBoxService:CheckGlobalCap(rarity: string): boolean
-	if not LootConfig.GlobalCaps or not LootConfig.GlobalCaps[rarity] then
-		return true -- No cap
+-- Fallback: random item from entire database (weighted by item.weight if present)
+function LootBoxService:GetAnyRandomItem(rng: Random): string?
+	local entries = {}
+	local totalWeight = 0
+	for id, def in pairs(ItemDefinitions.Items) do
+		local w = (def and def.weight) or 1
+		totalWeight = totalWeight + w
+		table.insert(entries, { id = id, weight = w })
 	end
-	
-	local cap = LootConfig.GlobalCaps[rarity]
-	local count = globalDropCounts[rarity] or 0
-	
-	-- Check if we've hit the cap
-	local totalCap = 0
-	for _, maxCount in pairs(cap) do
-		totalCap = totalCap + maxCount
+	if totalWeight <= 0 or #entries == 0 then
+		return nil
 	end
-	
-	if count >= totalCap then
-		return false
+	local roll = rng:NextNumber() * totalWeight
+	local acc = 0
+	for _, e in ipairs(entries) do
+		acc = acc + e.weight
+		if roll <= acc then
+			return e.id
+		end
 	end
-	
-	-- Increment counter
-	globalDropCounts[rarity] = count + 1
-	return true
+	return entries[1].id
 end
 
 -- Play break effects (stub)

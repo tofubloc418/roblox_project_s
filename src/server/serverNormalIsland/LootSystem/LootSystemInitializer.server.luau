@@ -46,6 +46,10 @@ LootSpawnService.BreakableCrateComponent = {
 -- Register existing crates in workspace
 BreakableCrate.RegisterExistingCrates(LootBoxService, DamageService)
 
+-- Trigger procedural crate spawning on init
+local spawnedOnInit = LootSpawnService:SpawnCratesForRound()
+print(string.format("[LootSpawn] Spawned %d crates on init", spawnedOnInit))
+
 -- Listen for new crates added to workspace
 workspace.DescendantAdded:Connect(function(descendant)
 	if descendant:IsA("Model") and descendant:GetAttribute("CrateType") then
@@ -80,7 +84,7 @@ if LootConfig.DEBUG_MODE then
 							end
 						end
 						if nearest and nearestDist < 25 then
-							DamageService:ApplyDamage(nearest, damage, player, "Test")
+							DamageService:ApplyDamage(nearest, damage, player)
 							print(string.format("Applied %d test damage to %s", damage, nearest.Name))
 						else
 							warn("No nearby crate to damage")

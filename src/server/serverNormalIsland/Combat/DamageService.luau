@@ -46,7 +46,7 @@ function DamageService:UnregisterDamageable(object: Instance)
 end
 
 -- Apply damage to an object
-function DamageService:ApplyDamage(target: Instance, amount: number, source: any?, damageType: string?)
+function DamageService:ApplyDamage(target: Instance, amount: number, source: any?)
 	-- Validate target
 	local registryEntry = self.DamageableRegistry[target]
 	if not registryEntry then

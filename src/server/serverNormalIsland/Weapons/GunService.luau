@@ -46,12 +46,18 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 	local handle = tool:FindFirstChild("Handle")
 	if not handle then return end
 	
-	-- Get gun config
-	local gunName = tool.Name
-	local config = GunConfigs[gunName]
+	-- Get gun config (try both tool name and ItemId attribute)
+	local gunName = tool:GetAttribute("ItemId") or tool.Name
+	local config = GunConfigs[gunName] or GunConfigs[tool.Name]
 	if not config then
 		warn("No config found for gun:", gunName)
 		return
+	end
+	
+	-- Check ammo
+	local currentAmmo = tool:GetAttribute("CurrentAmmo")
+	if not currentAmmo or currentAmmo <= 0 then
+		return -- No ammo
 	end
 	
 	-- Check cooldown
@@ -69,6 +75,9 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 		self.playerCooldowns[playerId] = {}
 	end
 	self.playerCooldowns[playerId][gunName] = now
+	
+	-- Deduct ammo on server
+	tool:SetAttribute("CurrentAmmo", currentAmmo - 1)
 	
 	-- Eject shell
 	self:EjectShell(handle, config)

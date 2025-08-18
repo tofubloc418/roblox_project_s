@@ -77,7 +77,6 @@ end
 
 -- Handle inventory updates from server
 updateInventory.OnClientEvent:Connect(function(newData: InventoryData)
-
 	inventoryData = newData
 	render()
 end)

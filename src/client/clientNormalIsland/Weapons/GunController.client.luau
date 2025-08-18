@@ -18,7 +18,6 @@ function GunController.new()
 	local self = setmetatable({}, GunController)
 	self.equippedTool = nil
 	self.config = nil
-	self.ammo = 0
 	self.reloading = false
 	self.shooting = false
 	self.lastShot = 0
@@ -54,8 +53,18 @@ end
 
 function GunController:EquipGun(tool: Tool)
 	self.equippedTool = tool
-	self.config = GunConfigs[tool.Name]
-	self.ammo = self.config.magazineCapacity
+	local itemId = tool:GetAttribute("ItemId")
+	self.config = GunConfigs[tool.Name] or (itemId and GunConfigs[itemId])
+	if not self.config then
+		warn("No gun config found for", tool.Name)
+		return
+	end
+	
+	-- Initialize CurrentAmmo attribute if not set
+	if not tool:GetAttribute("CurrentAmmo") then
+		tool:SetAttribute("CurrentAmmo", self.config.magazineCapacity)
+	end
+	
 	self.reloading = false
 	self.shooting = false
 	
@@ -65,12 +74,14 @@ function GunController:EquipGun(tool: Tool)
 	end
 	
 	-- Play equip sound
-	local equipSound = tool:FindFirstChild("Sounds") and tool.Sounds:FindFirstChild("Gun Equip")
+	local sounds = tool:FindFirstChild("Sounds")
+	local equipSound = sounds and sounds:FindFirstChild("Gun Equip")
 	if equipSound then
 		equipSound:Play()
 	end
 	
-	print(string.format("[Gun] Equipped %s - Ammo: %d/%d", tool.Name, self.ammo, self.config.magazineCapacity))
+	local currentAmmo = tool:GetAttribute("CurrentAmmo") or 0
+	print(string.format("[Gun] Equipped %s - Ammo: %d/%d", tool.Name, currentAmmo, self.config.magazineCapacity))
 	
 	-- Setup shooting
 	if self.config.auto then
@@ -124,16 +135,19 @@ function GunController:Fire()
 		return
 	end
 	
-	-- Check ammo
-	if self.ammo <= 0 then
+	-- Check ammo from tool attribute
+	local currentAmmo = self.equippedTool:GetAttribute("CurrentAmmo") or 0
+	if currentAmmo <= 0 then
 		self:Reload()
 		return
 	end
 	
 	self.lastShot = now
-	self.ammo = self.ammo - 1
+	-- Update ammo attribute
+	self.equippedTool:SetAttribute("CurrentAmmo", currentAmmo - 1)
+	currentAmmo = currentAmmo - 1
 	
-	print(string.format("[Gun] Fired - Ammo: %d/%d", self.ammo, self.config.magazineCapacity))
+	print(string.format("[Gun] Fired - Ammo: %d/%d", currentAmmo, self.config.magazineCapacity))
 	
 	-- Get mouse position
 	local mouse = player:GetMouse()
@@ -148,7 +162,8 @@ function GunController:Fire()
 	fireGun:FireServer(self.equippedTool, mousePosition)
 	
 	-- Play shot sound
-	local shotSound = self.equippedTool:FindFirstChild("Sounds") and self.equippedTool.Sounds:FindFirstChild("Gun Shot")
+	local sounds = self.equippedTool:FindFirstChild("Sounds")
+	local shotSound = sounds and sounds:FindFirstChild("Gun Shot")
 	if shotSound then
 		shotSound:Play()
 	end
@@ -164,7 +179,7 @@ function GunController:Fire()
 	end
 	
 	-- Auto reload if empty
-	if self.ammo <= 0 then
+	if currentAmmo <= 0 then
 		task.wait(0.1)
 		self:Reload()
 	end
@@ -190,13 +205,16 @@ end
 function GunController:Reload()
 	if not self.equippedTool or not self.config then return end
 	if self.reloading then return end
-	if self.ammo >= self.config.magazineCapacity then return end
+	
+	local currentAmmo = self.equippedTool:GetAttribute("CurrentAmmo") or 0
+	if currentAmmo >= self.config.magazineCapacity then return end
 	
 	self.reloading = true
 	print(string.format("[Gun] Reloading %s...", self.equippedTool.Name))
 	
 	-- Play reload sound
-	local reloadSound = self.equippedTool:FindFirstChild("Sounds") and self.equippedTool.Sounds:FindFirstChild("Gun Reload")
+	local sounds = self.equippedTool:FindFirstChild("Sounds")
+	local reloadSound = sounds and sounds:FindFirstChild("Gun Reload")
 	if reloadSound then
 		reloadSound:Play()
 	end
@@ -207,9 +225,10 @@ function GunController:Reload()
 	task.wait(self.config.reloadTime)
 	
 	if self.equippedTool then -- Check tool is still equipped
-		self.ammo = self.config.magazineCapacity
+		-- Reset ammo to full magazine
+		self.equippedTool:SetAttribute("CurrentAmmo", self.config.magazineCapacity)
 		self.reloading = false
-		print(string.format("[Gun] Reloaded - Ammo: %d/%d", self.ammo, self.config.magazineCapacity))
+		print(string.format("[Gun] Reloaded - Ammo: %d/%d", self.config.magazineCapacity, self.config.magazineCapacity))
 	end
 end
 

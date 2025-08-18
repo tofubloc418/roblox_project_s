@@ -36,61 +36,71 @@ function DropFactory:Initialize(inventoryService)
 end
 
 -- Spawn a dropped item
-function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vector3, impulse: Vector3?)
+function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vector3, impulse: Vector3?, existingTool: Tool?)
 	local itemData = ItemDefinitions.GetItem(itemId)
 	if not itemData then
 		warn("Invalid item ID for drop:", itemId)
 		return nil
 	end
 	
-	local prefab = self:GetItemPrefab(itemId)
-	if not prefab then
-		warn(string.format("No prefab found for item '%s'; skipping spawn", tostring(itemId)))
-		return nil
-	end
-	
 	local dropModel: Instance
 	
-	-- For Tools, clone directly (no wrapper needed for gun system)
-	if prefab:IsA("Tool") then
-		dropModel = prefab:Clone()
-		-- Clear any attributes from the prefab
-		dropModel:SetAttribute("StackCount", nil)
-		dropModel:SetAttribute("StackMax", nil)
-		dropModel:SetAttribute("ItemId", nil)
+	-- If we have an existing tool (from player dropping), use it
+	if existingTool then
+		dropModel = existingTool
+		-- Clear the slot index as it's no longer in inventory
+		dropModel:SetAttribute("SlotIndex", nil)
 	else
-		-- Wrap non-Tool items in a Model to prevent auto-pickup
-		local itemClone = prefab:Clone()
-		local wrapper = Instance.new("Model")
-		wrapper.Name = itemClone.Name .. "_Pickup"
-		
-		-- Parent item to wrapper
-		itemClone.Parent = wrapper
-		
-		-- Set wrapper's PrimaryPart for positioning
-		if itemClone:IsA("BasePart") then
-			wrapper.PrimaryPart = itemClone
-		else
-			local primaryPart = itemClone:FindFirstChildWhichIsA("BasePart")
-			if primaryPart then
-				wrapper.PrimaryPart = primaryPart
-			end
+		-- Create new tool from prefab
+		local prefab = self:GetItemPrefab(itemId)
+		if not prefab then
+			warn(string.format("No prefab found for item '%s'; skipping spawn", tostring(itemId)))
+			return nil
 		end
 		
-		dropModel = wrapper
+		if prefab:IsA("Tool") then
+			dropModel = prefab:Clone()
+		else
+			-- Convert Model to Tool
+			local tool = Instance.new("Tool")
+			tool.Name = itemData.displayName or itemId
+			tool.RequiresHandle = true
+			
+			local clone = prefab:Clone()
+			for _, child in ipairs(clone:GetChildren()) do
+				child.Parent = tool
+				if child:IsA("BasePart") and child.Name == "Handle" then
+					-- Good, already has handle
+				elseif child:IsA("BasePart") and not tool:FindFirstChild("Handle") then
+					child.Name = "Handle"
+				end
+			end
+			clone:Destroy()
+			
+			dropModel = tool
+		end
+		
+		-- Set attributes for new drops
+		dropModel:SetAttribute("ItemId", itemId)
+		dropModel:SetAttribute("CurrentStack", stackCount)
+		dropModel:SetAttribute("MaxStack", itemData.stackMax or 1)
+		
+		-- For guns, initialize ammo if not set
+		local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
+		local gunConfig = GunConfigs[itemId]
+		if gunConfig and not dropModel:GetAttribute("CurrentAmmo") then
+			dropModel:SetAttribute("CurrentAmmo", gunConfig.magazineCapacity)
+		end
 	end
 
 	-- Position the drop
-	if dropModel:IsA("Model") then
+	if dropModel:IsA("Model") or dropModel:IsA("Tool") then
 		dropModel:PivotTo(CFrame.new(position + Vector3.new(0, 1, 0)))
 	elseif dropModel:IsA("BasePart") then
 		dropModel.Position = position + Vector3.new(0, 1, 0)
 	end
 	
-	-- Set attributes on the wrapper/model
-	dropModel:SetAttribute("ItemId", itemId)
-	dropModel:SetAttribute("StackCount", stackCount)
-	dropModel:SetAttribute("StackMax", (itemData and itemData.stackMax) or 1)
+	-- Mark as pickup
 	dropModel:SetAttribute("IsPickup", true)
 	
 	if impulse then
@@ -99,7 +109,7 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	
 	dropModel.Parent = self.DroppedItemsContainer
 	
-	-- Setup pickup for all drops (Tools are now wrapped in Models)
+	-- Setup pickup interaction
 	self:SetupPickupInteraction(dropModel)
 	
 	return dropModel
@@ -240,26 +250,102 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	end)
 end
 
--- Simplified inventory pickup
+-- Pickup handling for new backpack system
 function DropFactory:Pickup(dropModel: Instance, player: Player)
-	local itemId = dropModel:GetAttribute("ItemId") or "unknown"
-	local pickupCount = dropModel:GetAttribute("StackCount") or 1
+	local itemId = dropModel:GetAttribute("ItemId") or dropModel.Name
+	local pickupCount = dropModel:GetAttribute("CurrentStack") or dropModel:GetAttribute("StackCount") or 1
 	
-
-	
-	-- Use the new inventory service
 	local InventoryService = self.InventoryService
-	if InventoryService then
-		local success = InventoryService:AddItem(player, itemId, pickupCount)
-		if not success then
-
-		end
-	else
-
+	if not InventoryService then
+		warn("InventoryService not initialized")
+		return
 	end
 	
-	-- Destroy the pickup
-	dropModel:Destroy()
+	-- If it's already a tool, we can potentially reuse it
+	if dropModel:IsA("Tool") then
+		local backpack = player:FindFirstChild("Backpack")
+		if not backpack then return end
+		
+		local itemData = ItemDefinitions.GetItem(itemId)
+		local maxStack = (itemData and itemData.stackMax) or 1
+		
+		-- Check if we can stack with existing items
+		local stacked = false
+		for _, tool in ipairs(backpack:GetChildren()) do
+			if tool:IsA("Tool") and tool:GetAttribute("ItemId") == itemId then
+				local currentStack = tool:GetAttribute("CurrentStack") or 1
+				local toolMaxStack = tool:GetAttribute("MaxStack") or maxStack
+				
+				if currentStack < toolMaxStack then
+					local space = toolMaxStack - currentStack
+					local toAdd = math.min(space, pickupCount)
+					
+					tool:SetAttribute("CurrentStack", currentStack + toAdd)
+					pickupCount = pickupCount - toAdd
+					
+					if pickupCount <= 0 then
+						stacked = true
+						break
+					end
+				end
+			end
+		end
+		
+		-- If we still have items to add, find an empty slot
+		if pickupCount > 0 then
+			-- Find used slots
+			local usedSlots = {}
+			for _, tool in ipairs(backpack:GetChildren()) do
+				if tool:IsA("Tool") then
+					local slot = tool:GetAttribute("SlotIndex")
+					if slot then
+						usedSlots[slot] = true
+					end
+				end
+			end
+			
+			-- Check character for equipped tools
+			local character = player.Character
+			if character then
+				for _, tool in ipairs(character:GetChildren()) do
+					if tool:IsA("Tool") then
+						local slot = tool:GetAttribute("SlotIndex")
+						if slot then
+							usedSlots[slot] = true
+						end
+					end
+				end
+			end
+			
+			-- Find empty slot
+			for slot = 1, 15 do
+				if not usedSlots[slot] then
+					-- Use the existing tool
+					dropModel:SetAttribute("SlotIndex", slot)
+					dropModel:SetAttribute("CurrentStack", pickupCount)
+					dropModel:SetAttribute("IsPickup", false)
+					dropModel.Parent = backpack
+					
+					-- Sync inventory
+					InventoryService:SyncInventory(player)
+					return
+				end
+			end
+			
+			-- No space available
+			return
+		end
+		
+		-- If fully stacked, destroy the pickup
+		dropModel:Destroy()
+		InventoryService:SyncInventory(player)
+	else
+		-- Not a tool, use the regular AddItem method
+		local success = InventoryService:AddItem(player, itemId, pickupCount)
+		if success then
+			dropModel:Destroy()
+		end
+	end
 end
 
 -- Clear all dropped items (for round reset)

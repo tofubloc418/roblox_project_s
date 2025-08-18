@@ -66,7 +66,7 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Categories.ARMOR] = 15,
 			[ItemDefinitions.Categories.ATTACHMENT] = 5,
 		},
-		BundleRuleId = "Small",
+		BundleCount = 1,
 		MaxHealth = 100,
 	},
 	
@@ -95,7 +95,7 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Categories.ARMOR] = 15,
 			[ItemDefinitions.Categories.ATTACHMENT] = 10,
 		},
-		BundleRuleId = "Medium",
+		BundleCount = 2,
 		MaxHealth = 150,
 	},
 	
@@ -118,7 +118,7 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Categories.AMMO] = 40,
 			[ItemDefinitions.Categories.ATTACHMENT] = 20,
 		},
-		BundleRuleId = "SingleWithAmmo",
+		BundleCount = 1,
 		GuaranteeAtLeast = {
 			category = ItemDefinitions.Categories.GUN,
 			count = 1,
@@ -136,7 +136,7 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Rarities.EPIC] = 0,
 			[ItemDefinitions.Rarities.LEGENDARY] = 0,
 		},
-		BundleRuleId = "GrenadeBundle",
+		BundleCount = 1,
 		MaxHealth = 80,
 	},
 	
@@ -150,14 +150,14 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Rarities.EPIC] = 5,
 			[ItemDefinitions.Rarities.LEGENDARY] = 0,
 		},
-		BundleRuleId = "MedicalSupply",
+		BundleCount = 1,
 		MaxHealth = 80,
 	},
 	
 	-- Specific weapon crate (example: Mosin only)
 	["MosinOnly"] = {
 		Whitelist = {"mosin"},
-		BundleRuleId = "SingleWithAmmo",
+		BundleCount = 1,
 		MaxHealth = 100,
 	},
 	
@@ -176,7 +176,7 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Rarities.EPIC] = 30,
 			[ItemDefinitions.Rarities.LEGENDARY] = 10,
 		},
-		BundleRuleId = "GunLoadout",
+		BundleCount = 2,
 		GuaranteeAtLeast = {
 			rarity = ItemDefinitions.Rarities.RARE,
 			count = 1,

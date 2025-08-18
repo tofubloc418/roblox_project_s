@@ -19,17 +19,23 @@ local DropFactory = require(ServerModules:WaitForChild("DropFactory"))
 local LootSpawnService = require(ServerModules:WaitForChild("LootSpawnService"))
 local BreakableCrate = require(ServerModules:WaitForChild("BreakableCrate"))
 
+-- Inventory module
+local InventoryModules = script.Parent.Parent:WaitForChild("Inventory")
+local InventoryService = require(InventoryModules:WaitForChild("InventoryService"))
+
 -- Combat modules (DamageService is now in Combat folder)
 local CombatModules = script.Parent.Parent:WaitForChild("Combat")
 local DamageService = require(CombatModules:WaitForChild("DamageService"))
 
-print("Initializing Loot System...")
+print("[LootSystem] Initializing...")
 
 -- Initialize RoundState with a seed
 local roundState = RoundState.Current()
 roundState:Initialize()
 
 -- Initialize services
+InventoryService:Initialize()
+DropFactory:Initialize(InventoryService)
 LootBoxService:Initialize(DropFactory)
 LootSpawnService:Initialize(BreakableCrate)
 
@@ -85,7 +91,7 @@ if LootConfig.DEBUG_MODE then
 						end
 						if nearest and nearestDist < 25 then
 							DamageService:ApplyDamage(nearest, damage, player)
-							print(string.format("Applied %d test damage to %s", damage, nearest.Name))
+
 						else
 							warn("No nearby crate to damage")
 						end
@@ -132,7 +138,7 @@ local function onRoundStart()
 	print(string.format("Round started: Spawned %d crates", crateCount))
 end
 
-print("Loot System initialized successfully!")
+print("[LootSystem] Initialization complete")
 
 -- Export for other systems to use
 _G.LootSystem = {

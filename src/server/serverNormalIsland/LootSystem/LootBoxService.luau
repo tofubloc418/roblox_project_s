@@ -28,9 +28,7 @@ end
 function LootBoxService:Initialize(dropFactory)
 	self.DropFactory = dropFactory
 	
-	if LootConfig.DEBUG_MODE then
-		print("LootBoxService initialized")
-	end
+
 end
 
 -- Main API: Roll loot and drop it from a crate
@@ -60,10 +58,7 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 	-- Get drop position (at crate's position)
 	local dropPosition = crateModel:GetPivot().Position
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Rolling loot for crate [%s] type: %s at position: %s", 
-			crateId, crateType, tostring(dropPosition)))
-	end
+
 	
 	-- Roll for items
 	local rolledItems = {}
@@ -102,33 +97,42 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 		table.insert(rolledItems, item)
 	end
 	
-	-- Apply drop rules to get final drop list
-	local bundleRuleId = crateConfig.BundleRuleId or "Small"
+	-- Apply bundles: choose BundleCount bundles randomly
 	local drops = {}
-	
-	for _, itemId in ipairs(rolledItems) do
-		local bundleDrops = DropRules.ApplyRule(bundleRuleId, itemId, rng)
+	local bundleCount = crateConfig.BundleCount or 1
+	for iBundle = 1, bundleCount do
+		local primary = rolledItems[1]
+		local primaryDef = primary and ItemDefinitions.GetItem(primary) or nil
+		local bundleCategory = primaryDef and primaryDef.category or ItemDefinitions.Categories.GUN
+		local bundleName = "GunWithAmmo"
+		if bundleCategory == ItemDefinitions.Categories.MED then
+			bundleName = "SingleMed"
+		elseif bundleCategory == ItemDefinitions.Categories.GRENADE then
+			bundleName = "SingleGrenade"
+		elseif bundleCategory == ItemDefinitions.Categories.ATTACHMENT then
+			bundleName = "SingleAttachment"
+		elseif bundleCategory == ItemDefinitions.Categories.ARMOR then
+			bundleName = "SingleArmor"
+		end
+		local bundleDrops = DropRules.ApplyBundle(bundleName, primary, rng)
 		for _, drop in ipairs(bundleDrops) do
 			table.insert(drops, drop)
 		end
 	end
-	
+
 	-- Spawn the drops
 	if self.DropFactory then
 		for i, drop in ipairs(drops) do
-			local rule = DropRules.GetRule(bundleRuleId)
-			local scatterPos = DropRules.GetScatterPosition(dropPosition, rule, i, rng)
-			local impulse = DropRules.GetImpulse(rule, rng)
-			
+			local scatterPos = DropRules.GetScatterPosition(dropPosition, {scatterRadius = 2}, i, rng)
+			local impulse = DropRules.GetImpulse({impulse = {min = 8, max = 15}}, rng)
+
 			self.DropFactory:SpawnDrop(drop.itemId, drop.stackCount, scatterPos, impulse)
 		end
 	else
 		warn("DropFactory not initialized")
 	end
 	
-	if LootConfig.DEBUG_MODE then
-		print("Dropped items:", drops)
-	end
+
 	
 	-- Fire break effects (stub)
 	self:PlayBreakEffects(crateModel)
@@ -220,9 +224,7 @@ function LootBoxService:RollItem(category: string, rarity: string, crateConfig, 
 	if not itemId then
 		-- Fallback: pick any random item from the database
 		itemId = self:GetAnyRandomItem(rng)
-		if LootConfig.DEBUG_MODE and itemId then
-			print(string.format("[LootSpawn] Fallback selected item '%s'", tostring(itemId)))
-		end
+		
 	end
 	return itemId
 end
@@ -252,15 +254,7 @@ end
 
 -- Play break effects (stub)
 function LootBoxService:PlayBreakEffects(crateModel: Model)
-	-- TODO: Play break sound effect
-	if LootConfig.DEBUG_MODE then
-		print("Would play break SFX for crate at:", crateModel:GetPivot().Position)
-	end
-	
-	-- TODO: Play break particle effect
-	if LootConfig.DEBUG_MODE then
-		print("Would play break VFX for crate")
-	end
+	-- TODO: Play break sound and particle effects
 end
 
 -- Create singleton instance

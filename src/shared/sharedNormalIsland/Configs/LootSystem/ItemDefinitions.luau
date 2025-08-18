@@ -45,6 +45,7 @@ ItemDefinitions.Items = {
 		rarity = ItemDefinitions.Rarities.COMMON,
 		ammoType = ItemDefinitions.AmmoTypes.LIGHT,
 		weight = 1,
+		stackMax = 3,
 	},
 }
 

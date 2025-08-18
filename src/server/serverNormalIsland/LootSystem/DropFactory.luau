@@ -10,7 +10,6 @@ local Players = game:GetService("Players")
 
 -- Shared modules
 local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
-local LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
 
 local DropFactory = {}
 DropFactory.__index = DropFactory
@@ -28,7 +27,12 @@ function DropFactory.new()
 	
 	-- Cache for prefabs
 	self._prefabCache = {}
+	self.InventoryService = nil -- Will be set during initialization
 	return self
+end
+
+function DropFactory:Initialize(inventoryService)
+	self.InventoryService = inventoryService
 end
 
 -- Spawn a dropped item
@@ -40,53 +44,64 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	end
 	
 	local prefab = self:GetItemPrefab(itemId)
+	if not prefab then
+		warn(string.format("No prefab found for item '%s'; skipping spawn", tostring(itemId)))
+		return nil
+	end
+	
 	local dropModel: Instance
-	if prefab then
-		dropModel = prefab:Clone()
-	else
-		dropModel = self:CreatePlaceholderDrop(itemId, stackCount)
-		if LootConfig.DEBUG_MODE then
-			warn(string.format("No prefab found for item '%s', using placeholder", itemId))
+	
+	-- Wrap Tools in a Model to prevent auto-pickup
+	if prefab:IsA("Tool") then
+		local toolClone = prefab:Clone()
+		-- Clear any attributes from the prefab
+		toolClone:SetAttribute("StackCount", nil)
+		toolClone:SetAttribute("StackMax", nil)
+		toolClone:SetAttribute("ItemId", nil)
+		
+		local wrapper = Instance.new("Model")
+		wrapper.Name = toolClone.Name .. "_Pickup"
+		
+		-- Parent tool to wrapper BEFORE setting position
+		toolClone.Parent = wrapper
+		
+		-- Set wrapper's PrimaryPart for positioning
+		local handle = toolClone:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then
+			wrapper.PrimaryPart = handle
 		end
+		
+		dropModel = wrapper
+	else
+		dropModel = prefab:Clone()
 	end
 
+	-- Position the drop
 	if dropModel:IsA("Model") then
 		dropModel:PivotTo(CFrame.new(position + Vector3.new(0, 1, 0)))
 	elseif dropModel:IsA("BasePart") then
 		dropModel.Position = position + Vector3.new(0, 1, 0)
-	elseif dropModel:IsA("Tool") then
-		local handle = (dropModel:FindFirstChild("Handle") :: any)
-		if handle and handle:IsA("BasePart") then
-			handle.CFrame = CFrame.new(position + Vector3.new(0, 1, 0))
-		end
 	end
 	
-	-- Set attributes for pickup system
+	-- Set attributes on the wrapper/model
 	dropModel:SetAttribute("ItemId", itemId)
 	dropModel:SetAttribute("StackCount", stackCount)
+	dropModel:SetAttribute("StackMax", (itemData and itemData.stackMax) or 1)
 	dropModel:SetAttribute("IsPickup", true)
 	
-	-- Apply physics impulse if specified
 	if impulse then
 		self:ApplyImpulse(dropModel, impulse)
 	end
 	
-	-- Parent to world
 	dropModel.Parent = self.DroppedItemsContainer
 	
-	-- Add pickup interaction only for non-Tool placeholders/models
-	if not dropModel:IsA("Tool") then
-		self:SetupPickupInteraction(dropModel)
-	end
-	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Spawned drop: %s x%d at %s", itemId, stackCount, tostring(position)))
-	end
+	-- Setup pickup for all drops (Tools are now wrapped in Models)
+	self:SetupPickupInteraction(dropModel)
 	
 	return dropModel
 end
 
--- Get item prefab (stub - will be implemented when prefabs exist)
+-- Get item prefab
 function DropFactory:GetItemPrefab(itemId: string)
 	if self._prefabCache[itemId] ~= nil then
 		return self._prefabCache[itemId]
@@ -120,58 +135,6 @@ function DropFactory:GetItemPrefab(itemId: string)
 
 	self._prefabCache[itemId] = found
 	return found
-end
-
--- Create a placeholder drop part
-function DropFactory:CreatePlaceholderDrop(itemId: string, stackCount: number)
-	local itemData = ItemDefinitions.GetItem(itemId)
-	
-	local part = Instance.new("Part")
-	part.Name = string.format("Pickup_%s_%d", itemId, stackCount)
-	part.Size = Vector3.new(2, 2, 2)
-	part.TopSurface = Enum.SurfaceType.Smooth
-	part.BottomSurface = Enum.SurfaceType.Smooth
-	part.CanCollide = true
-	part.Anchored = false
-	
-	-- Color based on rarity
-	local rarityColors = {
-		[ItemDefinitions.Rarities.COMMON] = Color3.fromRGB(128, 128, 128),
-		[ItemDefinitions.Rarities.UNCOMMON] = Color3.fromRGB(0, 255, 0),
-		[ItemDefinitions.Rarities.RARE] = Color3.fromRGB(0, 128, 255),
-		[ItemDefinitions.Rarities.EPIC] = Color3.fromRGB(176, 0, 255),
-		[ItemDefinitions.Rarities.LEGENDARY] = Color3.fromRGB(255, 176, 0),
-	}
-	
-	part.Color = rarityColors[itemData.rarity] or Color3.fromRGB(255, 255, 255)
-	
-	-- Add a billboard GUI to show item info
-	local billboardGui = Instance.new("BillboardGui")
-	billboardGui.Size = UDim2.new(4, 0, 2, 0)
-	billboardGui.StudsOffset = Vector3.new(0, 2, 0)
-	billboardGui.AlwaysOnTop = true
-	
-	local textLabel = Instance.new("TextLabel")
-	textLabel.Size = UDim2.new(1, 0, 1, 0)
-	textLabel.BackgroundTransparency = 1
-	textLabel.Text = string.format("%s\nx%d", itemData.displayName, stackCount)
-	textLabel.TextScaled = true
-	textLabel.TextColor3 = Color3.new(1, 1, 1)
-	textLabel.TextStrokeTransparency = 0
-	textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-	textLabel.Parent = billboardGui
-	
-	billboardGui.Parent = part
-	
-	-- Add a selection box for visibility
-	local selectionBox = Instance.new("SelectionBox")
-	selectionBox.Adornee = part
-	selectionBox.Color3 = part.Color
-	selectionBox.LineThickness = 0.1
-	selectionBox.Transparency = 0.5
-	selectionBox.Parent = part
-	
-	return part
 end
 
 -- Apply physics impulse to dropped item
@@ -211,7 +174,7 @@ function DropFactory:ApplyImpulse(dropModel: Instance, impulse: Vector3)
 	end
 end
 
--- Setup pickup interaction (stub)
+-- Setup pickup interaction
 function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	-- Auto-pickup when a player walks very close to the drop
 	local primaryPart
@@ -270,104 +233,25 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	end)
 end
 
--- Minimal inventory pickup
+-- Simplified inventory pickup
 function DropFactory:Pickup(dropModel: Instance, player: Player)
 	local itemId = dropModel:GetAttribute("ItemId") or "unknown"
-	local itemData = ItemDefinitions.GetItem(itemId)
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then
-		backpack = Instance.new("Backpack")
-		backpack.Parent = player
-	end
+	local pickupCount = dropModel:GetAttribute("StackCount") or 1
+	
 
-	local tool: Tool
-	local prefab = self:GetItemPrefab(itemId)
-	if prefab then
-		tool = Instance.new("Tool")
-		tool.Name = (itemData and itemData.displayName) or tostring(itemId)
-		tool:SetAttribute("ItemId", itemId)
-		tool.RequiresHandle = true
+	
+	-- Use the new inventory service
+	local InventoryService = self.InventoryService
+	if InventoryService then
+		local success = InventoryService:AddItem(player, itemId, pickupCount)
+		if not success then
 
-		-- Flatten prefab into tool and set a Handle
-		local clone = prefab:Clone()
-		local handlePart: BasePart? = nil
-		local baseParts = {}
-		for _, inst in ipairs(clone:GetDescendants()) do
-			if inst:IsA("BasePart") then
-				table.insert(baseParts, inst)
-			end
 		end
-		if #baseParts > 0 then
-			-- Choose first part as handle
-			handlePart = baseParts[1]
-			if handlePart then
-				handlePart.Name = "Handle"
-			end
-			for _, part in ipairs(baseParts) do
-				part.Anchored = false
-				part.CanCollide = false
-				part.CanQuery = false
-				part.CanTouch = false
-				part.Massless = true
-				part.Parent = tool
-				if part ~= handlePart then
-					if handlePart then
-						local weld = Instance.new("WeldConstraint")
-						weld.Part0 = handlePart
-						weld.Part1 = part
-						weld.Parent = handlePart
-					end
-				end
-			end
-		else
-			-- No parts in prefab, fallback to placeholder handle
-			local ph = Instance.new("Part")
-			ph.Name = "Handle"
-			ph.Size = Vector3.new(1.2, 1.2, 2)
-			ph.CanCollide = false
-			ph.CanQuery = false
-			ph.CanTouch = false
-			ph.Massless = true
-			ph.Parent = tool
-		end
-		clone:Destroy()
-		tool.Parent = backpack
 	else
-		-- No prefab found, create a simple placeholder tool
-		tool = Instance.new("Tool")
-		tool.Name = (itemData and itemData.displayName) or tostring(itemId)
-		tool:SetAttribute("ItemId", itemId)
-		tool.RequiresHandle = true
-		local handle = Instance.new("Part")
-		handle.Name = "Handle"
-		handle.Size = Vector3.new(1.2, 1.2, 2)
-		handle.CanCollide = false
-		handle.CanQuery = false
-		handle.CanTouch = false
-		handle.Massless = true
-		local rarity = itemData and itemData.rarity
-		local rarityColors = {
-			[ItemDefinitions.Rarities.COMMON] = Color3.fromRGB(128, 128, 128),
-			[ItemDefinitions.Rarities.UNCOMMON] = Color3.fromRGB(0, 255, 0),
-			[ItemDefinitions.Rarities.RARE] = Color3.fromRGB(0, 128, 255),
-			[ItemDefinitions.Rarities.EPIC] = Color3.fromRGB(176, 0, 255),
-			[ItemDefinitions.Rarities.LEGENDARY] = Color3.fromRGB(255, 176, 0),
-		}
-		handle.Color = (rarity and rarityColors[rarity]) or Color3.fromRGB(200, 200, 200)
-		handle.Parent = tool
-		tool.Parent = backpack
-	end
 
-	local char = player.Character
-	local humanoid = char and char:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid:EquipTool(tool)
 	end
-
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Gave %s a tool for item '%s'", player.Name, tostring(itemId)))
-	end
-
+	
+	-- Destroy the pickup
 	dropModel:Destroy()
 end
 

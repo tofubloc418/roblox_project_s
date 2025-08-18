@@ -28,9 +28,7 @@ end
 -- Initialize the service
 function LootSpawnService:Initialize(breakableCrateComponent)
 	self.BreakableCrateComponent = breakableCrateComponent
-	if LootConfig.DEBUG_MODE then
-		print("LootSpawnService initialized (sky drop mode)")
-	end
+
 end
 
 -- Spawn crates for a new round
@@ -38,24 +36,25 @@ function LootSpawnService:SpawnCratesForRound()
 	local roundState = RoundState.Current()
 	local rng = roundState:GetSpawnRng()
 	local spawnSettings = SpawnConfig
+	local spawnCounts = {}
 	local totalSpawned = 0
 	for crateType, distribution in pairs(spawnSettings.CrateDistribution) do
 		local count = typeof(distribution) == "number" and distribution or rng:NextInteger(distribution.min or 0, distribution.max or 0)
-		if LootConfig.DEBUG_MODE then
-			print(string.format("[LootSpawn] Planning %d spawns for type '%s'", count, tostring(crateType)))
-		end
+		local typeSpawned = 0
 		for i = 1, count do
 			local success = self:SpawnSingleCrate(crateType, rng)
 			if success then
+				typeSpawned = typeSpawned + 1
 				totalSpawned = totalSpawned + 1
-				if LootConfig.DEBUG_MODE then
-					print(string.format("[LootSpawn] Spawned %s (%d/%d)", tostring(crateType), i, count))
-				end
 			end
 		end
+		if typeSpawned > 0 then
+			spawnCounts[crateType] = typeSpawned
+		end
 	end
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Spawned %d crates for round", totalSpawned))
+	
+	for crateType, count in pairs(spawnCounts) do
+		print(string.format("[LootSpawn] Spawned %d %s crates", count, crateType))
 	end
 	return totalSpawned
 end
@@ -85,9 +84,7 @@ function LootSpawnService:GetRandomCoreSkyPosition(rng: Random): Vector3?
 	local x = rng:NextNumber(-halfX, halfX)
 	local z = rng:NextNumber(-halfZ, halfZ)
 	local dropHeight = SpawnConfig.SpawnHeight or ((IslandConfig.spawnAreaCenter and (IslandConfig.spawnAreaCenter.Y + 400)) or 600)
-	if LootConfig.DEBUG_MODE then
-		print(string.format("[LootSpawn] Chosen drop pos: (%.1f, %.1f, %.1f)", x, dropHeight, z))
-	end
+
 	return Vector3.new(x, dropHeight, z)
 end
 
@@ -108,30 +105,13 @@ function LootSpawnService:CreateCrate(crateType: string, position: Vector3): Mod
 		end
 		if template and template:IsA("Model") then
 			crateModel = template:Clone()
-			if LootConfig.DEBUG_MODE then
-				print(string.format("[LootSpawn] Using prefab for type '%s': %s", tostring(crateType), template.Name))
-			end
 		end
-	elseif LootConfig.DEBUG_MODE then
-		print("[LootSpawn] ReplicatedStorage/LootCrates not found; using placeholder")
+	else
+		warn("[LootSpawn] ReplicatedStorage/LootCrates not found; cannot spawn crate")
 	end
 	if not crateModel then
-		local newModel = Instance.new("Model")
-		newModel.Name = "Crate_" .. crateType
-		local cratePart = Instance.new("Part")
-		cratePart.Name = "CrateBody"
-		cratePart.Size = Vector3.new(4, 4, 4)
-		cratePart.TopSurface = Enum.SurfaceType.Smooth
-		cratePart.BottomSurface = Enum.SurfaceType.Smooth
-		cratePart.CanCollide = true
-		cratePart.Anchored = false
-		cratePart.Color = Color3.fromRGB(128, 128, 128)
-		cratePart.Parent = newModel
-		newModel.PrimaryPart = cratePart
-		crateModel = newModel
-		if LootConfig.DEBUG_MODE then
-			print(string.format("[LootSpawn] Created placeholder model for type '%s'", tostring(crateType)))
-		end
+		warn(string.format("[LootSpawn] No crate prefab found for type '%s'", tostring(crateType)))
+		return nil :: any
 	end
 	local model = crateModel :: Model
 	for _, inst in ipairs(model:GetDescendants()) do
@@ -150,7 +130,7 @@ function LootSpawnService:CreateCrate(crateType: string, position: Vector3): Mod
 	model:SetAttribute("CrateId", crateId)
 	model:SetAttribute("MaxHealth", crateConfig.MaxHealth or 100)
 	model:SetAttribute("Health", crateConfig.MaxHealth or 100)
-	model:SetAttribute("BundleRuleId", crateConfig.BundleRuleId or "Small")
+	model:SetAttribute("BundleCount", crateConfig.BundleCount or 1)
 	if crateConfig.Whitelist then
 		model:SetAttribute("Whitelist", game:GetService("HttpService"):JSONEncode(crateConfig.Whitelist))
 	end
@@ -162,9 +142,7 @@ function LootSpawnService:CreateCrate(crateType: string, position: Vector3): Mod
 	if self.BreakableCrateComponent and self.BreakableCrateComponent.RegisterCrate then
 		self.BreakableCrateComponent.RegisterCrate(model)
 	end
-	if LootConfig.DEBUG_MODE then
-		print(string.format("[LootSpawn] Finalized spawn: model='%s' type='%s' at %s", model.Name, tostring(crateType), tostring(position)))
-	end
+
 	return model
 end
 

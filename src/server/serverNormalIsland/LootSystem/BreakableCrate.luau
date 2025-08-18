@@ -50,7 +50,7 @@ function BreakableCrate:RegisterCrate(crateModel: Model, lootBoxService, damageS
 		crateModel:SetAttribute("MaxHealth", crateCfg.MaxHealth or 100)
 		crateModel:SetAttribute("Health", crateCfg.MaxHealth or 100)
 		crateModel:SetAttribute("CrackStage", crateModel:GetAttribute("CrackStage") or 0)
-		crateModel:SetAttribute("BundleRuleId", crateCfg.BundleRuleId or "Small")
+		crateModel:SetAttribute("BundleCount", crateCfg.BundleCount or 1)
 		if crateCfg.Whitelist then
 			crateModel:SetAttribute("Whitelist", game:GetService("HttpService"):JSONEncode(crateCfg.Whitelist))
 		end
@@ -84,10 +84,7 @@ function BreakableCrate:RegisterCrate(crateModel: Model, lootBoxService, damageS
 		end
 	end)
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Registered breakable crate: %s (HP: %d)", 
-			component.CrateType, component.MaxHealth))
-	end
+
 	
 	return component
 end
@@ -102,10 +99,7 @@ function BreakableCrate:TakeDamage(damage: number, source: any?)
 	self.Health = math.max(0, self.Health - damage)
 	self.Model:SetAttribute("Health", self.Health)
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Crate %s took %d damage (%d -> %d HP)", 
-			self.Model.Name, damage, oldHealth, self.Health))
-	end
+
 	
 	-- Check if broken
 	if self.Health <= 0 then
@@ -280,9 +274,7 @@ function BreakableCrate:UpdateCrackVisuals()
 		end
 	end
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Updated crate overlays to stage %d (HP: %d/%d)", self.CrackStage, self.Health, self.MaxHealth))
-	end
+
 end
 
 -- Play crack sound effect
@@ -302,9 +294,7 @@ function BreakableCrate:Break(source: any?)
 	
 	self.IsBroken = true
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Crate %s broken!", self.Model.Name))
-	end
+
 	
 	-- 1) Play break sound if provided by authoring
 	local breakSound = self.Model:FindFirstChild("BreakSound")
@@ -373,21 +363,24 @@ end
 
 -- Static method to register all existing crates in workspace
 function BreakableCrate.RegisterExistingCrates(lootBoxService, damageService)
-	local registeredCount = 0
+	local registeredByType = {}
 	
 	-- Look for models with CrateType attribute
 	for _, descendant in ipairs(workspace:GetDescendants()) do
 		if descendant:IsA("Model") and descendant:GetAttribute("CrateType") then
+			local crateType = descendant:GetAttribute("CrateType")
 			BreakableCrate:RegisterCrate(descendant, lootBoxService, damageService)
-			registeredCount = registeredCount + 1
+			registeredByType[crateType] = (registeredByType[crateType] or 0) + 1
 		end
 	end
 	
-	if LootConfig.DEBUG_MODE then
-		print(string.format("Registered %d existing crates", registeredCount))
+	local total = 0
+	for crateType, count in pairs(registeredByType) do
+		print(string.format("[BreakableCrate] Registered %d %s crates", count, crateType))
+		total = total + count
 	end
 	
-	return registeredCount
+	return total
 end
 
 -- Static method to clear all crates

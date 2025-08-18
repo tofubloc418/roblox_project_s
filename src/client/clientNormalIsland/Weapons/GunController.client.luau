@@ -1,0 +1,259 @@
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Debris = game:GetService("Debris")
+local Players = game:GetService("Players")
+
+local player = Players.LocalPlayer
+local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
+
+-- Wait for remotes
+local remotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
+local fireGun = remotes:WaitForChild("FireGun")
+
+local GunController = {}
+GunController.__index = GunController
+
+function GunController.new()
+	local self = setmetatable({}, GunController)
+	self.equippedTool = nil
+	self.config = nil
+	self.ammo = 0
+	self.reloading = false
+	self.shooting = false
+	self.lastShot = 0
+	self.connections = {}
+	self.originalWalkSpeed = 16
+	return self
+end
+
+function GunController:Initialize()
+	-- Listen for tool equip/unequip
+	local character = player.Character or player.CharacterAdded:Wait()
+	
+	character.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") and GunConfigs[child.Name] then
+			self:EquipGun(child)
+		end
+	end)
+	
+	character.ChildRemoved:Connect(function(child)
+		if child == self.equippedTool then
+			self:UnequipGun()
+		end
+	end)
+	
+	-- Handle reload input
+	UserInputService.InputBegan:Connect(function(input, gameProcessed)
+		if gameProcessed then return end
+		if input.KeyCode == Enum.KeyCode.R and self.equippedTool then
+			self:Reload()
+		end
+	end)
+end
+
+function GunController:EquipGun(tool: Tool)
+	self.equippedTool = tool
+	self.config = GunConfigs[tool.Name]
+	self.ammo = self.config.magazineCapacity
+	self.reloading = false
+	self.shooting = false
+	
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		self.originalWalkSpeed = humanoid.WalkSpeed
+	end
+	
+	-- Play equip sound
+	local equipSound = tool:FindFirstChild("Sounds") and tool.Sounds:FindFirstChild("Gun Equip")
+	if equipSound then
+		equipSound:Play()
+	end
+	
+	print(string.format("[Gun] Equipped %s - Ammo: %d/%d", tool.Name, self.ammo, self.config.magazineCapacity))
+	
+	-- Setup shooting
+	if self.config.auto then
+		-- Full auto
+		self.connections.activated = tool.Activated:Connect(function()
+			self.shooting = true
+			self:StartAutoFire()
+		end)
+		
+		self.connections.deactivated = tool.Deactivated:Connect(function()
+			self.shooting = false
+			self:StopAutoFire()
+		end)
+	else
+		-- Semi auto
+		self.connections.activated = tool.Activated:Connect(function()
+			self:Fire()
+		end)
+	end
+end
+
+function GunController:UnequipGun()
+	-- Disconnect all connections
+	for _, connection in pairs(self.connections) do
+		connection:Disconnect()
+	end
+	self.connections = {}
+	
+	-- Reset state
+	self.shooting = false
+	self:StopAutoFire()
+	
+	-- Reset walk speed
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = self.originalWalkSpeed
+	end
+	
+	self.equippedTool = nil
+	self.config = nil
+end
+
+function GunController:Fire()
+	if not self.equippedTool or not self.config then return end
+	if self.reloading then return end
+	
+	-- Check fire rate cooldown
+	local now = tick()
+	local cooldown = 1 / self.config.fireRate
+	if now - self.lastShot < cooldown then
+		return
+	end
+	
+	-- Check ammo
+	if self.ammo <= 0 then
+		self:Reload()
+		return
+	end
+	
+	self.lastShot = now
+	self.ammo = self.ammo - 1
+	
+	print(string.format("[Gun] Fired - Ammo: %d/%d", self.ammo, self.config.magazineCapacity))
+	
+	-- Get mouse position
+	local mouse = player:GetMouse()
+	local mousePosition = mouse.Hit.Position
+	
+	-- Create visual bullets
+	for i = 1, self.config.bulletsPerShot do
+		self:CreateVisualBullet(mousePosition)
+	end
+	
+	-- Send to server
+	fireGun:FireServer(self.equippedTool, mousePosition)
+	
+	-- Play shot sound
+	local shotSound = self.equippedTool:FindFirstChild("Sounds") and self.equippedTool.Sounds:FindFirstChild("Gun Shot")
+	if shotSound then
+		shotSound:Play()
+	end
+	
+	-- Apply movement slowdown
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		humanoid.WalkSpeed = self.originalWalkSpeed * self.config.playerSlowdown
+		task.wait(0.2)
+		if humanoid then
+			humanoid.WalkSpeed = self.originalWalkSpeed
+		end
+	end
+	
+	-- Auto reload if empty
+	if self.ammo <= 0 then
+		task.wait(0.1)
+		self:Reload()
+	end
+end
+
+function GunController:StartAutoFire()
+	if self.autoFireConnection then return end
+	
+	self.autoFireConnection = RunService.Heartbeat:Connect(function()
+		if self.shooting and not self.reloading then
+			self:Fire()
+		end
+	end)
+end
+
+function GunController:StopAutoFire()
+	if self.autoFireConnection then
+		self.autoFireConnection:Disconnect()
+		self.autoFireConnection = nil
+	end
+end
+
+function GunController:Reload()
+	if not self.equippedTool or not self.config then return end
+	if self.reloading then return end
+	if self.ammo >= self.config.magazineCapacity then return end
+	
+	self.reloading = true
+	print(string.format("[Gun] Reloading %s...", self.equippedTool.Name))
+	
+	-- Play reload sound
+	local reloadSound = self.equippedTool:FindFirstChild("Sounds") and self.equippedTool.Sounds:FindFirstChild("Gun Reload")
+	if reloadSound then
+		reloadSound:Play()
+	end
+	
+	-- Stop shooting during reload
+	self.shooting = false
+	
+	task.wait(self.config.reloadTime)
+	
+	if self.equippedTool then -- Check tool is still equipped
+		self.ammo = self.config.magazineCapacity
+		self.reloading = false
+		print(string.format("[Gun] Reloaded - Ammo: %d/%d", self.ammo, self.config.magazineCapacity))
+	end
+end
+
+function GunController:CreateVisualBullet(targetPosition: Vector3)
+	if not self.equippedTool then return end
+	
+	local handle = self.equippedTool:FindFirstChild("Handle")
+	if not handle then return end
+	
+	-- Calculate direction with spread
+	local baseDirection = (targetPosition - handle.Position).Unit
+	local spread = math.rad(self.config.bulletSpread)
+	
+	-- Apply random spread
+	local spreadX = (math.random() - 0.5) * spread
+	local spreadY = (math.random() - 0.5) * spread
+	
+	local direction = CFrame.lookAt(handle.Position, handle.Position + baseDirection)
+	direction = direction * CFrame.Angles(spreadX, spreadY, 0)
+	direction = direction.LookVector
+	
+	-- Create bullet
+	local bullet = Instance.new("Part")
+	bullet.Size = Vector3.new(0.2, 0.2, 1)
+	bullet.CFrame = handle.CFrame * CFrame.new(0, 0, -1)
+	bullet.BrickColor = BrickColor.new("New Yeller")
+	bullet.Material = Enum.Material.Neon
+	bullet.CanCollide = false
+	bullet.Anchored = false
+	bullet.Name = "Bullet"
+	bullet.Parent = workspace
+	
+	-- Add velocity
+	local bodyVelocity = Instance.new("BodyVelocity")
+	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+	bodyVelocity.Velocity = direction * self.config.bulletSpeed
+	bodyVelocity.Parent = bullet
+	
+	-- Clean up after 3 seconds
+	Debris:AddItem(bullet, 3)
+end
+
+-- Initialize singleton
+local controller = GunController.new()
+controller:Initialize()
+
+return controller

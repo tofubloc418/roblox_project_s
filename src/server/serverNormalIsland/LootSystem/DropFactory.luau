@@ -51,29 +51,33 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	
 	local dropModel: Instance
 	
-	-- Wrap Tools in a Model to prevent auto-pickup
+	-- For Tools, clone directly (no wrapper needed for gun system)
 	if prefab:IsA("Tool") then
-		local toolClone = prefab:Clone()
+		dropModel = prefab:Clone()
 		-- Clear any attributes from the prefab
-		toolClone:SetAttribute("StackCount", nil)
-		toolClone:SetAttribute("StackMax", nil)
-		toolClone:SetAttribute("ItemId", nil)
-		
+		dropModel:SetAttribute("StackCount", nil)
+		dropModel:SetAttribute("StackMax", nil)
+		dropModel:SetAttribute("ItemId", nil)
+	else
+		-- Wrap non-Tool items in a Model to prevent auto-pickup
+		local itemClone = prefab:Clone()
 		local wrapper = Instance.new("Model")
-		wrapper.Name = toolClone.Name .. "_Pickup"
+		wrapper.Name = itemClone.Name .. "_Pickup"
 		
-		-- Parent tool to wrapper BEFORE setting position
-		toolClone.Parent = wrapper
+		-- Parent item to wrapper
+		itemClone.Parent = wrapper
 		
 		-- Set wrapper's PrimaryPart for positioning
-		local handle = toolClone:FindFirstChild("Handle")
-		if handle and handle:IsA("BasePart") then
-			wrapper.PrimaryPart = handle
+		if itemClone:IsA("BasePart") then
+			wrapper.PrimaryPart = itemClone
+		else
+			local primaryPart = itemClone:FindFirstChildWhichIsA("BasePart")
+			if primaryPart then
+				wrapper.PrimaryPart = primaryPart
+			end
 		end
 		
 		dropModel = wrapper
-	else
-		dropModel = prefab:Clone()
 	end
 
 	-- Position the drop
@@ -182,6 +186,9 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 		primaryPart = dropModel.PrimaryPart or dropModel:FindFirstChildWhichIsA("BasePart")
 	elseif dropModel:IsA("BasePart") then
 		primaryPart = dropModel
+	elseif dropModel:IsA("Tool") then
+		-- For Tools, use the Handle as the primary part
+		primaryPart = dropModel:FindFirstChild("Handle")
 	end
 	if not primaryPart then
 		return

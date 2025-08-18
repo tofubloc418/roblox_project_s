@@ -25,7 +25,7 @@ export type GunConfig = {
 local GunConfigs: {[string]: GunConfig} = {
 	M9 = {
 		auto = true,
-		fireRate = 12.5,
+		fireRate = 4,
 		damage = 15,
 		headshotMultiplier = 2.5,
 		range = 300,
@@ -33,7 +33,7 @@ local GunConfigs: {[string]: GunConfig} = {
 		bulletsPerShot = 1,
 		playerSlowdown = 0.5,
 		magazineCapacity = 100,
-		reloadTime = 6.7,
+		reloadTime = 3,
 		bulletSpeed = 300,
 		shellEjectForce = 35,
 	},

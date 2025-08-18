@@ -1,11 +1,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Debris = game:GetService("Debris")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
 local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
+
+-- Wait for BulletRenderer to initialize (it's a client script, not a module)
+while not _G.BulletRenderer do
+	task.wait()
+end
+local BulletRenderer = _G.BulletRenderer
 
 -- Wait for remotes
 local remotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
@@ -13,6 +18,44 @@ local fireGun = remotes:WaitForChild("FireGun")
 
 local GunController = {}
 GunController.__index = GunController
+
+-- Try to find a muzzle attachment/part to use as the spawn origin
+local function getMuzzleCFrame(tool: Tool): CFrame?
+	local function findMuzzleIn(instance: Instance): Instance?
+		-- Prefer an Attachment named "Muzzle" or containing "Muzzle"
+		for _, obj in ipairs(instance:GetDescendants()) do
+			if obj:IsA("Attachment") then
+				local name = string.lower(obj.Name)
+				if name == "muzzle" or string.find(name, "muzzle") then
+					return obj
+				end
+			end
+		end
+		-- Fallback to a BasePart named "Muzzle"/"Barrel"
+		for _, obj in ipairs(instance:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				local name = string.lower(obj.Name)
+				if name == "muzzle" or name == "barrel" or string.find(name, "muzzle") then
+					return obj
+				end
+			end
+		end
+		return nil
+	end
+
+	local found = findMuzzleIn(tool)
+	if found then
+		if found:IsA("Attachment") then
+			return (found :: Attachment).WorldCFrame
+		elseif found:IsA("BasePart") then
+			return (found :: BasePart).CFrame
+		end
+	end
+
+	-- Fallback to handle
+	local handle = tool:FindFirstChild("Handle")
+	return handle and (handle :: BasePart).CFrame or nil
+end
 
 function GunController.new()
 	local self = setmetatable({}, GunController)
@@ -153,13 +196,33 @@ function GunController:Fire()
 	local mouse = player:GetMouse()
 	local mousePosition = mouse.Hit.Position
 	
-	-- Create visual bullets
-	for i = 1, self.config.bulletsPerShot do
-		self:CreateVisualBullet(mousePosition)
+	-- Create visual bullets with new renderer
+	local muzzleCFrame = getMuzzleCFrame(self.equippedTool)
+	if muzzleCFrame then
+		for i = 1, self.config.bulletsPerShot do
+			-- Calculate direction with spread from muzzle
+			local muzzlePos = muzzleCFrame.Position
+			local baseDirection = (mousePosition - muzzlePos).Unit
+			local spread = math.rad(self.config.bulletSpread)
+			
+			-- Apply random spread
+			local spreadX = (math.random() - 0.5) * spread
+			local spreadY = (math.random() - 0.5) * spread
+			
+			local direction = CFrame.lookAt(muzzlePos, muzzlePos + baseDirection)
+			direction = direction * CFrame.Angles(spreadX, spreadY, 0)
+			direction = direction.LookVector
+			
+			-- Use the new bullet renderer
+			BulletRenderer:RenderLocalBullet(muzzlePos, direction, self.config.bulletSpeed, self.equippedTool.Name)
+		end
 	end
 	
 	-- Send to server
+	print(string.format("[Gun] Sending FireServer with tool %s to position %s", 
+		self.equippedTool.Name, tostring(mousePosition)))
 	fireGun:FireServer(self.equippedTool, mousePosition)
+	print("[Gun] FireServer sent")
 	
 	-- Play shot sound
 	local sounds = self.equippedTool:FindFirstChild("Sounds")
@@ -232,44 +295,7 @@ function GunController:Reload()
 	end
 end
 
-function GunController:CreateVisualBullet(targetPosition: Vector3)
-	if not self.equippedTool then return end
-	
-	local handle = self.equippedTool:FindFirstChild("Handle")
-	if not handle then return end
-	
-	-- Calculate direction with spread
-	local baseDirection = (targetPosition - handle.Position).Unit
-	local spread = math.rad(self.config.bulletSpread)
-	
-	-- Apply random spread
-	local spreadX = (math.random() - 0.5) * spread
-	local spreadY = (math.random() - 0.5) * spread
-	
-	local direction = CFrame.lookAt(handle.Position, handle.Position + baseDirection)
-	direction = direction * CFrame.Angles(spreadX, spreadY, 0)
-	direction = direction.LookVector
-	
-	-- Create bullet
-	local bullet = Instance.new("Part")
-	bullet.Size = Vector3.new(0.2, 0.2, 1)
-	bullet.CFrame = handle.CFrame * CFrame.new(0, 0, -1)
-	bullet.BrickColor = BrickColor.new("New Yeller")
-	bullet.Material = Enum.Material.Neon
-	bullet.CanCollide = false
-	bullet.Anchored = false
-	bullet.Name = "Bullet"
-	bullet.Parent = workspace
-	
-	-- Add velocity
-	local bodyVelocity = Instance.new("BodyVelocity")
-	bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-	bodyVelocity.Velocity = direction * self.config.bulletSpeed
-	bodyVelocity.Parent = bullet
-	
-	-- Clean up after 3 seconds
-	Debris:AddItem(bullet, 3)
-end
+-- Old CreateVisualBullet function removed - now using BulletRenderer
 
 -- Initialize singleton
 local controller = GunController.new()

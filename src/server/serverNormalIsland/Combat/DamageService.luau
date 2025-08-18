@@ -47,24 +47,35 @@ end
 
 -- Apply damage to an object
 function DamageService:ApplyDamage(target: Instance, amount: number, source: any?)
-	-- Validate target
+	-- Check if it's a humanoid (direct damage)
+	if target:IsA("Humanoid") then
+		if amount <= 0 then return false end
+		target:TakeDamage(amount)
+		return true
+	end
+	
+	-- Check if it's a Model with a Humanoid (for backwards compatibility)
+	if target:IsA("Model") then
+		local humanoid = target:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			if amount <= 0 then return false end
+			humanoid:TakeDamage(amount)
+			return true
+		end
+	end
+	
+	-- Check registry for custom damageable objects (like crates)
 	local registryEntry = self.DamageableRegistry[target]
 	if not registryEntry then
 		return false -- Target not damageable
 	end
 	
 	-- Validate amount
-	if amount <= 0 then
-		return false
-	end
-
-	-- Minimal: directly call the handler with the raw amount
-	-- Weapons will handle all damage math in the future.
+	if amount <= 0 then return false end
 	
 	-- Call the damage handler
 	if registryEntry.handler then
 		registryEntry.handler(amount, source)
-		
 		return true
 	end
 	

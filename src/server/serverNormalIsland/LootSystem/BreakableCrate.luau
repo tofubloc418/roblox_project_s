@@ -95,7 +95,7 @@ function BreakableCrate:TakeDamage(damage: number, source: any?)
 		return
 	end
 	
-	local oldHealth = self.Health
+	local _oldHealth = self.Health
 	self.Health = math.max(0, self.Health - damage)
 	self.Model:SetAttribute("Health", self.Health)
 	
@@ -140,141 +140,15 @@ function BreakableCrate:UpdateCrackVisuals()
 	if not primaryPart then
 		return
 	end
-	
-	-- Ensure consistent container for generated visuals
+	-- Remove legacy overlay visuals if they exist
 	local overlayFolder = self.Model:FindFirstChild("CrackOverlays")
-	if not overlayFolder then
-		overlayFolder = Instance.new("Folder")
-		overlayFolder.Name = "CrackOverlays"
-		overlayFolder.Parent = self.Model
+	if overlayFolder then
+		overlayFolder:Destroy()
 	end
-	
-	-- Clear previous overlays
-	for _, child in ipairs(overlayFolder:GetChildren()) do
-		child:Destroy()
-	end
-	
-	-- Base visual: slight transparency proportional to damage
+
+	-- Simple visual: adjust transparency proportional to damage
 	local damageRatio = 1 - (self.Health / self.MaxHealth)
 	primaryPart.Transparency = math.min(0.5, damageRatio * 0.5)
-	
-	-- Stage-driven generated imperfections
-	local function createWeld(part)
-		local weld = Instance.new("WeldConstraint")
-		weld.Part0 = primaryPart
-		weld.Part1 = part
-		weld.Parent = part
-	end
-	
-	local function addCrackLine(length: number)
-		local line = Instance.new("Part")
-		line.Name = "CrackLine"
-		line.Anchored = false
-		line.CanCollide = false
-		line.CanQuery = false
-		line.CanTouch = false
-		line.Material = Enum.Material.SmoothPlastic
-		line.Color = Color3.fromRGB(20, 20, 20)
-		line.Transparency = 0.1
-		line.Size = Vector3.new(length, 0.03, 0.03)
-		line.Parent = overlayFolder
-		
-		-- Random position on a face of the primary part
-		local size = primaryPart.Size
-		local faceIndex = math.random(1, 6)
-		local normalVecs = {
-			Vector3.new(0, 1, 0),
-			Vector3.new(0, -1, 0),
-			Vector3.new(1, 0, 0),
-			Vector3.new(-1, 0, 0),
-			Vector3.new(0, 0, 1),
-			Vector3.new(0, 0, -1),
-		}
-		local normal = normalVecs[faceIndex]
-		
-		local half = size * 0.5
-		local localPos = Vector3.new(
-			(math.random() - 0.5) * (size.X - 0.2),
-			(math.random() - 0.5) * (size.Y - 0.2),
-			(math.random() - 0.5) * (size.Z - 0.2)
-		)
-		-- Snap to chosen face by setting the coordinate along the normal to +/- half extent
-		if normal.X ~= 0 then
-			localPos = Vector3.new(math.sign(normal.X) * half.X + (0.01 * normal.X), localPos.Y, localPos.Z)
-		elseif normal.Y ~= 0 then
-			localPos = Vector3.new(localPos.X, math.sign(normal.Y) * half.Y + (0.01 * normal.Y), localPos.Z)
-		else
-			localPos = Vector3.new(localPos.X, localPos.Y, math.sign(normal.Z) * half.Z + (0.01 * normal.Z))
-		end
-		
-		local worldPos = primaryPart.CFrame:PointToWorldSpace(localPos)
-		local tangentA = (math.abs(normal.Y) == 1) and Vector3.new(1, 0, 0) or Vector3.new(0, 1, 0)
-		local tangent = (tangentA:Cross(normal)).Unit
-		local angle = math.random() * math.pi
-		local dir = (tangent * math.cos(angle) + normal:Cross(tangent) * math.sin(angle)).Unit
-		
-		line.CFrame = CFrame.lookAt(worldPos, worldPos + dir) * CFrame.new(line.Size.X * -0.5, 0, 0)
-		createWeld(line)
-	end
-	
-	local function addChip()
-		local chip = Instance.new("WedgePart")
-		chip.Name = "Chip"
-		chip.Anchored = false
-		chip.CanCollide = false
-		chip.CanQuery = false
-		chip.CanTouch = false
-		chip.Material = primaryPart.Material
-		chip.Color = primaryPart.Color:lerp(Color3.new(1,1,1), 0.2)
-		chip.Transparency = 0.1
-		chip.Size = Vector3.new(0.2 + math.random() * 0.2, 0.1 + math.random() * 0.15, 0.2 + math.random() * 0.2)
-		chip.Parent = overlayFolder
-		
-		local size = primaryPart.Size
-		local faceIndex = math.random(1, 6)
-		local normalVecs = {
-			Vector3.new(0, 1, 0),
-			Vector3.new(0, -1, 0),
-			Vector3.new(1, 0, 0),
-			Vector3.new(-1, 0, 0),
-			Vector3.new(0, 0, 1),
-			Vector3.new(0, 0, -1),
-		}
-		local normal = normalVecs[faceIndex]
-		local half = size * 0.5
-		local localPos = Vector3.new(
-			(math.random() - 0.5) * (size.X - 0.2),
-			(math.random() - 0.5) * (size.Y - 0.2),
-			(math.random() - 0.5) * (size.Z - 0.2)
-		)
-		if normal.X ~= 0 then
-			localPos = Vector3.new(math.sign(normal.X) * half.X + (0.01 * normal.X), localPos.Y, localPos.Z)
-		elseif normal.Y ~= 0 then
-			localPos = Vector3.new(localPos.X, math.sign(normal.Y) * half.Y + (0.01 * normal.Y), localPos.Z)
-		else
-			localPos = Vector3.new(localPos.X, localPos.Y, math.sign(normal.Z) * half.Z + (0.01 * normal.Z))
-		end
-		local worldPos = primaryPart.CFrame:PointToWorldSpace(localPos)
-		chip.CFrame = CFrame.new(worldPos) * CFrame.Angles(0, math.random() * math.pi * 2, 0)
-		createWeld(chip)
-	end
-	
-	if self.CrackStage == 0 then
-		-- No overlays
-	elseif self.CrackStage == 1 then
-		for i = 1, math.random(4, 6) do
-			addCrackLine(0.8 + math.random() * 2.0)
-		end
-	elseif self.CrackStage == 2 then
-		for i = 1, math.random(10, 14) do
-			addCrackLine(0.8 + math.random() * 2.5)
-		end
-		for i = 1, math.random(2, 4) do
-			addChip()
-		end
-	end
-	
-
 end
 
 -- Play crack sound effect

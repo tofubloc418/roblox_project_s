@@ -5,6 +5,15 @@ local Players = game:GetService("Players")
 local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
 local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 
+-- Type definition for bullet data (matches BulletVisuals module)
+type BulletData = {
+	origin: Vector3,
+	direction: Vector3,
+	speed: number,
+	gunName: string,
+	shooterId: number,
+}
+
 local GunService = {}
 GunService.__index = GunService
 
@@ -20,6 +29,10 @@ local fireGun = remotes:FindFirstChild("FireGun") or Instance.new("RemoteEvent")
 fireGun.Name = "FireGun"
 fireGun.Parent = remotes
 
+local bulletVisualEvent = remotes:FindFirstChild("BulletVisual") or Instance.new("RemoteEvent")
+bulletVisualEvent.Name = "BulletVisual"
+bulletVisualEvent.Parent = remotes
+
 function GunService.new()
 	local self = setmetatable({}, GunService)
 	self.playerCooldowns = {}
@@ -31,6 +44,7 @@ function GunService:Initialize()
 		self:HandleShot(player, tool, mousePosition)
 	end)
 end
+
 
 function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Vector3)
 	-- Validate player and tool
@@ -49,15 +63,12 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 	-- Get gun config (try both tool name and ItemId attribute)
 	local gunName = tool:GetAttribute("ItemId") or tool.Name
 	local config = GunConfigs[gunName] or GunConfigs[tool.Name]
-	if not config then
-		warn("No config found for gun:", gunName)
-		return
-	end
+	if not config then return end
 	
 	-- Check ammo
 	local currentAmmo = tool:GetAttribute("CurrentAmmo")
-	if not currentAmmo or currentAmmo <= 0 then
-		return -- No ammo
+	if currentAmmo == nil then
+		currentAmmo = config.magazineCapacity
 	end
 	
 	-- Check cooldown
@@ -76,43 +87,88 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 	end
 	self.playerCooldowns[playerId][gunName] = now
 	
-	-- Deduct ammo on server
-	tool:SetAttribute("CurrentAmmo", currentAmmo - 1)
+	-- Deduct ammo on server (initialize if needed)
+	tool:SetAttribute("CurrentAmmo", math.max(0, (currentAmmo or 0) - 1))
 	
 	-- Eject shell
 	self:EjectShell(handle, config)
 	
-	-- Fire bullets
+	-- Fire bullets and broadcast visuals
 	for i = 1, config.bulletsPerShot do
-		self:FireBullet(character, handle.Position, mousePosition, config)
+		-- Determine muzzle (Attachment/BasePart named Muzzle/Barrel) for origin if available
+		local muzzleCFrame: CFrame = handle.CFrame
+		local function findMuzzle(instance: Instance): Instance?
+			for _, obj in ipairs(instance:GetDescendants()) do
+				if obj:IsA("Attachment") then
+					local n = string.lower(obj.Name)
+					if n == "muzzle" or string.find(n, "muzzle") then return obj end
+				end
+			end
+			for _, obj in ipairs(instance:GetDescendants()) do
+				if obj:IsA("BasePart") then
+					local n = string.lower(obj.Name)
+					if n == "muzzle" or n == "barrel" or string.find(n, "muzzle") then return obj end
+				end
+			end
+			return nil
+		end
+		local found = findMuzzle(tool)
+		if found then
+			if found:IsA("Attachment") then
+				muzzleCFrame = (found :: Attachment).WorldCFrame
+			elseif found:IsA("BasePart") then
+				muzzleCFrame = (found :: BasePart).CFrame
+			end
+		end
+
+		-- Calculate direction with spread for this bullet from muzzle
+		local muzzlePos = muzzleCFrame.Position
+		local baseDirection = (mousePosition - muzzlePos).Unit
+		local spread = math.rad(config.bulletSpread)
+		
+		-- Apply random spread
+		local spreadX = (math.random() - 0.5) * spread
+		local spreadY = (math.random() - 0.5) * spread
+		
+		local direction = CFrame.lookAt(muzzlePos, muzzlePos + baseDirection)
+		direction = direction * CFrame.Angles(spreadX, spreadY, 0)
+		direction = direction.LookVector
+		
+		-- Fire the actual bullet (damage calculation)
+		self:FireBullet(character, muzzlePos, direction, config)
+		
+		-- Broadcast bullet visual to all clients
+		local bulletData: BulletData = {
+			origin = muzzlePos, -- Start from muzzle position
+			direction = direction,
+			speed = config.bulletSpeed,
+			gunName = gunName,
+			shooterId = player.UserId,
+		}
+		bulletVisualEvent:FireAllClients(bulletData)
 	end
 end
 
-function GunService:FireBullet(character: Model, origin: Vector3, targetPosition: Vector3, config)
-	-- Calculate direction with spread
-	local baseDirection = (targetPosition - origin).Unit
-	local spread = math.rad(config.bulletSpread)
-	
-	-- Apply random spread
-	local spreadX = (math.random() - 0.5) * spread
-	local spreadY = (math.random() - 0.5) * spread
-	
-	local direction = CFrame.lookAt(origin, origin + baseDirection)
-	direction = direction * CFrame.Angles(spreadX, spreadY, 0)
-	direction = direction.LookVector * config.range
+function GunService:FireBullet(character: Model, origin: Vector3, direction: Vector3, config)
+	-- Direction is already calculated with spread, just apply range
+	local rayDirection = direction * config.range
 	
 	-- Raycast
 	local raycastParams = RaycastParams.new()
 	raycastParams.FilterDescendantsInstances = {character}
 	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
 	
-	local result = workspace:Raycast(origin, direction, raycastParams)
+		local result = workspace:Raycast(origin, rayDirection, raycastParams)
 	
 	if result then
 		local hitPart = result.Instance
 		local hitModel = hitPart:FindFirstAncestorOfClass("Model")
 		
+		print(string.format("[GunService] Raycast hit: Part=%s, Model=%s", 
+			hitPart.Name, hitModel and hitModel.Name or "nil"))
+		
 		if hitModel then
+			-- Check for humanoid first
 			local humanoid = hitModel:FindFirstChildOfClass("Humanoid")
 			if humanoid then
 				-- Calculate damage
@@ -122,9 +178,26 @@ function GunService:FireBullet(character: Model, origin: Vector3, targetPosition
 				end
 				
 				-- Apply damage through DamageService
-				DamageService:ApplyDamage(hitModel, damage, Players:GetPlayerFromCharacter(character))
+				DamageService:ApplyDamage(humanoid, damage, Players:GetPlayerFromCharacter(character))
+				
+			-- Check if this model is a crate (has CrateType attribute)
+			elseif hitModel:GetAttribute("CrateType") then
+				-- Apply damage to the crate model
+				local damage = config.damage
+				print(string.format("[GunService] Hit crate %s (Type: %s) - Applying %d damage", 
+					hitModel.Name, hitModel:GetAttribute("CrateType"), damage))
+				local success = DamageService:ApplyDamage(hitModel, damage, Players:GetPlayerFromCharacter(character))
+				if not success then
+					print("[GunService] Failed to apply damage to crate")
+				end
+			else
+				print(string.format("[GunService] Hit model %s has no CrateType attribute", hitModel.Name))
 			end
+		else
+			print(string.format("[GunService] Hit part %s has no Model ancestor", hitPart.Name))
 		end
+	else
+		print("[GunService] Raycast hit nothing")
 	end
 end
 

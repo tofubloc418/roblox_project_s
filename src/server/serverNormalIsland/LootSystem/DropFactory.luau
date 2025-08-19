@@ -61,21 +61,43 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 		if prefab:IsA("Tool") then
 			dropModel = prefab:Clone()
 		else
-			-- Convert Model to Tool
+			-- Convert Model to Tool (preserve Muzzle; don't rename it)
 			local tool = Instance.new("Tool")
 			tool.Name = itemData.displayName or itemId
 			tool.RequiresHandle = true
 			
 			local clone = prefab:Clone()
+			local hasHandle = false
+			local primaryForHandle: BasePart? = nil
+			
+			-- Move children into the tool without renaming Muzzle
 			for _, child in ipairs(clone:GetChildren()) do
 				child.Parent = tool
-				if child:IsA("BasePart") and child.Name == "Handle" then
-					-- Good, already has handle
-				elseif child:IsA("BasePart") and not tool:FindFirstChild("Handle") then
-					child.Name = "Handle"
+				if child:IsA("BasePart") then
+					if child.Name == "Handle" then
+						hasHandle = true
+					end
+					if not primaryForHandle then
+						primaryForHandle = child
+					end
 				end
 			end
 			clone:Destroy()
+			
+			-- Ensure a Handle exists (do NOT repurpose Muzzle)
+			if not hasHandle then
+				local handle = Instance.new("Part")
+				handle.Name = "Handle"
+				handle.Size = Vector3.new(1, 1, 1)
+				handle.Transparency = 1
+				handle.CanCollide = false
+				handle.CanQuery = false
+				handle.CanTouch = false
+				handle.Parent = tool
+				if primaryForHandle then
+					handle.CFrame = (primaryForHandle :: BasePart).CFrame
+				end
+			end
 			
 			dropModel = tool
 		end
@@ -139,11 +161,39 @@ function DropFactory:GetItemPrefab(itemId: string)
 		return nil
 	end
 
-	local found
-	for _, descendant in ipairs(categoryFolder:GetDescendants()) do
-		if (descendant:IsA("Model") or descendant:IsA("Tool")) and descendant.Name == itemId then
-			found = descendant
+	local found: Instance? = nil
+	-- Prefer a Tool directly under category
+	for _, child in ipairs(categoryFolder:GetChildren()) do
+		if child:IsA("Tool") and child.Name == itemId then
+			found = child
 			break
+		end
+	end
+	-- Fallback: any Tool in descendants
+	if not found then
+		for _, descendant in ipairs(categoryFolder:GetDescendants()) do
+			if descendant:IsA("Tool") and descendant.Name == itemId then
+				found = descendant
+				break
+			end
+		end
+	end
+	-- Fallback: Model directly under category
+	if not found then
+		for _, child in ipairs(categoryFolder:GetChildren()) do
+			if child:IsA("Model") and child.Name == itemId then
+				found = child
+				break
+			end
+		end
+	end
+	-- Fallback: any Model in descendants
+	if not found then
+		for _, descendant in ipairs(categoryFolder:GetDescendants()) do
+			if descendant:IsA("Model") and descendant.Name == itemId then
+				found = descendant
+				break
+			end
 		end
 	end
 

@@ -88,6 +88,7 @@ export type BulletData = {
 	speed: number,
 	gunName: string,
 	shooterId: number,
+	hitPosition: Vector3?,
 }
 
 return BulletVisuals

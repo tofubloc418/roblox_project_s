@@ -19,42 +19,13 @@ local fireGun = remotes:WaitForChild("FireGun")
 local GunController = {}
 GunController.__index = GunController
 
--- Try to find a muzzle attachment/part to use as the spawn origin
+-- Resolve ONLY a BasePart named "Muzzle" directly under the Tool
 local function getMuzzleCFrame(tool: Tool): CFrame?
-	local function findMuzzleIn(instance: Instance): Instance?
-		-- Prefer an Attachment named "Muzzle" or containing "Muzzle"
-		for _, obj in ipairs(instance:GetDescendants()) do
-			if obj:IsA("Attachment") then
-				local name = string.lower(obj.Name)
-				if name == "muzzle" or string.find(name, "muzzle") then
-					return obj
-				end
-			end
-		end
-		-- Fallback to a BasePart named "Muzzle"/"Barrel"
-		for _, obj in ipairs(instance:GetDescendants()) do
-			if obj:IsA("BasePart") then
-				local name = string.lower(obj.Name)
-				if name == "muzzle" or name == "barrel" or string.find(name, "muzzle") then
-					return obj
-				end
-			end
-		end
-		return nil
+	local node = tool:FindFirstChild("Muzzle", true)
+	if node and node:IsA("Attachment") then
+		return (node :: Attachment).WorldCFrame
 	end
-
-	local found = findMuzzleIn(tool)
-	if found then
-		if found:IsA("Attachment") then
-			return (found :: Attachment).WorldCFrame
-		elseif found:IsA("BasePart") then
-			return (found :: BasePart).CFrame
-		end
-	end
-
-	-- Fallback to handle
-	local handle = tool:FindFirstChild("Handle")
-	return handle and (handle :: BasePart).CFrame or nil
+	return nil
 end
 
 function GunController.new()
@@ -213,7 +184,7 @@ function GunController:Fire()
 			direction = direction * CFrame.Angles(spreadX, spreadY, 0)
 			direction = direction.LookVector
 			
-			-- Use the new bullet renderer
+			-- Use the new bullet renderer (no known hit yet on client)
 			BulletRenderer:RenderLocalBullet(muzzlePos, direction, self.config.bulletSpeed, self.equippedTool.Name)
 		end
 	end

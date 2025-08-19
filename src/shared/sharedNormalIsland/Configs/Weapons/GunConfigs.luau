@@ -24,7 +24,7 @@ export type GunConfig = {
 
 local GunConfigs: {[string]: GunConfig} = {
 	M9 = {
-		auto = true,
+		auto = false,
 		fireRate = 4,
 		damage = 15,
 		headshotMultiplier = 2.5,

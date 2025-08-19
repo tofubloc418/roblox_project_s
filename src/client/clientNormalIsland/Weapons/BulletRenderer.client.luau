@@ -108,7 +108,7 @@ function BulletRenderer:RenderBullet(data: BulletData, isLocalShot: boolean)
 		direction = data.direction,
 		speed = data.speed,
 		distance = 0,
-		maxDistance = 500, -- Max range
+		maxDistance = (data.hitPosition and (data.hitPosition - data.origin).Magnitude) or 500,
 		isLocalShot = isLocalShot,
 	}
 	

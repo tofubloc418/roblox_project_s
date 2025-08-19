@@ -8,8 +8,8 @@ export type PlayerStats = {
 }
 
 local PlayerConfig: PlayerStats = {
-	walkSpeed = 16, -- Roblox default
-	jumpPower = 50, -- Roblox default
+	walkSpeed = 80,
+	jumpPower = 100,
 	maxHealth = 100,
 }
 

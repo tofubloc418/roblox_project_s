@@ -20,12 +20,23 @@ export type GunConfig = {
 	-- Visual/Audio
 	bulletSpeed: number,               -- Visual bullet travel speed
 	shellEjectForce: number,           -- Shell ejection velocity
+
+	-- Shell visuals
+	shellType: string,                 -- Which shell prefab to use (see ShellType enum below)
+}
+
+-- Shell type enum (maps to ReplicatedStorage/Gun/BulletShells children)
+local ShellType = {
+	Normal = "NormalShell",
+	Sniper = "SniperShell",
+	Shotgun = "ShotgunShell",
+	Rifle = "RifleShell",
 }
 
 local GunConfigs: {[string]: GunConfig} = {
 	M9 = {
-		auto = false,
-		fireRate = 4,
+		auto = true,
+		fireRate = 10,
 		damage = 15,
 		headshotMultiplier = 2.5,
 		range = 300,
@@ -35,10 +46,10 @@ local GunConfigs: {[string]: GunConfig} = {
 		magazineCapacity = 100,
 		reloadTime = 3,
 		bulletSpeed = 300,
-		shellEjectForce = 35,
+		shellEjectForce = 15,
+		shellType = ShellType.Normal,
 	},
 	
-	-- Example configs for future weapons
 	AK47 = {
 		auto = true,
 		fireRate = 10,
@@ -52,21 +63,23 @@ local GunConfigs: {[string]: GunConfig} = {
 		reloadTime = 2.5,
 		bulletSpeed = 350,
 		shellEjectForce = 40,
+		shellType = ShellType.Rifle,
 	},
 	
-	Shotgun = {
+	MP220 = {
 		auto = false,
-		fireRate = 1,
-		damage = 12,  -- Per pellet
+		fireRate = 5,
+		damage = 12.5,
 		headshotMultiplier = 1.5,
 		range = 100,
-		bulletSpread = 8,
-		bulletsPerShot = 8,  -- 8 pellets
+		bulletSpread = 10,
+		bulletsPerShot = 9,
 		playerSlowdown = 0.7,
 		magazineCapacity = 6,
 		reloadTime = 3,
 		bulletSpeed = 250,
 		shellEjectForce = 45,
+		shellType = ShellType.Shotgun,
 	},
 }
 

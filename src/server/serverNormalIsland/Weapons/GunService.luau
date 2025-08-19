@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 
 local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
 local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
+local FastCast = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("FastCastRedux"))
 
 -- Type definition for bullet data (matches BulletVisuals module)
 type BulletData = {
@@ -34,15 +35,47 @@ local bulletVisualEvent = remotes:FindFirstChild("BulletVisual") or Instance.new
 bulletVisualEvent.Name = "BulletVisual"
 bulletVisualEvent.Parent = remotes
 
+local bulletHitEvent = remotes:FindFirstChild("BulletHit") or Instance.new("RemoteEvent")
+bulletHitEvent.Name = "BulletHit"
+bulletHitEvent.Parent = remotes
+
 function GunService.new()
 	local self = setmetatable({}, GunService)
 	self.playerCooldowns = {}
+	self.caster = FastCast.new()
 	return self
 end
 
 function GunService:Initialize()
 	fireGun.OnServerEvent:Connect(function(player, tool, mousePosition)
 		self:HandleShot(player, tool, mousePosition)
+	end)
+
+	-- Apply damage when a cast actually hits something
+	self.caster.RayHit:Connect(function(cast, result, velocity, position)
+		local data = cast.UserData
+		if not data then return end
+		local hitPart = result.Instance
+		local hitModel = hitPart:FindFirstAncestorOfClass("Model")
+		if hitModel then
+			local hum = hitModel:FindFirstChildOfClass("Humanoid")
+			if hum then
+				local damage = data.config.damage
+				if hitPart.Name == "Head" then
+					damage = damage * data.config.headshotMultiplier
+				end
+				DamageService:ApplyDamage(hum, damage, data.shooter)
+			elseif hitModel:GetAttribute("CrateType") then
+				DamageService:ApplyDamage(hitModel, data.config.damage, data.shooter)
+			end
+		end
+		-- Clamp tracers at hit
+		bulletHitEvent:FireAllClients({
+			shooterId = data.shooterId,
+			origin = data.origin,
+			direction = data.direction,
+			hitPosition = position,
+		})
 	end)
 end
 
@@ -116,88 +149,72 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 		direction = direction * CFrame.Angles(spreadX, spreadY, 0)
 		direction = direction.LookVector
 		
-		-- Fire the actual bullet (damage calculation) and get hit position
-		local hitPos = self:FireBullet(character, muzzlePos, direction, config)
-		
-		-- Broadcast bullet visual to all clients (include stop position if hit)
+		-- Broadcast bullet visual to all clients (stop position will be sent on hit)
 		local bulletData: BulletData = {
 			origin = muzzlePos,
 			direction = direction,
 			speed = config.bulletSpeed,
 			gunName = gunName,
 			shooterId = player.UserId,
-			hitPosition = hitPos,
+			hitPosition = nil,
 		}
 		bulletVisualEvent:FireAllClients(bulletData)
-	end
-end
 
-function GunService:FireBullet(character: Model, origin: Vector3, direction: Vector3, config): Vector3?
-	-- Direction is already calculated with spread, just apply range
-	local rayDirection = direction * config.range
-	
-	-- Raycast
-	local raycastParams = RaycastParams.new()
-	raycastParams.FilterDescendantsInstances = {character}
-	raycastParams.FilterType = Enum.RaycastFilterType.Exclude
-	
-	local result = workspace:Raycast(origin, rayDirection, raycastParams)
-	
-	if result then
-		local hitPart = result.Instance
-		local hitModel = hitPart:FindFirstAncestorOfClass("Model")
-		
-		if hitModel then
-			-- Check for humanoid first
-			local humanoid = hitModel:FindFirstChildOfClass("Humanoid")
-			if humanoid then
-				-- Calculate damage
-				local damage = config.damage
-				if hitPart.Name == "Head" then
-					damage = damage * config.headshotMultiplier
-				end
-				
-				-- Apply damage through DamageService
-				DamageService:ApplyDamage(humanoid, damage, Players:GetPlayerFromCharacter(character))
-				
-			-- Check if this model is a crate (has CrateType attribute)
-			elseif hitModel:GetAttribute("CrateType") then
-				-- Apply damage to the crate model
-				local damage = config.damage
-				local success = DamageService:ApplyDamage(hitModel, damage, Players:GetPlayerFromCharacter(character))
-				if not success then end
-			end
+		-- FastCast projectile with speed
+		local behavior = FastCast.newBehavior()
+		local params = RaycastParams.new()
+		params.FilterDescendantsInstances = {character}
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		behavior.RaycastParams = params
+		behavior.AutoIgnoreContainer = true
+		behavior.Acceleration = Vector3.new(0, 0, 0)
+		local initialVelocity = direction * (config.bulletSpeed or 300)
+		local cast = self.caster:Fire(muzzlePos, direction, initialVelocity, behavior)
+		if cast then
+			cast.UserData = {
+				shooter = player,
+				shooterId = player.UserId,
+				origin = muzzlePos,
+				direction = direction,
+				config = config,
+			}
 		end
-		return result.Position
 	end
-
-	return nil
 end
+
 
 function GunService:EjectShell(handle: BasePart, config)
-	local shell = Instance.new("Part")
-	shell.CFrame = handle.CFrame * CFrame.new(0.5, 0.2, 0) * CFrame.fromEulerAnglesXYZ(1.5, 0, 0)
-	shell.Size = Vector3.new(1, 1, 1)
-	shell.BrickColor = BrickColor.new("Bronze")
-	shell.Material = Enum.Material.Metal
-	shell.CanCollide = false
-	shell.BottomSurface = Enum.SurfaceType.Smooth
-	shell.TopSurface = Enum.SurfaceType.Smooth
-	shell.Name = "Shell"
-	
-	-- Random ejection velocity
-	local randomX = math.random(-10, 10)
-	local randomZ = math.random(-10, 10)
-	shell.Velocity = handle.CFrame.RightVector * config.shellEjectForce + Vector3.new(randomX, 20, randomZ)
-	shell.AssemblyAngularVelocity = Vector3.new(0, 200, 0)
-	
-	-- Add mesh for visual
-	local mesh = Instance.new("SpecialMesh")
-	mesh.Scale = Vector3.new(0.15, 0.4, 0.15)
-	mesh.Parent = shell
-	
-	shell.Parent = workspace
-	Debris:AddItem(shell, 5)
+	local shellsFolder = ReplicatedStorage:WaitForChild("Weapons"):WaitForChild("BulletShells")
+	local shellName = (config and config.shellType) or "NormalShell"
+	local shellPrefab = shellsFolder:FindFirstChild(shellName)
+	if not shellPrefab then return end
+
+	local ejectCFrame = handle.CFrame * CFrame.new(0.5, 0.2, 0) * CFrame.fromEulerAnglesXYZ(1.5, 0, 0)
+	local linear = handle.CFrame.RightVector * config.shellEjectForce + Vector3.new(math.random(-10, 10), 20, math.random(-10, 10))
+	local angular = Vector3.new(0, 200, 0)
+
+	if shellPrefab:IsA("Model") then
+		local clone = shellPrefab:Clone()
+		local primary = clone.PrimaryPart or clone:FindFirstChildWhichIsA("BasePart")
+		if not primary then clone:Destroy(); return end
+		clone:PivotTo(ejectCFrame)
+		clone.Parent = workspace
+		primary.CanCollide = true
+		primary.AssemblyLinearVelocity = linear
+		primary.AssemblyAngularVelocity = angular
+		Debris:AddItem(clone, 5)
+		return
+	end
+
+	if shellPrefab:IsA("BasePart") then
+		local part = (shellPrefab:Clone()) :: BasePart
+		part.CFrame = ejectCFrame
+		part.CanCollide = true
+		part.Parent = workspace
+		part.AssemblyLinearVelocity = linear
+		part.AssemblyAngularVelocity = angular
+		Debris:AddItem(part, 5)
+	end
 end
 
 -- Singleton

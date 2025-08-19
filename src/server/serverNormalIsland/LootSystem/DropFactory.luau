@@ -38,10 +38,53 @@ end
 -- Remove any ProximityPrompt descendants from an instance
 function DropFactory:RemovePickupPrompts(instance: Instance)
 	for _, d in ipairs(instance:GetDescendants()) do
-		if d:IsA("ProximityPrompt") then
+		if d:IsA("ProximityPrompt") or (d:IsA("BasePart") and d.Name == "Bubble") then
 			d:Destroy()
 		end
 	end
+end
+
+-- Create a floating bubble visual and anchor the drop slightly off the ground
+function DropFactory:ApplyFloatingBubble(dropModel: Instance)
+	local primaryPart: BasePart?
+	if dropModel:IsA("Model") then
+		primaryPart = dropModel.PrimaryPart or dropModel:FindFirstChildWhichIsA("BasePart")
+	elseif dropModel:IsA("BasePart") then
+		primaryPart = dropModel
+	elseif dropModel:IsA("Tool") then
+		local h = dropModel:FindFirstChild("Handle")
+		if h and h:IsA("BasePart") then
+			primaryPart = h
+		end
+	end
+	if not primaryPart then return end
+
+	-- Anchor the drop in place while on the ground
+	primaryPart.Anchored = true
+
+	-- Compute bubble size
+	local diameter = 2
+	if dropModel:IsA("Model") then
+		local _, size = dropModel:GetBoundingBox()
+		diameter = math.max(size.X, math.max(size.Y, size.Z)) * 1.4
+	elseif primaryPart then
+		diameter = math.max(primaryPart.Size.X, math.max(primaryPart.Size.Y, primaryPart.Size.Z)) * 1.4
+	end
+
+	-- Create bubble
+	local bubble = Instance.new("Part")
+	bubble.Name = "Bubble"
+	bubble.Shape = Enum.PartType.Ball
+	bubble.Material = Enum.Material.ForceField
+	bubble.Color = Color3.fromRGB(185, 230, 255)
+	bubble.Transparency = 0.35
+	bubble.Size = Vector3.new(diameter, diameter, diameter)
+	bubble.Anchored = true
+	bubble.CanCollide = false
+	bubble.CanQuery = false
+	bubble.CanTouch = false
+	bubble.CFrame = primaryPart.CFrame * CFrame.new(0, 0.25, 0)
+	bubble.Parent = dropModel
 end
 
 -- Spawn a dropped item
@@ -147,6 +190,9 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	end
 	
 	dropModel.Parent = self.DroppedItemsContainer
+
+	-- Apply floating bubble visual
+	self:ApplyFloatingBubble(dropModel)
 	
 	-- Setup pickup interaction
 	self:SetupPickupInteraction(dropModel)
@@ -314,6 +360,12 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 		local itemData = ItemDefinitions.GetItem(itemId)
 		local maxStack = (itemData and itemData.stackMax) or 1
 		local character = player.Character
+		
+		-- Ensure world-anchoring is removed
+		local h = dropModel:FindFirstChild("Handle")
+		if h and h:IsA("BasePart") then
+			h.Anchored = false
+		end
 		
 		-- Prefer stacking into an equipped tool first
 		if character and pickupCount > 0 then

@@ -6,7 +6,7 @@
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
+local _Players = game:GetService("Players")
 
 -- Shared modules
 local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
@@ -33,6 +33,15 @@ end
 
 function DropFactory:Initialize(inventoryService)
 	self.InventoryService = inventoryService
+end
+
+-- Remove any ProximityPrompt descendants from an instance
+function DropFactory:RemovePickupPrompts(instance: Instance)
+	for _, d in ipairs(instance:GetDescendants()) do
+		if d:IsA("ProximityPrompt") then
+			d:Destroy()
+		end
+	end
 end
 
 -- Spawn a dropped item
@@ -124,6 +133,14 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	
 	-- Mark as pickup
 	dropModel:SetAttribute("IsPickup", true)
+	
+	-- Disable default Roblox auto-pickup for Tools by turning off Handle touch
+	if dropModel:IsA("Tool") then
+		local handle = dropModel:FindFirstChild("Handle")
+		if handle and handle:IsA("BasePart") then
+			handle.CanTouch = false
+		end
+	end
 	
 	if impulse then
 		self:ApplyImpulse(dropModel, impulse)
@@ -240,62 +257,37 @@ end
 
 -- Setup pickup interaction
 function DropFactory:SetupPickupInteraction(dropModel: Instance)
-	-- Auto-pickup when a player walks very close to the drop
+	-- Use a ProximityPrompt (appear when close, press key while aiming)
 	local primaryPart
 	if dropModel:IsA("Model") then
 		primaryPart = dropModel.PrimaryPart or dropModel:FindFirstChildWhichIsA("BasePart")
 	elseif dropModel:IsA("BasePart") then
 		primaryPart = dropModel
 	elseif dropModel:IsA("Tool") then
-		-- For Tools, use the Handle as the primary part
 		primaryPart = dropModel:FindFirstChild("Handle")
 	end
-	if not primaryPart then
-		return
-	end
+	if not primaryPart then return end
 
-	-- Ensure touch events are permitted
-	primaryPart.CanTouch = true
+	local existing = primaryPart:FindFirstChildOfClass("ProximityPrompt")
+	if existing then existing:Destroy() end
 
-	-- Helper to resolve a player from a touched part
-	local function getPlayerFromHit(hit: BasePart): Player?
-		local model = hit:FindFirstAncestorOfClass("Model")
-		if model then
-			return Players:GetPlayerFromCharacter(model)
-		end
-		return nil
-	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "PickupPrompt"
+	prompt.ActionText = "Pick Up"
+	local itemId = dropModel:GetAttribute("ItemId") or dropModel.Name
+	prompt.ObjectText = tostring(itemId)
+	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
+	prompt.HoldDuration = 0
+	prompt.RequiresLineOfSight = true
+	prompt.MaxActivationDistance = 6
+	prompt.Style = Enum.ProximityPromptStyle.Default
+	prompt.Parent = primaryPart
 
-	-- Fast path: pick up on physical contact
-	primaryPart.Touched:Connect(function(hit)
+	prompt.Triggered:Connect(function(player)
 		if dropModel.Parent and not dropModel:GetAttribute("PickedUp") then
-			local player = getPlayerFromHit(hit)
-			if player then
-				dropModel:SetAttribute("PickedUp", true)
-				self:Pickup(dropModel, player)
-			end
-		end
-	end)
-
-	-- Poll nearby players and auto-pickup when within small radius
-	task.spawn(function()
-		local pickupRadius = 3.0 -- very close, practically on top
-		while dropModel.Parent do
-			task.wait(0.1)
-			if dropModel:GetAttribute("PickedUp") then
-				break
-			end
-			for _, player in ipairs(Players:GetPlayers()) do
-				local char = player.Character
-				local hrp = char and (char:FindFirstChild("HumanoidRootPart") :: any) or (char and char.PrimaryPart)
-				if hrp and (hrp.Position - primaryPart.Position).Magnitude <= pickupRadius then
-					if not dropModel:GetAttribute("PickedUp") then
-						dropModel:SetAttribute("PickedUp", true)
-						self:Pickup(dropModel, player)
-					end
-					return
-				end
-			end
+			dropModel:SetAttribute("PickedUp", true)
+			self:Pickup(dropModel, player)
 		end
 	end)
 end
@@ -311,6 +303,9 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 		return
 	end
 	
+	-- Remove any lingering prompts before parenting to inventory/character
+	self:RemovePickupPrompts(dropModel)
+	
 	-- If it's already a tool, we can potentially reuse it
 	if dropModel:IsA("Tool") then
 		local backpack = player:FindFirstChild("Backpack")
@@ -318,9 +313,31 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 		
 		local itemData = ItemDefinitions.GetItem(itemId)
 		local maxStack = (itemData and itemData.stackMax) or 1
+		local character = player.Character
 		
-		-- Check if we can stack with existing items
-		local stacked = false
+		-- Prefer stacking into an equipped tool first
+		if character and pickupCount > 0 then
+			for _, tool in ipairs(character:GetChildren()) do
+				if tool:IsA("Tool") and tool:GetAttribute("ItemId") == itemId then
+					local currentStack = tool:GetAttribute("CurrentStack") or 1
+					local toolMaxStack = tool:GetAttribute("MaxStack") or maxStack
+					if currentStack < toolMaxStack then
+						local space = toolMaxStack - currentStack
+						local toAdd = math.min(space, pickupCount)
+						tool:SetAttribute("CurrentStack", currentStack + toAdd)
+						pickupCount = pickupCount - toAdd
+						if pickupCount <= 0 then
+							dropModel:Destroy()
+							InventoryService:SyncInventory(player)
+							return
+						end
+					end
+				end
+			end
+		end
+		
+		-- Check if we can stack with existing items in backpack
+		local _stacked = false
 		for _, tool in ipairs(backpack:GetChildren()) do
 			if tool:IsA("Tool") and tool:GetAttribute("ItemId") == itemId then
 				local currentStack = tool:GetAttribute("CurrentStack") or 1
@@ -334,7 +351,7 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 					pickupCount = pickupCount - toAdd
 					
 					if pickupCount <= 0 then
-						stacked = true
+						_stacked = true
 						break
 					end
 				end
@@ -355,7 +372,6 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 			end
 			
 			-- Check character for equipped tools
-			local character = player.Character
 			if character then
 				for _, tool in ipairs(character:GetChildren()) do
 					if tool:IsA("Tool") then

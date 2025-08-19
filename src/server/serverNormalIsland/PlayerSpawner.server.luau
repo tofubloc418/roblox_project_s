@@ -8,6 +8,7 @@ Players.CharacterAutoLoads = true
 
 local IslandConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("IslandConfig"))
 local Occupancy  = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("OccupancyMap"))
+local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 
 local BOUNDARY_WIDTH   = IslandConfig.spawnAreaSize.X   -- studs (core area only)
 local MIN_PLAYER_DIST  = 30                           -- studs
@@ -177,10 +178,15 @@ Players.PlayerAdded:Connect(function(player)
 
 	player.CharacterAdded:Connect(function(char)
 		handlePlayerSpawn(player)
-		-- Boost movement speed on spawn
+		-- Initialize movement/health from PlayerConfig
 		local humanoid = char:WaitForChild("Humanoid", 5)
 		if humanoid then
-			humanoid.WalkSpeed = 100 -- very fast
+			humanoid.WalkSpeed = PlayerConfig.walkSpeed
+			if humanoid.UseJumpPower ~= nil then
+				humanoid.JumpPower = PlayerConfig.jumpPower
+			end
+			humanoid.MaxHealth = PlayerConfig.maxHealth
+			humanoid.Health = PlayerConfig.maxHealth
 		end
 	end)
 	

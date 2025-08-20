@@ -110,6 +110,7 @@ function BulletRenderer:RenderBullet(data: BulletData, isLocalShot: boolean)
 		distance = 0,
 		maxDistance = (data.hitPosition and (data.hitPosition - data.origin).Magnitude) or 500,
 		isLocalShot = isLocalShot,
+		shooterId = data.shooterId,
 	}
 	
 	table.insert(self.activeBullets, activeBullet)
@@ -168,6 +169,31 @@ function BulletRenderer:Initialize()
 		-- Don't render our own bullets from the server (we already rendered them locally)
 		if data.shooterId ~= localPlayer.UserId then
 			self:RenderBullet(data, false)
+		end
+	end)
+
+	-- Clamp tracers to actual server hit
+	local bulletHitEvent = remotes:FindFirstChild("BulletHit") or Instance.new("RemoteEvent")
+	bulletHitEvent.Name = "BulletHit"
+	bulletHitEvent.Parent = remotes
+	bulletHitEvent.OnClientEvent:Connect(function(data)
+		local shooterId = data.shooterId
+		local hitPosition = data.hitPosition :: Vector3?
+		local direction = data.direction :: Vector3
+		if not hitPosition then return end
+		-- Find best matching active bullet from same shooter via direction alignment and closest origin
+		local best, bestScore = nil, -math.huge
+		for _, active in ipairs(self.activeBullets) do
+			if active.shooterId == shooterId then
+				local score = active.direction:Dot(direction)
+				if score > bestScore then
+					best = active
+					bestScore = score
+				end
+			end
+		end
+		if best then
+			best.maxDistance = (hitPosition - best.origin).Magnitude
 		end
 	end)
 end

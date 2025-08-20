@@ -15,6 +15,7 @@ local BulletRenderer = _G.BulletRenderer
 -- Wait for remotes
 local remotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
 local fireGun = remotes:WaitForChild("FireGun")
+local reloadGun = remotes:WaitForChild("ReloadGun")
 
 local GunController = {}
 GunController.__index = GunController
@@ -74,10 +75,7 @@ function GunController:EquipGun(tool: Tool)
 		return
 	end
 	
-	-- Initialize CurrentAmmo attribute if not set
-	if not tool:GetAttribute("CurrentAmmo") then
-		tool:SetAttribute("CurrentAmmo", self.config.magazineCapacity)
-	end
+	-- Do not initialize ammo on client; server owns ammo state
 	
 	self.reloading = false
 	self.shooting = false
@@ -97,20 +95,17 @@ function GunController:EquipGun(tool: Tool)
 	local currentAmmo = tool:GetAttribute("CurrentAmmo") or 0
 	print(string.format("[Gun] Equipped %s - Ammo: %d/%d", tool.Name, currentAmmo, self.config.magazineCapacity))
 	
-	-- Setup shooting
-	if self.config.auto then
-		-- Full auto
+	-- Setup shooting (Auto and Burst are hold-to-fire; Single is click-to-fire)
+	if self.config.mode == "Auto" or self.config.mode == "Burst" then
 		self.connections.activated = tool.Activated:Connect(function()
 			self.shooting = true
 			self:StartAutoFire()
 		end)
-		
 		self.connections.deactivated = tool.Deactivated:Connect(function()
 			self.shooting = false
 			self:StopAutoFire()
 		end)
 	else
-		-- Semi auto
 		self.connections.activated = tool.Activated:Connect(function()
 			self:Fire()
 		end)
@@ -142,58 +137,66 @@ function GunController:Fire()
 	if not self.equippedTool or not self.config then return end
 	if self.reloading then return end
 	
-	-- Check fire rate cooldown
+	-- Cooldown using shotDelay
 	local now = tick()
-	local cooldown = 1 / self.config.fireRate
+	local cooldown = self.config.shotDelay or 0
 	if now - self.lastShot < cooldown then
 		return
 	end
 	
-	-- Check ammo from tool attribute
+	-- Check ammo from tool attribute; require enough for this trigger
 	local currentAmmo = self.equippedTool:GetAttribute("CurrentAmmo") or 0
-	if currentAmmo <= 0 then
+	local burstCount = (self.config.burstCount or 1)
+	local ammoCost = burstCount * (self.config.bulletsPerShot or 1)
+	if currentAmmo < ammoCost then
 		self:Reload()
 		return
 	end
 	
 	self.lastShot = now
-	-- Update ammo attribute
-	self.equippedTool:SetAttribute("CurrentAmmo", currentAmmo - 1)
-	currentAmmo = currentAmmo - 1
-	
-	print(string.format("[Gun] Fired - Ammo: %d/%d", currentAmmo, self.config.magazineCapacity))
+	-- Predict ammo locally for logging only; server authoritatively updates attribute
+	local predicted = currentAmmo - ammoCost
+	print(string.format("[Gun] Fired - Ammo: %d/%d", predicted, self.config.magazineCapacity))
 	
 	-- Get mouse position
 	local mouse = player:GetMouse()
 	local mousePosition = mouse.Hit.Position
-	
-	-- Create visual bullets with new renderer
-	local muzzleCFrame = getMuzzleCFrame(self.equippedTool)
-	if muzzleCFrame then
-		for i = 1, self.config.bulletsPerShot do
-			-- Calculate direction with spread from muzzle
-			local muzzlePos = muzzleCFrame.Position
-			local baseDirection = (mousePosition - muzzlePos).Unit
-			local spread = math.rad(self.config.bulletSpread)
-			
-			-- Apply random spread
-			local spreadX = (math.random() - 0.5) * spread
-			local spreadY = (math.random() - 0.5) * spread
-			
-			local direction = CFrame.lookAt(muzzlePos, muzzlePos + baseDirection)
-			direction = direction * CFrame.Angles(spreadX, spreadY, 0)
-			direction = direction.LookVector
-			
-			-- Use the new bullet renderer (no known hit yet on client)
-			BulletRenderer:RenderLocalBullet(muzzlePos, direction, self.config.bulletSpeed, self.equippedTool.Name)
-		end
-	end
-	
-	-- Send to server
+
+	-- Send to server immediately so authoritative burst starts without waiting on client visuals
 	print(string.format("[Gun] Sending FireServer with tool %s to position %s", 
 		self.equippedTool.Name, tostring(mousePosition)))
 	fireGun:FireServer(self.equippedTool, mousePosition)
 	print("[Gun] FireServer sent")
+	
+	-- Create visual bullets with new renderer
+	local muzzleCFrame = getMuzzleCFrame(self.equippedTool)
+	if muzzleCFrame then
+		local burstShots = (self.config.burstCount or 1)
+		local gap = self.config.burstDelay or 0.05
+		for n = 1, burstShots do
+			for i = 1, self.config.bulletsPerShot do
+				-- Re-evaluate muzzle each bullet for accuracy
+				local currentMuzzle = getMuzzleCFrame(self.equippedTool) or muzzleCFrame
+				local muzzlePos = currentMuzzle.Position
+				local baseDirection = (mousePosition - muzzlePos).Unit
+				local spread = math.rad(self.config.bulletSpread)
+				
+				-- Apply random spread per bullet
+				local spreadX = (math.random() - 0.5) * spread
+				local spreadY = (math.random() - 0.5) * spread
+				
+				local direction = CFrame.lookAt(muzzlePos, muzzlePos + baseDirection)
+				direction = direction * CFrame.Angles(spreadX, spreadY, 0)
+				direction = direction.LookVector
+				
+				-- Render local bullet visual for this pellet/shot
+				BulletRenderer:RenderLocalBullet(muzzlePos, direction, self.config.bulletSpeed, self.equippedTool.Name)
+			end
+			if n < burstShots then
+				task.wait(gap)
+			end
+		end
+	end
 	
 	-- Play shot sound
 	local sounds = self.equippedTool:FindFirstChild("Sounds")
@@ -259,8 +262,8 @@ function GunController:Reload()
 	task.wait(self.config.reloadTime)
 	
 	if self.equippedTool then -- Check tool is still equipped
-		-- Reset ammo to full magazine
-		self.equippedTool:SetAttribute("CurrentAmmo", self.config.magazineCapacity)
+		-- Ask server to authoritatively reload
+		reloadGun:FireServer(self.equippedTool)
 		self.reloading = false
 		print(string.format("[Gun] Reloaded - Ammo: %d/%d", self.config.magazineCapacity, self.config.magazineCapacity))
 	end

@@ -31,6 +31,10 @@ local DamageService = require(CombatModules:WaitForChild("DamageService"))
 local WeaponModules = script.Parent.Parent:WaitForChild("Weapons")
 local GunService = require(WeaponModules:WaitForChild("GunService"))
 
+-- Med modules
+local MedModules = script.Parent.Parent:WaitForChild("Med")
+local MedService = require(MedModules:WaitForChild("MedService"))
+
 print("[LootSystem] Initializing...")
 
 -- Initialize RoundState with a seed
@@ -43,6 +47,7 @@ DropFactory:Initialize(InventoryService)
 LootBoxService:Initialize(DropFactory)
 LootSpawnService:Initialize(BreakableCrate)
 GunService:Initialize()
+MedService:Initialize()
 
 -- Wire up BreakableCrate registration
 local function registerCrate(crateModel: Model)

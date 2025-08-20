@@ -36,17 +36,94 @@ ItemDefinitions.Items = {
 		weight = 1,
 		stackMax = 3,
 	},
+	["AK47"] = {
+		id = "AK47",
+		displayName = "AK47",
+		category = ItemDefinitions.Categories.GUN,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 1,
+	},
+	["MP220"] = {
+		id = "MP220",
+		displayName = "MP220",
+		category = ItemDefinitions.Categories.GUN,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 1,
+	},
+
+	-- Meds
+    -- Ammo
+	["9mm"] = {
+		id = "9mm",
+		displayName = "9mm",
+		category = ItemDefinitions.Categories.AMMO,
+		rarity = ItemDefinitions.Rarities.COMMON,
+		weight = 1,
+		stackMax = 60,
+	},
+	["5.56mm"] = {
+		id = "5.56mm",
+		displayName = "5.56mm",
+		category = ItemDefinitions.Categories.AMMO,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 60,
+	},
+	["7.62mm"] = {
+		id = "7.62mm",
+		displayName = "7.62mm",
+		category = ItemDefinitions.Categories.AMMO,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 60,
+	},
+	["12 Gauge"] = {
+		id = "12 Gauge",
+		displayName = "12 Gauge",
+		category = ItemDefinitions.Categories.AMMO,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 30,
+	},
+	["Bandage"] = {
+		id = "Bandage",
+		displayName = "Bandage",
+		category = ItemDefinitions.Categories.MED,
+		rarity = ItemDefinitions.Rarities.COMMON,
+		weight = 1,
+		stackMax = 5,
+	},
+	["Medkit"] = {
+		id = "Medkit",
+		displayName = "Medkit",
+		category = ItemDefinitions.Categories.MED,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 2,
+	},
+	["Soda"] = {
+		id = "Soda",
+		displayName = "Soda",
+		category = ItemDefinitions.Categories.MED,
+		rarity = ItemDefinitions.Rarities.COMMON,
+		weight = 1,
+		stackMax = 3,
+	},
+	["Pill"] = {
+		id = "Pill",
+		displayName = "Pill",
+		category = ItemDefinitions.Categories.MED,
+		rarity = ItemDefinitions.Rarities.UNCOMMON,
+		weight = 1,
+		stackMax = 3,
+	},
 }
 
 -- Helper function to get item by ID
 function ItemDefinitions.GetItem(itemId: string)
 	return ItemDefinitions.Items[itemId]
-end
-
--- Helper function to get ammo type for a gun
-function ItemDefinitions.GetAmmoForGun(gunId: string)
-	-- Deprecated. Retrieve from GunConfigs if needed.
-	return nil
 end
 
 return ItemDefinitions

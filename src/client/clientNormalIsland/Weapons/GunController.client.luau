@@ -34,6 +34,7 @@ function GunController.new()
 	self.equippedTool = nil
 	self.config = nil
 	self.reloading = false
+	self.reloadPendingUntil = 0
 	self.shooting = false
 	self.lastShot = 0
 	self.connections = {}
@@ -136,6 +137,7 @@ end
 function GunController:Fire()
 	if not self.equippedTool or not self.config then return end
 	if self.reloading then return end
+	if self.reloadPendingUntil and tick() < self.reloadPendingUntil then return end
 	
 	-- Cooldown using shotDelay
 	local now = tick()
@@ -150,6 +152,17 @@ function GunController:Fire()
 	local ammoCost = burstCount * (self.config.bulletsPerShot or 1)
 	if currentAmmo < ammoCost then
 		self:Reload()
+		-- Wait for server to update ammo or reload to complete before allowing another Fire
+		-- This avoids ping-ponging between empty shots and reload requests
+		local startTime = tick()
+		local timeout = 3
+		while tick() - startTime < timeout do
+			local updatedAmmo = self.equippedTool and self.equippedTool:GetAttribute("CurrentAmmo") or 0
+			if updatedAmmo and updatedAmmo >= ammoCost then
+				break
+			end
+			task.wait(0.05)
+		end
 		return
 	end
 	
@@ -215,9 +228,8 @@ function GunController:Fire()
 		end
 	end
 	
-	-- Auto reload if empty
-	if currentAmmo <= 0 then
-		task.wait(0.1)
+	-- Auto reload if empty after firing
+	if predicted <= 0 then
 		self:Reload()
 	end
 end
@@ -263,9 +275,20 @@ function GunController:Reload()
 	
 	if self.equippedTool then -- Check tool is still equipped
 		-- Ask server to authoritatively reload
+		self.reloadPendingUntil = tick() + math.max(0.5, (self.config.reloadTime or 0) * 0.25)
 		reloadGun:FireServer(self.equippedTool)
+		-- Wait for ammo attribute to replicate fully to magazine capacity
+		local timeoutAt = tick() + 3
+		local target = self.config.magazineCapacity or 1
+		while tick() < timeoutAt do
+			local updatedAmmo = self.equippedTool:GetAttribute("CurrentAmmo") or 0
+			if updatedAmmo >= target then
+				break
+			end
+			task.wait(0.05)
+		end
+		self.reloadPendingUntil = 0
 		self.reloading = false
-		print(string.format("[Gun] Reloaded - Ammo: %d/%d", self.config.magazineCapacity, self.config.magazineCapacity))
 	end
 end
 

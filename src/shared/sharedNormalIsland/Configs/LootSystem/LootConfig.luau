@@ -42,6 +42,19 @@ LootConfig.Tiers = {
 
 -- Crate type definitions
 LootConfig.CrateTypes = {
+	["TestCrate"] = {
+		AllowedPools = {
+			ItemDefinitions.Categories.GUN,
+		},
+		RarityWeights = {
+			[ItemDefinitions.Rarities.COMMON] = 100,
+		},
+		CategoryWeights = {
+			[ItemDefinitions.Categories.GUN] = 100,
+		},
+		BundleCount = 1,
+		MaxHealth = 100,
+	},
 	-- Standard loot crate
 	["Normal"] = {
 		AllowedPools = {
@@ -141,14 +154,14 @@ LootConfig.CrateTypes = {
 	},
 	
 	-- Medical supply crate
-	["MedicalCrate"] = {
+	["Medical"] = {
 		AllowedPools = {ItemDefinitions.Categories.MED},
 		RarityWeights = {
-			[ItemDefinitions.Rarities.COMMON] = 50,
-			[ItemDefinitions.Rarities.UNCOMMON] = 30,
-			[ItemDefinitions.Rarities.RARE] = 15,
-			[ItemDefinitions.Rarities.EPIC] = 5,
-			[ItemDefinitions.Rarities.LEGENDARY] = 0,
+			[ItemDefinitions.Rarities.COMMON] = 100,
+			-- [ItemDefinitions.Rarities.UNCOMMON] = 30,
+			-- [ItemDefinitions.Rarities.RARE] = 15,
+			-- [ItemDefinitions.Rarities.EPIC] = 5,
+			-- [ItemDefinitions.Rarities.LEGENDARY] = 0,
 		},
 		BundleCount = 1,
 		MaxHealth = 80,

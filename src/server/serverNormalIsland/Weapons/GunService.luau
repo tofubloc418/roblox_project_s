@@ -5,6 +5,7 @@ local _Players = game:GetService("Players")
 local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
 local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local FastCast = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("FastCastRedux"))
+local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 
 -- Type definition for bullet data (matches BulletVisuals module)
 type BulletData = {
@@ -126,8 +127,86 @@ function GunService:HandleReload(player: Player, tool: Instance)
 	if before == nil then
 		before = 0
 	end
-	tool:SetAttribute("CurrentAmmo", config.magazineCapacity)
-	print(string.format("[Gun] Reload server shooter=%s gun=%s ammo: %d -> %d", player.Name, gunName, before, config.magazineCapacity))
+
+	local magCap = config.magazineCapacity or 0
+	if before >= magCap then
+		print("[Gun] Reload blocked: already full")
+		return
+	end
+
+	-- Determine ammo type and how many rounds needed
+	local ammoItemId = config.ammoType
+	if not ammoItemId or ammoItemId == "" then
+		-- Fallback: fill without consuming ammo (legacy behavior)
+		tool:SetAttribute("CurrentAmmo", magCap)
+		print(string.format("[Gun] Reload server (no ammo type) shooter=%s gun=%s ammo: %d -> %d", player.Name, gunName, before, magCap))
+		return
+	end
+
+	local need = magCap - before
+	if need <= 0 then
+		print("[Gun] Reload blocked: no need")
+		return
+	end
+
+	-- Collect ammo stacks from character and backpack
+	local function iterateAmmoTools()
+		local yielded = {}
+		local character = player.Character
+		if character then
+			for _, inst in ipairs(character:GetChildren()) do
+				if inst:IsA("Tool") and inst:GetAttribute("ItemId") == ammoItemId then
+					table.insert(yielded, inst)
+				end
+			end
+		end
+		local backpack = player:FindFirstChildOfClass("Backpack")
+		if backpack then
+			for _, inst in ipairs(backpack:GetChildren()) do
+				if inst:IsA("Tool") and inst:GetAttribute("ItemId") == ammoItemId then
+					table.insert(yielded, inst)
+				end
+			end
+		end
+		return yielded
+	end
+
+	local ammoTools = iterateAmmoTools()
+	local totalAvailable = 0
+	for _, ammoTool in ipairs(ammoTools) do
+		totalAvailable += (ammoTool:GetAttribute("CurrentStack") or 0)
+	end
+
+	if totalAvailable <= 0 then
+		print("[Gun] Reload blocked: no ammo in inventory")
+		return
+	end
+
+	local toLoad = math.min(need, totalAvailable)
+	local remaining = toLoad
+	for _, ammoTool in ipairs(ammoTools) do
+		if remaining <= 0 then break end
+		local count = ammoTool:GetAttribute("CurrentStack") or 0
+		if count > 0 then
+			local take = math.min(count, remaining)
+			local newCount = count - take
+			if newCount <= 0 then
+				ammoTool:Destroy()
+			else
+				ammoTool:SetAttribute("CurrentStack", newCount)
+			end
+			remaining -= take
+		end
+	end
+
+	local after = math.clamp(before + toLoad, 0, magCap)
+	tool:SetAttribute("CurrentAmmo", after)
+	print(string.format("[Gun] Reload server shooter=%s gun=%s ammo: %d -> %d (loaded=%d need=%d avail=%d)", player.Name, gunName, before, after, toLoad, need, totalAvailable))
+
+	-- Sync inventory to reflect ammo consumption
+	if InventoryService and InventoryService.SyncInventory then
+		InventoryService:SyncInventory(player)
+	end
 end
 
 

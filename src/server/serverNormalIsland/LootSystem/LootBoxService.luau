@@ -60,48 +60,39 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 	
 
 	
-	-- Roll for items
-	local rolledItems = {}
-	
-	-- Handle whitelist-only crates
-	if crateConfig.Whitelist then
-		for _, itemId in ipairs(crateConfig.Whitelist) do
-			if LootPools.ItemExists(itemId) then
-				table.insert(rolledItems, itemId)
-				break -- Take first valid item
-			end
-		end
-	else
-		-- Standard rolling process
-		-- Step 1: Choose category
-		local category = self:RollCategory(crateConfig, rng)
-		if not category then
-			warn("Failed to roll category for crate:", crateType)
-			return
-		end
-		
-		-- Step 2: Choose rarity
-		local rarity = self:RollRarity(crateConfig, rng)
-		if not rarity then
-			warn("Failed to roll rarity for crate:", crateType)
-			return
-		end
-		
-		-- Step 3: Choose item from pool
-		local item = self:RollItem(category, rarity, crateConfig, rng)
-		if not item then
-			warn("Failed to roll item for category:", category, "rarity:", rarity)
-			return
-		end
-		
-		table.insert(rolledItems, item)
-	end
-	
-	-- Apply bundles: choose BundleCount bundles randomly
+	-- Apply bundles: roll primary per bundle
 	local drops = {}
 	local bundleCount = crateConfig.BundleCount or 1
 	for iBundle = 1, bundleCount do
-		local primary = rolledItems[1]
+		local primary: string? = nil
+		-- Per-bundle primary roll
+		if crateConfig.Whitelist then
+			for _, itemId in ipairs(crateConfig.Whitelist) do
+				if LootPools.ItemExists(itemId) then
+					primary = itemId
+					break
+				end
+			end
+		else
+			local category = self:RollCategory(crateConfig, rng)
+			if not category then
+				warn("Failed to roll category for crate:", crateType)
+				return
+			end
+			local rarity = self:RollRarity(crateConfig, rng)
+			if not rarity then
+				warn("Failed to roll rarity for crate:", crateType)
+				return
+			end
+			local item = self:RollItem(category, rarity, crateConfig, rng)
+			if not item then
+				warn("Failed to roll item for category:", category, "rarity:", rarity)
+				return
+			end
+			primary = item
+		end
+
+		-- Map primary to bundle type
 		local primaryDef = primary and ItemDefinitions.GetItem(primary) or nil
 		local bundleCategory = primaryDef and primaryDef.category or ItemDefinitions.Categories.GUN
 		local bundleName = "GunWithAmmo"

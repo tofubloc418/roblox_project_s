@@ -14,6 +14,8 @@ local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitFo
 local DropFactory = {}
 DropFactory.__index = DropFactory
 
+local MIN_SEPARATION = 3 -- studs; hardcoded minimum distance between drops
+
 function DropFactory.new()
 	local self = setmetatable({}, DropFactory)
 	
@@ -85,6 +87,78 @@ function DropFactory:ApplyFloatingBubble(dropModel: Instance)
 	bubble.CanTouch = false
 	bubble.CFrame = primaryPart.CFrame * CFrame.new(0, 0.25, 0)
 	bubble.Parent = dropModel
+end
+
+-- Compute a representative world position for a drop (Handle/PrimaryPart or pivot)
+function DropFactory:GetDropWorldPosition(dropModel: Instance): Vector3?
+	if dropModel:IsA("Model") or dropModel:IsA("Tool") then
+		local dm: any = dropModel
+		local cf = dm:GetPivot()
+		return cf.Position
+	elseif dropModel:IsA("BasePart") then
+		local bp: any = dropModel
+		return bp.Position
+	end
+	return nil
+end
+
+-- Move a drop to a given world position (preserve current rotation)
+function DropFactory:SetDropWorldPosition(dropModel: Instance, newPosition: Vector3)
+	if dropModel:IsA("Model") or dropModel:IsA("Tool") then
+		local dm: any = dropModel
+		local current = dm:GetPivot()
+		dm:PivotTo(CFrame.new(newPosition) * CFrame.fromMatrix(Vector3.new(), current.XVector, current.YVector))
+	elseif dropModel:IsA("BasePart") then
+		local bp: any = dropModel
+		bp.CFrame = CFrame.new(newPosition)
+	end
+end
+
+-- Light repulsion of the newly spawned drop away from nearby existing drops
+function DropFactory:ResolveSeparationForNewDrop(newDrop: Instance)
+	if not self.DroppedItemsContainer then return end
+
+	local function computePush(fromPos: Vector3, toPos: Vector3)
+		local delta = toPos - fromPos
+		delta = Vector3.new(delta.X, 0, delta.Z) -- horizontal only
+		local dist = delta.Magnitude
+		if dist <= 1e-3 then
+			-- Random small nudge to break symmetry
+			local angle = math.random() * math.pi * 2
+			return Vector3.new(math.cos(angle), 0, math.sin(angle)) * (MIN_SEPARATION * 0.5)
+		end
+		if dist >= MIN_SEPARATION then
+			return Vector3.new(0, 0, 0)
+		end
+		local needed = MIN_SEPARATION - dist
+		return (-delta.Unit) * needed * 0.5 -- move half the overlap away
+	end
+
+	local iterations = 8
+	for _ = 1, iterations do
+		local pos = self:GetDropWorldPosition(newDrop)
+		if not pos then return end
+		local totalPush = Vector3.new(0, 0, 0)
+		for _, other in ipairs(self.DroppedItemsContainer:GetChildren()) do
+			if other ~= newDrop then
+				local otherPos = self:GetDropWorldPosition(other)
+				if otherPos then
+					totalPush += computePush(pos, otherPos)
+				end
+			end
+		end
+		if totalPush.Magnitude < 0.01 then
+			break
+		end
+		-- Clamp step size for stability
+		local step = totalPush
+		local maxStep = 2
+		if step.Magnitude > maxStep then
+			step = step.Unit * maxStep
+		end
+		local newPos = Vector3.new(pos.X, pos.Y, pos.Z) + step
+		self:SetDropWorldPosition(newDrop, newPos)
+	end
 end
 
 -- Spawn a dropped item
@@ -193,6 +267,9 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 
 	-- Apply floating bubble visual
 	self:ApplyFloatingBubble(dropModel)
+
+	-- Lightly separate from neighbors to avoid overlapping pickup prompts
+	self:ResolveSeparationForNewDrop(dropModel)
 	
 	-- Setup pickup interaction
 	self:SetupPickupInteraction(dropModel)

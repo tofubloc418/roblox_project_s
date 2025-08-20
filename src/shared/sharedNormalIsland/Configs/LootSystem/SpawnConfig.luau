@@ -1,11 +1,12 @@
 local SpawnConfig = {}
 
 SpawnConfig.CrateDistribution = {
-	["Normal"] = 100,
+	["TestCrate"] = 200,
+	["Normal"] = 0,
 	["NormalPlus"] = 0,
 	["WeaponCrate"] = 0,
 	["GrenadeBox"] = 0,
-	["MedicalCrate"] = 0,
+	["MedicalCrate"] = 200,
 	["Elite"] = 0,
 }
 

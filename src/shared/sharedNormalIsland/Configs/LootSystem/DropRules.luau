@@ -14,13 +14,13 @@ DropRules.Bundles = {
 	-- { itemId = <gun>, stackCount = <gun stacks, usually 1>, stackAmmo = <number of full ammo stacks to drop> }
 	GunWithAmmo = {
 		{ itemId = "M9", stackCount = 1, stackAmmo = 1 },
-		{ itemId = "AK47", stackCount = 1, stackAmmo = 1 },
-		{ itemId = "MP220", stackCount = 1, stackAmmo = 1 },
 	},
 
 	-- Single-item bundles expressed as lists for consistency
 	SingleMed = {
 		{ itemId = "Bandage", stackCount = 5 },
+		{ itemId = "Medkit", stackCount = 1 },
+		{ itemId = "Pill", stackCount = 1 },
 	},
 
 	SingleAttachment = {

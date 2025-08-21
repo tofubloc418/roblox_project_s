@@ -54,6 +54,8 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 	-- Get deterministic RNG for this crate
 	local roundState = RoundState.Current()
 	local rng = roundState:GetCrateRollRng(crateId)
+
+	print(string.format("[LootRoll] CrateStart type=%s id=%s", tostring(crateType), tostring(crateId)))
 	
 	-- Get drop position (at crate's position)
 	local dropPosition = crateModel:GetPivot().Position
@@ -63,7 +65,9 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 	-- Apply bundles: roll primary per bundle
 	local drops = {}
 	local bundleCount = crateConfig.BundleCount or 1
+	print(string.format("[LootRoll] BundleCount=%d", bundleCount))
 	for iBundle = 1, bundleCount do
+		print(string.format("[LootRoll] Bundle %d/%d start", iBundle, bundleCount))
 		local primary: string? = nil
 		-- Per-bundle primary roll
 		if crateConfig.Whitelist then
@@ -73,17 +77,20 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 					break
 				end
 			end
+			print(string.format("[LootRoll] Bundle %d using whitelist primary=%s", iBundle, tostring(primary)))
 		else
 			local category = self:RollCategory(crateConfig, rng)
 			if not category then
 				warn("Failed to roll category for crate:", crateType)
 				return
 			end
+			print(string.format("[LootRoll] Bundle %d rolled category=%s", iBundle, tostring(category)))
 			local rarity = self:RollRarity(crateConfig, rng)
 			if not rarity then
 				warn("Failed to roll rarity for crate:", crateType)
 				return
 			end
+			print(string.format("[LootRoll] Bundle %d rolled rarity=%s", iBundle, tostring(rarity)))
 			local item = self:RollItem(category, rarity, crateConfig, rng)
 			if not item then
 				warn("Failed to roll item for category:", category, "rarity:", rarity)
@@ -91,6 +98,8 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 			end
 			primary = item
 		end
+
+		print(string.format("[LootRoll] Bundle %d primary item=%s", iBundle, tostring(primary)))
 
 		-- Map primary to bundle type
 		local primaryDef = primary and ItemDefinitions.GetItem(primary) or nil
@@ -105,7 +114,9 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 		elseif bundleCategory == ItemDefinitions.Categories.ARMOR then
 			bundleName = "SingleArmor"
 		end
+		print(string.format("[LootRoll] Bundle %d bundleName=%s", iBundle, tostring(bundleName)))
 		local bundleDrops = DropRules.ApplyBundle(bundleName, primary, rng)
+		print(string.format("[LootRoll] Bundle %d dropsCount=%d", iBundle, #bundleDrops))
 		for _, drop in ipairs(bundleDrops) do
 			table.insert(drops, drop)
 		end
@@ -113,6 +124,7 @@ function LootBoxService:RollAndDrop(crateModel: Model)
 
 	-- Spawn the drops
 	if self.DropFactory then
+		print(string.format("[LootRoll] CrateEnd totalDrops=%d", #drops))
 		for i, drop in ipairs(drops) do
 			local scatterPos = DropRules.GetScatterPosition(dropPosition, {scatterRadius = 2}, i, rng)
 			local impulse = DropRules.GetImpulse({impulse = {min = 8, max = 15}}, rng)

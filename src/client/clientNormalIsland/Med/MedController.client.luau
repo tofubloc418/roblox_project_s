@@ -2,7 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 local player = Players.LocalPlayer
-local MedConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Med"):WaitForChild("MedConfigs"))
+local MedModule = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Med"):WaitForChild("MedConfigs"))
+local MedConfigs = MedModule.Items
 
 local remotes = ReplicatedStorage:WaitForChild("MedRemotes")
 local useMed = remotes:WaitForChild("UseMed")

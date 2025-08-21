@@ -29,6 +29,58 @@ local function getMuzzleCFrame(tool: Tool): CFrame?
 	return nil
 end
 
+-- Animator helpers for gun animations
+local function ensureAnimator(): Animator?
+    local character = player.Character
+    if not character then return nil end
+    local hum = character:FindFirstChildOfClass("Humanoid")
+    if not hum then return nil end
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = hum
+    end
+    return animator
+end
+
+local function findAnim(tool: Instance, name: string): Animation?
+    local folder = tool and tool:FindFirstChild("Animations")
+    if not folder then return nil end
+    local inst = folder:FindFirstChild(name)
+    if inst and inst:IsA("Animation") then
+        return inst
+    end
+    return nil
+end
+
+local function loadAnim(animator: Animator?, anim: Animation?): AnimationTrack?
+    if not animator or not anim then return nil end
+    return animator:LoadAnimation(anim)
+end
+
+-- Count ammo stacks available client-side for the given ammo item id
+local function countAmmoAvailable(ammoItemId: string?): number
+	if not ammoItemId or ammoItemId == "" then return math.huge end
+	local total = 0
+	local character = player.Character
+	if character then
+		for _, inst in ipairs(character:GetChildren()) do
+			if inst:IsA("Tool") and inst:GetAttribute("ItemId") == ammoItemId then
+				total += inst:GetAttribute("CurrentStack") or 0
+			end
+		end
+	end
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	if backpack then
+		for _, inst in ipairs(backpack:GetChildren()) do
+			if inst:IsA("Tool") and inst:GetAttribute("ItemId") == ammoItemId then
+				total += inst:GetAttribute("CurrentStack") or 0
+			end
+		end
+	end
+	return total
+end
+
 function GunController.new()
 	local self = setmetatable({}, GunController)
 	self.equippedTool = nil
@@ -39,6 +91,8 @@ function GunController.new()
 	self.lastShot = 0
 	self.connections = {}
 	self.originalWalkSpeed = 16
+	self.animator = nil
+	self.gunAnimations = { Equip = nil, Unequip = nil, Reload = nil, Hold = nil }
 	return self
 end
 
@@ -80,6 +134,8 @@ function GunController:EquipGun(tool: Tool)
 	
 	self.reloading = false
 	self.shooting = false
+	self.animator = ensureAnimator()
+	self.gunAnimations = { Equip = nil, Unequip = nil, Reload = nil, Hold = nil }
 	
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -91,6 +147,27 @@ function GunController:EquipGun(tool: Tool)
 	local equipSound = sounds and sounds:FindFirstChild("Gun Equip")
 	if equipSound then
 		equipSound:Play()
+	end
+	
+	-- Load gun animations and play Equip then Hold (Hold is single-keyframe loop)
+	if self.animator then
+		self.gunAnimations.Equip = loadAnim(self.animator, findAnim(tool, "Equip"))
+		self.gunAnimations.Unequip = loadAnim(self.animator, findAnim(tool, "Unequip"))
+		self.gunAnimations.Reload = loadAnim(self.animator, findAnim(tool, "Reload"))
+		self.gunAnimations.Hold = loadAnim(self.animator, findAnim(tool, "Hold"))
+		if self.gunAnimations.Hold then self.gunAnimations.Hold.Looped = true end
+		if self.gunAnimations.Equip then
+			self.gunAnimations.Equip:Play()
+			local conn
+			conn = self.gunAnimations.Equip.Stopped:Connect(function()
+				if conn then conn:Disconnect() end
+				if self.equippedTool == tool and self.gunAnimations.Hold then
+					self.gunAnimations.Hold:Play()
+				end
+			end)
+		else
+			if self.gunAnimations.Hold then self.gunAnimations.Hold:Play() end
+		end
 	end
 	
 	local currentAmmo = tool:GetAttribute("CurrentAmmo") or 0
@@ -124,6 +201,14 @@ function GunController:UnequipGun()
 	self.shooting = false
 	self:StopAutoFire()
 	
+	-- Play unequip animation
+	if self.gunAnimations and self.gunAnimations.Hold then
+		self.gunAnimations.Hold:Stop(0)
+	end
+	if self.gunAnimations and self.gunAnimations.Unequip then
+		self.gunAnimations.Unequip:Play()
+	end
+	
 	-- Reset walk speed
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
@@ -132,6 +217,8 @@ function GunController:UnequipGun()
 	
 	self.equippedTool = nil
 	self.config = nil
+	self.animator = nil
+	self.gunAnimations = { Equip = nil, Unequip = nil, Reload = nil, Hold = nil }
 end
 
 function GunController:Fire()
@@ -258,8 +345,23 @@ function GunController:Reload()
 	local currentAmmo = self.equippedTool:GetAttribute("CurrentAmmo") or 0
 	if currentAmmo >= self.config.magazineCapacity then return end
 	
+	-- Client-side check for ammo stacks before starting reload (prevents playing sound/anim unnecessarily)
+	local ammoAvailable = countAmmoAvailable(self.config.ammoType)
+	if ammoAvailable <= 0 then
+		print(string.format("[Gun] Reload blocked (client): no ammo for %s", tostring(self.equippedTool.Name)))
+		return
+	end
+	
 	self.reloading = true
 	print(string.format("[Gun] Reloading %s...", self.equippedTool.Name))
+	
+	-- Stop hold while reloading; play reload animation
+	if self.gunAnimations and self.gunAnimations.Hold then
+		self.gunAnimations.Hold:Stop(0)
+	end
+	if self.gunAnimations and self.gunAnimations.Reload then
+		self.gunAnimations.Reload:Play()
+	end
 	
 	-- Play reload sound
 	local sounds = self.equippedTool:FindFirstChild("Sounds")
@@ -289,6 +391,10 @@ function GunController:Reload()
 		end
 		self.reloadPendingUntil = 0
 		self.reloading = false
+		-- Resume hold after reload
+		if self.equippedTool and self.gunAnimations and self.gunAnimations.Hold then
+			self.gunAnimations.Hold:Play()
+		end
 	end
 end
 

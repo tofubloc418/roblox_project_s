@@ -5,8 +5,6 @@ local MedEnums = {
 	},
 }
 
-local MedConfigs = {}
-
 export type MedConfig = {
 	useTime: number, -- seconds to channel before applying effect
 	mode: string, -- MedEnums.UsageMode.Instant | MedEnums.UsageMode.OverTime
@@ -22,41 +20,50 @@ local function cfg(data: MedConfig): MedConfig
 	return data
 end
 
-local configs: { [string]: MedConfig } = {
+local Items: { [string]: MedConfig } = {
 	Bandage = cfg({
 		useTime = 3,
 		mode = MedEnums.UsageMode.Instant,
-		healthAmount = 20,
-		useWalkSpeed = 8,
+		healthAmount = 15,
+		useWalkSpeed = 10,
 	}),
 
 	Medkit = cfg({
-		useTime = 5,
+		useTime = 6,
 		mode = MedEnums.UsageMode.Instant,
-		healthAmount = 75,
-		useWalkSpeed = 6,
+		healthAmount = 100,
+		useWalkSpeed = 10,
 	}),
 
 	Soda = cfg({
 		useTime = 1.5,
 		mode = MedEnums.UsageMode.Instant,
 		healthAmount = 0,
-		adrenalineDelta = 15,
-		useWalkSpeed = 16,
+		adrenalineDelta = 25,
+		useWalkSpeed = 10,
 	}),
 
 	Pill = cfg({
 		useTime = 1,
 		mode = MedEnums.UsageMode.Instant,
 		healthAmount = 0,
-		adrenalineDelta = 10,
-		useWalkSpeed = 16,
+		adrenalineDelta = 50,
+		useWalkSpeed = 10,
 	}),
 }
 
--- Expose enums on the same module table for consumers
-configs.MedEnums = MedEnums
+local Module = {
+	Items = Items,
+	MedEnums = MedEnums,
+	-- Global adrenaline-based healing/leak settings
+	AdrenalineHealPerSecondBase = 1,
+	AdrenalineLeakPerSecond = 1,
+	AdrenalineThresholdMid = 50,
+	AdrenalineThresholdHigh = 75,
+	AdrenalineMidMultiplier = 1.5,
+	AdrenalineHighMultiplier = 2,
+}
 
-return configs
+return Module
 
 

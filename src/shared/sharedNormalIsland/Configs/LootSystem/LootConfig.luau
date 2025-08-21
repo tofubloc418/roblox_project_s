@@ -154,14 +154,10 @@ LootConfig.CrateTypes = {
 	},
 	
 	-- Medical supply crate
-	["Medical"] = {
+	["MedicalCrate"] = {
 		AllowedPools = {ItemDefinitions.Categories.MED},
 		RarityWeights = {
 			[ItemDefinitions.Rarities.COMMON] = 100,
-			-- [ItemDefinitions.Rarities.UNCOMMON] = 30,
-			-- [ItemDefinitions.Rarities.RARE] = 15,
-			-- [ItemDefinitions.Rarities.EPIC] = 5,
-			-- [ItemDefinitions.Rarities.LEGENDARY] = 0,
 		},
 		BundleCount = 1,
 		MaxHealth = 80,

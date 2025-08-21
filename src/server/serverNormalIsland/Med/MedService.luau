@@ -1,8 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
-local MedConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Med"):WaitForChild("MedConfigs"))
-local MedEnums = MedConfigs.MedEnums
+local MedModule = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Med"):WaitForChild("MedConfigs"))
+local MedConfigs = MedModule.Items
+local MedEnums = MedModule.MedEnums
 
 local remotes = ReplicatedStorage:FindFirstChild("MedRemotes")
 if not remotes then
@@ -21,6 +22,7 @@ MedService.__index = MedService
 function MedService.new()
 	local self = setmetatable({}, MedService)
 	self.playerUsing = {}
+	self._tickerStarted = false
 	return self
 end
 
@@ -28,6 +30,66 @@ function MedService:Initialize()
 	useMed.OnServerEvent:Connect(function(player: Player, tool: Instance)
 		self:HandleUse(player, tool)
 	end)
+
+	-- Ensure adrenaline attribute exists for joining players
+	game:GetService("Players").PlayerAdded:Connect(function(plr)
+		if plr:GetAttribute("Adrenaline") == nil then
+			plr:SetAttribute("Adrenaline", 0)
+		end
+	end)
+
+	-- Start global adrenaline ticker once
+	if not self._tickerStarted then
+		self._tickerStarted = true
+		task.spawn(function()
+			local Players = game:GetService("Players")
+			local last = os.clock()
+			while true do
+				local now = os.clock()
+				local dt = now - last
+				last = now
+				-- Cap dt to avoid huge jumps on lag spikes
+				dt = math.clamp(dt, 0, 0.5)
+
+				local baseHeal = MedModule.AdrenalineHealPerSecondBase or 0
+				local leakRate = MedModule.AdrenalineLeakPerSecond or 0
+				local tMid = MedModule.AdrenalineThresholdMid or 50
+				local tHigh = MedModule.AdrenalineThresholdHigh or 75
+				local mMid = MedModule.AdrenalineMidMultiplier or 1.5
+				local mHigh = MedModule.AdrenalineHighMultiplier or 2
+
+				for _, plr in ipairs(Players:GetPlayers()) do
+					local adrenaline = plr:GetAttribute("Adrenaline") or 0
+					if adrenaline > 0 then
+						-- Heal based on adrenaline thresholds
+						local rate = baseHeal
+						if adrenaline > tHigh then
+							rate = baseHeal * mHigh
+						elseif adrenaline > tMid then
+							rate = baseHeal * mMid
+						end
+						local healAmount = rate * dt
+						local character = plr.Character
+						if character then
+							local humanoid = character:FindFirstChildOfClass("Humanoid")
+							if humanoid and humanoid.Health > 0 then
+								humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + healAmount)
+							end
+						end
+
+						-- Leak adrenaline over time
+						local newAdr = math.max(0, adrenaline - leakRate * dt)
+						if newAdr ~= adrenaline then
+							plr:SetAttribute("Adrenaline", newAdr)
+						end
+					end
+				end
+
+				-- Tick at ~10 Hz
+				task.wait(0.1)
+			end
+		end)
+	end
 end
 
 function MedService:HandleUse(player: Player, tool: Instance)
@@ -63,26 +125,14 @@ function MedService:HandleUse(player: Player, tool: Instance)
 		return
 	end
 
-	-- Apply instant heal or start HoT
-	if config.mode == MedEnums.UsageMode.OverTime then
-		local duration = config.hotDuration or 0
-		local interval = math.max(0.05, config.tickInterval or 0.5)
-		local perTick = config.healPerTick or 0
-		local elapsed = 0
-		while elapsed < duration and humanoid.Parent do
-			if humanoid.Health <= 0 then break end
-			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + perTick)
-			elapsed += interval
-			task.wait(interval)
-		end
-	else
-		local heal = config.healthAmount or 0
-		if heal ~= 0 then
-			humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + heal)
-		end
+	-- Apply instant effects
+	local heal = config.healthAmount or 0
+	if heal ~= 0 then
+		humanoid.Health = math.min(humanoid.MaxHealth, humanoid.Health + heal)
 	end
 
 	-- Apply adrenaline attribute if configured
+	-- Apply adrenaline change (Soda/Pill increase absolute amount)
 	if config.adrenalineDelta and config.adrenalineDelta ~= 0 then
 		local current = player:GetAttribute("Adrenaline") or 0
 		local newValue = math.clamp(current + config.adrenalineDelta, 0, 100)

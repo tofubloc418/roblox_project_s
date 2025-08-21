@@ -352,7 +352,7 @@ function GunService:HandleShot(player: Player, tool: Instance, mousePosition: Ve
 end
 
 function GunService:EjectShell(handle: BasePart, config)
-	local shellsFolder = ReplicatedStorage:WaitForChild("Weapons"):WaitForChild("BulletShells")
+	local shellsFolder = ReplicatedStorage:WaitForChild("BulletShells")
 	local shellName = (config and config.shellType) or "NormalShell"
 	local shellPrefab = shellsFolder:FindFirstChild(shellName)
 	if not shellPrefab then return end

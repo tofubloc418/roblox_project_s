@@ -54,7 +54,7 @@ function DropFactory:ApplyFloatingBubble(dropModel: Instance)
 	elseif dropModel:IsA("BasePart") then
 		primaryPart = dropModel
 	elseif dropModel:IsA("Tool") then
-		local h = dropModel:FindFirstChild("Handle")
+		local h = dropModel:FindFirstChild("Handle", true)
 		if h and h:IsA("BasePart") then
 			primaryPart = h
 		end
@@ -253,7 +253,7 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 	
 	-- Disable default Roblox auto-pickup for Tools by turning off Handle touch
 	if dropModel:IsA("Tool") then
-		local handle = dropModel:FindFirstChild("Handle")
+		local handle = dropModel:FindFirstChild("Handle", true)
 		if handle and handle:IsA("BasePart") then
 			handle.CanTouch = false
 		end
@@ -387,7 +387,7 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	elseif dropModel:IsA("BasePart") then
 		primaryPart = dropModel
 	elseif dropModel:IsA("Tool") then
-		primaryPart = dropModel:FindFirstChild("Handle")
+		primaryPart = dropModel:FindFirstChild("Handle", true)
 	end
 	if not primaryPart then return end
 
@@ -398,7 +398,15 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	prompt.Name = "PickupPrompt"
 	prompt.ActionText = "Pick Up"
 	local itemId = dropModel:GetAttribute("ItemId") or dropModel.Name
-	prompt.ObjectText = tostring(itemId)
+
+	local function updatePromptText()
+		local def = ItemDefinitions.GetItem(itemId)
+		local displayName = (def and def.displayName) or tostring(itemId)
+		local count = dropModel:GetAttribute("CurrentStack") or dropModel:GetAttribute("StackCount") or 1
+		prompt.ObjectText = string.format("%s x%d", displayName, count)
+	end
+
+	updatePromptText()
 	prompt.KeyboardKeyCode = Enum.KeyCode.E
 	prompt.GamepadKeyCode = Enum.KeyCode.ButtonX
 	prompt.HoldDuration = 0
@@ -406,6 +414,10 @@ function DropFactory:SetupPickupInteraction(dropModel: Instance)
 	prompt.MaxActivationDistance = 6
 	prompt.Style = Enum.ProximityPromptStyle.Default
 	prompt.Parent = primaryPart
+
+	-- Keep label in sync with stack count changes while in world
+	dropModel:GetAttributeChangedSignal("CurrentStack"):Connect(updatePromptText)
+	dropModel:GetAttributeChangedSignal("StackCount"):Connect(updatePromptText)
 
 	prompt.Triggered:Connect(function(player)
 		if dropModel.Parent and not dropModel:GetAttribute("PickedUp") then
@@ -439,7 +451,7 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 		local character = player.Character
 		
 		-- Ensure world-anchoring is removed
-		local h = dropModel:FindFirstChild("Handle")
+		local h = dropModel:FindFirstChild("Handle", true)
 		if h and h:IsA("BasePart") then
 			h.Anchored = false
 		end

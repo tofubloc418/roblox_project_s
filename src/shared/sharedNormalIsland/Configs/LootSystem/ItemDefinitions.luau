@@ -34,7 +34,7 @@ ItemDefinitions.Items = {
 		category = ItemDefinitions.Categories.GUN,
 		rarity = ItemDefinitions.Rarities.COMMON,
 		weight = 1,
-		stackMax = 3,
+		stackMax = 1,
 	},
 	["AK47"] = {
 		id = "AK47",
@@ -53,7 +53,6 @@ ItemDefinitions.Items = {
 		stackMax = 1,
 	},
 
-	-- Meds
     -- Ammo
 	["9mm"] = {
 		id = "9mm",
@@ -93,7 +92,7 @@ ItemDefinitions.Items = {
 		category = ItemDefinitions.Categories.MED,
 		rarity = ItemDefinitions.Rarities.COMMON,
 		weight = 1,
-		stackMax = 5,
+		stackMax = 15,
 	},
 	["Medkit"] = {
 		id = "Medkit",
@@ -102,14 +101,6 @@ ItemDefinitions.Items = {
 		rarity = ItemDefinitions.Rarities.UNCOMMON,
 		weight = 1,
 		stackMax = 2,
-	},
-	["Soda"] = {
-		id = "Soda",
-		displayName = "Soda",
-		category = ItemDefinitions.Categories.MED,
-		rarity = ItemDefinitions.Rarities.COMMON,
-		weight = 1,
-		stackMax = 3,
 	},
 	["Pill"] = {
 		id = "Pill",

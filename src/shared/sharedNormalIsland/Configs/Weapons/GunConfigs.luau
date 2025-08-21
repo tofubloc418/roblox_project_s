@@ -32,16 +32,18 @@ export type GunConfig = {
 	shellType: string,                 -- Which shell prefab to use (see ShellType enum below)
 }
 
--- Shell type enum (maps to ReplicatedStorage/Gun/BulletShells children)
+-- Shell type enum (maps to ReplicatedStorage/BulletShells children)
 local ShellType = {
-	Normal = "NormalShell",
-	Sniper = "SniperShell",
-	Shotgun = "ShotgunShell",
-	Rifle = "RifleShell",
+	NINE_MM = "9mm",
+	FIVE_FIVE_SIX_MM = "5.56mm",
+	SEVEN_SIX_TWO_MM = "7.62mm",
+	TWELVE_GAUGE = "12 Gauge",
+	FIFTY_AE = ".50 AE",
+	THREE_ZERO_EIGHT_SUBSONIC = ".308 Subsonic",
+	FORTY_FIVE_ACP = ".45 ACP",
+	SNIPER = "Sniper",
 }
 
--- Ammo type enum aligned with Surviv.io
--- Reference: Surviv.io Ammunition types ([surviv.io wiki](https://survivio.fandom.com/wiki/Ammunition))
 local AmmoTypes = {
 	NINE_MM = "9mm",
 	FIVE_FIVE_SIX_MM = "5.56mm",
@@ -54,22 +56,20 @@ local AmmoTypes = {
 
 local GunConfigs: {[string]: GunConfig} = {
 	M9 = {
-		mode = "Burst",
-		shotDelay = 0.35,
-		burstDelay = 0.06,
-		burstCount = 3,
-		damage = 15,
+		mode = "Single",
+		shotDelay = 0.12,
+		damage = 12,
 		headshotMultiplier = 2.5,
 		range = 300,
 		ammoType = AmmoTypes.NINE_MM,
-		bulletSpread = 1.5,
+		bulletSpread = 4,
 		bulletsPerShot = 1,
 		playerSlowdown = 0.5,
-		magazineCapacity = 100,
-		reloadTime = 3,
+		magazineCapacity = 15,
+		reloadTime = 1.6,
 		bulletSpeed = 300,
 		shellEjectForce = 15,
-		shellType = ShellType.Normal,
+		shellType = ShellType.NINE_MM,
 	},
 	
 	AK47 = {
@@ -86,7 +86,7 @@ local GunConfigs: {[string]: GunConfig} = {
 		reloadTime = 2.5,
 		bulletSpeed = 350,
 		shellEjectForce = 40,
-		shellType = ShellType.Rifle,
+		shellType = ShellType.SEVEN_SIX_TWO_MM,
 	},
 	
 	MP220 = {
@@ -103,7 +103,7 @@ local GunConfigs: {[string]: GunConfig} = {
 		reloadTime = 3,
 		bulletSpeed = 250,
 		shellEjectForce = 45,
-		shellType = ShellType.Shotgun,
+		shellType = ShellType.TWELVE_GAUGE,
 	},
 }
 

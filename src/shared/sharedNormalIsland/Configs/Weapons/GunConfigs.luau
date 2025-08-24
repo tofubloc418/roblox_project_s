@@ -85,7 +85,7 @@ local GunConfigs: {[string]: GunConfig} = {
 		magazineCapacity = 30,
 		reloadTime = 2.5,
 		bulletSpeed = 350,
-		shellEjectForce = 40,
+		shellEjectForce = 20,
 		shellType = ShellType.SEVEN_SIX_TWO_MM,
 	},
 	

@@ -6,6 +6,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local _StarterPlayer = game:GetService("StarterPlayer")
+local ServerStorage = game:GetService("ServerStorage")
 
 -- Shared modules
 local _LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
@@ -41,10 +42,27 @@ print("[Initializer] Starting...")
 -- Note: Some environments may not expose typed members on StarterPlayer in Luau; use attributes instead
 game:GetService("StarterPlayer"):SetAttribute("ForceR15", true)
 game:GetService("StarterPlayer"):SetAttribute("IgnoreCharacterAppearance", true)
+-- Enforce first-person camera for all players by default
+game:GetService("StarterPlayer").CameraMode = Enum.CameraMode.LockFirstPerson
 
 -- Initialize RoundState with a seed
 local roundState = RoundState.Current()
 roundState:Initialize()
+
+-- Expose universal match start time
+local matchInfoFolder = ReplicatedStorage:FindFirstChild("MatchInfo")
+if not matchInfoFolder then
+    matchInfoFolder = Instance.new("Folder")
+    matchInfoFolder.Name = "MatchInfo"
+    matchInfoFolder.Parent = ReplicatedStorage
+end
+local startTime = matchInfoFolder:FindFirstChild("StartTime")
+if not startTime then
+    startTime = Instance.new("NumberValue")
+    startTime.Name = "StartTime"
+    startTime.Value = os.time()
+    startTime.Parent = matchInfoFolder
+end
 
 -- Initialize services
 InventoryService:Initialize()
@@ -119,6 +137,16 @@ local function applyCharacterConfig(character: Model)
 end
 
 Players.PlayerAdded:Connect(function(player)
+    -- Force first-person for this player on join
+    player.CameraMode = Enum.CameraMode.LockFirstPerson
+	-- Initialize stamina attributes
+	if player:GetAttribute("MaxStamina") == nil then
+		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)
+	end
+	if player:GetAttribute("Stamina") == nil then
+		player:SetAttribute("Stamina", PlayerConfig.baseMaxStamina or 100)
+	end
+	player:SetAttribute("WantsSprint", false)
 	player.CharacterAdded:Connect(function(character)
 		applyCharacterConfig(character)
 	end)

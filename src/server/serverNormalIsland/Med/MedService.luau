@@ -137,6 +137,15 @@ function MedService:HandleUse(player: Player, tool: Instance)
 		local current = player:GetAttribute("Adrenaline") or 0
 		local newValue = math.clamp(current + config.adrenalineDelta, 0, 100)
 		player:SetAttribute("Adrenaline", newValue)
+		-- Increase stamina capacity for positive adrenalineDelta
+		if config.adrenalineDelta > 0 then
+			local maxSt = player:GetAttribute("MaxStamina") or 100
+			local add = math.floor(config.adrenalineDelta * 0.5)
+			local newMax = math.clamp(maxSt + add, 0, 200)
+			player:SetAttribute("MaxStamina", newMax)
+			local cur = player:GetAttribute("Stamina") or newMax
+			player:SetAttribute("Stamina", math.min(newMax, cur + add))
+		end
 	end
 
 	-- Consume one stack if present

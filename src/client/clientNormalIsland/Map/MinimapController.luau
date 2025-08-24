@@ -14,7 +14,9 @@ local MapMath = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("
 
 local PingIcons = require(script.Parent:WaitForChild("PingIcons"))
 local MinimapView = require(script.Parent:WaitForChild("MinimapView"))
-local FullMapView = require(script.Parent:WaitForChild("FullMapView"))
+local HudBuilder = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("HudBuilder"))
+local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
+local PlayersService = game:GetService("Players")
 
 local remoteEvents = ReplicatedStorage:WaitForChild("RemoteEvents")
 local PingRemote = remoteEvents:WaitForChild("PingRemote") :: RemoteEvent
@@ -24,34 +26,38 @@ Controller.enabled = true
 Controller.lastUpdateTime = 0
 Controller.playerPings = {} :: {[number]: MinimapConfig.PingData}
 
-local screenGui: ScreenGui
+local _screenGui: ScreenGui
 local mini, full
 local playerIcon: ImageLabel
 local fullMapPlayerIcon: ImageLabel
+local topHud
+local timerLabel: TextLabel
 
 function Controller:Initialize()
-    screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MinimapUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = playerGui
+    local build = HudBuilder.buildMinimap(playerGui)
+    _screenGui = build.ScreenGui
+    mini = build.Mini
+    full = build.Full
+    playerIcon = build.PlayerIcon
+    fullMapPlayerIcon = build.FullMapPlayerIcon
 
-    mini = MinimapView.new(screenGui)
-    playerIcon = Instance.new("ImageLabel")
-    playerIcon.Name = "PlayerIcon"
-    playerIcon.Size = MinimapConfig.PlayerIcon.Size
-    playerIcon.AnchorPoint = Vector2.new(0.5, 0.5)
-    playerIcon.Position = UDim2.fromScale(0.5, 0.5)
-    playerIcon.Image = MinimapConfig.PlayerIcon.Image
-    playerIcon.ImageColor3 = MinimapConfig.PlayerIcon.Color
-    playerIcon.BackgroundTransparency = 1
-    playerIcon.ZIndex = 5
-    playerIcon.Parent = mini.Frame
+    -- Build top-right HUD
+    topHud = HudBuilder.buildTopRightHud(playerGui)
 
-    full = FullMapView.new(screenGui)
-    fullMapPlayerIcon = playerIcon:Clone()
-    fullMapPlayerIcon.Name = "FullMapPlayerIcon"
-    fullMapPlayerIcon.ZIndex = 13
-    fullMapPlayerIcon.Parent = full.Frame
+    -- Match timer tucked just under the minimap
+    timerLabel = Instance.new("TextLabel")
+    timerLabel.Name = "MatchTimer"
+    timerLabel.AnchorPoint = Vector2.new(0.5, 0)
+    timerLabel.Size = UDim2.fromOffset(120, 18)
+    -- Position will be updated each frame relative to minimap; initialize near top-left to avoid nil
+    timerLabel.Position = UDim2.fromOffset(0, 0)
+    timerLabel.BackgroundTransparency = 0.3
+    timerLabel.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    timerLabel.TextColor3 = Color3.fromRGB(255,255,255)
+    timerLabel.TextScaled = true
+    timerLabel.Font = Enum.Font.GothamBold
+    timerLabel.Text = "00:00"
+    timerLabel.Parent = _screenGui
 end
 
 function Controller:Update()
@@ -98,6 +104,7 @@ end
 
 function Controller:ToggleFullMap()
     full.Frame.Visible = not full.Frame.Visible
+    CursorManager.setEnabledFor("FullMap", full.Frame.Visible)
     if full.Frame.Visible then
         for _, pingData in pairs(self.playerPings) do
             local existing = full.PingContainer:FindFirstChild("PingIcon_" .. tostring(pingData.Timestamp))
@@ -193,6 +200,44 @@ function Controller:Start()
     end)
     RunService.Heartbeat:Connect(function()
         if self.enabled and mini then self:Update() end
+        -- Update timer and HUD elements
+        local matchInfo = ReplicatedStorage:FindFirstChild("MatchInfo")
+        local start = matchInfo and matchInfo:FindFirstChild("StartTime")
+        if start and timerLabel then
+            local elapsed = os.time() - start.Value
+            if elapsed < 0 then elapsed = 0 end
+            local m = math.floor(elapsed / 60)
+            local s = elapsed % 60
+            timerLabel.Text = string.format("%02d:%02d", m, s)
+            -- Reposition below minimap every frame in case layout changes
+            if mini and mini.Frame then
+                local f = mini.Frame
+                local pos = f.AbsolutePosition
+                local size = f.AbsoluteSize
+                local x = pos.X + size.X * 0.5
+                local y = pos.Y + size.Y + 6
+                local inset = GuiService:GetGuiInset()
+                timerLabel.Position = UDim2.fromOffset(x - inset.X, y - inset.Y)
+                timerLabel.AnchorPoint = Vector2.new(0.5, 0)
+            end
+        end
+        -- Health/Stamina bars
+        local character = player.Character
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        if hum and topHud then
+            local hpFrac = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
+            topHud.HealthFill.Size = UDim2.fromScale(hpFrac, 1)
+        end
+        -- Stamina from player attribute "Stamina" (0..max) and "MaxStamina"
+        if topHud then
+            local stamina = player:GetAttribute("Stamina") or 0
+            local maxStamina = player:GetAttribute("MaxStamina") or 100
+            local stFrac = math.clamp(maxStamina > 0 and (stamina / maxStamina) or 0, 0, 1)
+            topHud.StaminaFill.Size = UDim2.fromScale(stFrac, 1)
+            -- Player count
+            local count = #PlayersService:GetPlayers()
+            topHud.PlayerCount.Text = tostring(count)
+        end
     end)
 end
 

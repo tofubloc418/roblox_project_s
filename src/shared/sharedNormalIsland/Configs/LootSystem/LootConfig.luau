@@ -47,7 +47,8 @@ LootConfig.CrateTypes = {
 			ItemDefinitions.Categories.GUN,
 		},
 		RarityWeights = {
-			[ItemDefinitions.Rarities.COMMON] = 100,
+			[ItemDefinitions.Rarities.COMMON] = 50,
+			[ItemDefinitions.Rarities.UNCOMMON] = 50,
 		},
 		CategoryWeights = {
 			[ItemDefinitions.Categories.GUN] = 100,

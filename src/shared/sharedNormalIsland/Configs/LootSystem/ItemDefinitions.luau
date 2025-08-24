@@ -44,14 +44,6 @@ ItemDefinitions.Items = {
 		weight = 1,
 		stackMax = 1,
 	},
-	["MP220"] = {
-		id = "MP220",
-		displayName = "MP220",
-		category = ItemDefinitions.Categories.GUN,
-		rarity = ItemDefinitions.Rarities.UNCOMMON,
-		weight = 1,
-		stackMax = 1,
-	},
 
     -- Ammo
 	["9mm"] = {

@@ -1,0 +1,160 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
+
+-- Input remotes for reliable client -> server intent
+local inputRemotes = ReplicatedStorage:FindFirstChild("InputRemotes")
+if not inputRemotes then
+    inputRemotes = Instance.new("Folder")
+    inputRemotes.Name = "InputRemotes"
+    inputRemotes.Parent = ReplicatedStorage
+end
+local setSprintRemote = inputRemotes:FindFirstChild("SetSprint")
+if not setSprintRemote then
+    setSprintRemote = Instance.new("RemoteEvent")
+    setSprintRemote.Name = "SetSprint"
+    setSprintRemote.Parent = inputRemotes
+end
+local jumpPressedRemote = inputRemotes:FindFirstChild("JumpPressed")
+if not jumpPressedRemote then
+    jumpPressedRemote = Instance.new("RemoteEvent")
+    jumpPressedRemote.Name = "JumpPressed"
+    jumpPressedRemote.Parent = inputRemotes
+end
+
+local lastJumpCharge: {[Player]: number} = {}
+
+local function stepPlayer(player: Player, dt: number)
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local maxStamina = player:GetAttribute("MaxStamina") or (PlayerConfig.baseMaxStamina or 100)
+	local stamina = player:GetAttribute("Stamina") or maxStamina
+	local wantsSprint = player:GetAttribute("WantsSprint") == true
+
+	-- Determine state
+	local movingMode = "walk"
+	if humanoid then
+		if wantsSprint and stamina > 0 then
+			movingMode = "run"
+			humanoid.WalkSpeed = PlayerConfig.runSpeed or 20
+		else
+			humanoid.WalkSpeed = PlayerConfig.walkSpeed or 14
+		end
+		if humanoid:GetState() == Enum.HumanoidStateType.Swimming then
+			movingMode = "swim"
+		end
+	end
+
+	-- Drain/regen
+	local drain = 0
+	if movingMode == "run" then
+		drain = (PlayerConfig.staminaRunDrainPerSecond or 15) * dt
+	elseif movingMode == "swim" then
+		drain = (PlayerConfig.staminaSwimDrainPerSecond or 15) * dt
+	else
+		-- walking: regen
+		stamina = math.min(maxStamina, stamina + (PlayerConfig.staminaRegenPerSecond or 12) * dt)
+	end
+	stamina = math.max(0, stamina - drain)
+
+	-- Apply
+	player:SetAttribute("Stamina", stamina)
+
+	-- Enforce jump gating based on stamina threshold (cost)
+	if humanoid then
+		local cost = PlayerConfig.jumpStaminaCost or 20
+		local allow = stamina >= cost
+		-- Toggle Jumping state and power
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, allow)
+		humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
+		if not allow and humanoid.Jump == true then
+			humanoid.Jump = false
+		end
+	end
+	-- Debug samples
+	if math.random() < 0.05 then
+		print(string.format("[Stamina] %s dt=%.2f mode=%s stamina=%.1f/%d", player.Name, dt, movingMode, stamina, maxStamina))
+	end
+end
+
+-- Jump cost: hook Humanoid.Jumping per character
+local function onCharacter(player: Player, character: Model)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return end
+	humanoid.Jumping:Connect(function(active)
+		if active then
+			local maxStamina = player:GetAttribute("MaxStamina") or (PlayerConfig.baseMaxStamina or 100)
+			local stamina = player:GetAttribute("Stamina") or maxStamina
+			local cost = PlayerConfig.jumpStaminaCost or 20
+			if stamina >= cost then
+				player:SetAttribute("Stamina", stamina - cost)
+				print(string.format("[Stamina] %s jump cost=%.1f -> %.1f", player.Name, cost, stamina - cost))
+			else
+				-- Prevent jump by lowering JumpPower briefly
+				local jp = humanoid.JumpPower
+				humanoid.JumpPower = 0
+				task.delay(0.15, function()
+					humanoid.JumpPower = jp
+				end)
+			end
+		end
+	end)
+	-- Redundant logging via state change
+	humanoid.StateChanged:Connect(function(_, new)
+		if new == Enum.HumanoidStateType.Jumping then
+			print(string.format("[Stamina] %s state Jumping (redundant log)", player.Name))
+		end
+	end)
+end
+
+-- Heartbeat loop
+game:GetService("RunService").Heartbeat:Connect(function(dt)
+	for _, plr in ipairs(Players:GetPlayers()) do
+		stepPlayer(plr, math.clamp(dt, 0, 0.5))
+	end
+end)
+
+-- Character hookup
+Players.PlayerAdded:Connect(function(plr)
+	plr.CharacterAdded:Connect(function(char)
+		onCharacter(plr, char)
+	end)
+end)
+
+
+-- Remote handlers for reliable input intent
+setSprintRemote.OnServerEvent:Connect(function(player: Player, desired: boolean)
+	player:SetAttribute("WantsSprint", desired == true)
+	print(string.format("[Input] %s sprint=%s", player.Name, tostring(desired)))
+end)
+
+jumpPressedRemote.OnServerEvent:Connect(function(player: Player)
+	local now = os.clock()
+	local last = lastJumpCharge[player] or 0
+	if (now - last) < 0.2 then
+		return
+	end
+	lastJumpCharge[player] = now
+
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local maxStamina = player:GetAttribute("MaxStamina") or (PlayerConfig.baseMaxStamina or 100)
+	local stamina = player:GetAttribute("Stamina") or maxStamina
+	local cost = PlayerConfig.jumpStaminaCost or 20
+
+	if stamina >= cost then
+		player:SetAttribute("Stamina", stamina - cost)
+		print(string.format("[Stamina] %s jump (remote) cost=%.1f -> %.1f", player.Name, cost, stamina - cost))
+	else
+		if humanoid then
+			local jp = humanoid.JumpPower
+			humanoid.JumpPower = 0
+			task.delay(0.15, function()
+				humanoid.JumpPower = jp
+			end)
+		end
+	end
+end)
+
+

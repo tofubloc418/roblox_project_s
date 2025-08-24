@@ -18,6 +18,8 @@ type ItemStack = InventoryTypes.ItemStack
 type InventoryData = InventoryTypes.InventoryData
 
 -- UI Module
+local HudBuilder = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("HudBuilder"))
+local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
 local InventoryUI = require(script.Parent:WaitForChild("InventoryUI"))
 
 -- Config
@@ -37,19 +39,13 @@ local dragStartSlot: number? = nil
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
-local screen, hotbarGui = InventoryUI.createScreens()
-local grid = InventoryUI.buildInventoryGrid(screen, ROWS, COLS)
-local hotbar = InventoryUI.buildHotbar(hotbarGui, COLS)
-
-local slotButtons: { ImageButton } = {}
-for i = 1, SLOT_COUNT do
-	slotButtons[i] = InventoryUI.createSlot(grid, i)
-end
-
-local hotbarButtons: { ImageButton } = {}
-for i = 1, COLS do
-	hotbarButtons[i] = InventoryUI.createSlot(hotbar, i)
-end
+local inv = HudBuilder.buildInventory(ROWS, COLS)
+local screen = inv.Screen
+local _hotbarGui = inv.HotbarGui
+local _grid = inv.Grid
+local _hotbar = inv.Hotbar
+local slotButtons = inv.SlotButtons
+local hotbarButtons = inv.HotbarButtons
 
 -- Render function
 local function render()
@@ -86,6 +82,7 @@ local function onToggleInventory(actionName, inputState, inputObject)
 	if inputState == Enum.UserInputState.Begin then
 		inventoryOpen = not inventoryOpen
 		screen.Enabled = inventoryOpen
+		CursorManager.setEnabledFor("Inventory", inventoryOpen)
 	end
 	return Enum.ContextActionResult.Sink
 end

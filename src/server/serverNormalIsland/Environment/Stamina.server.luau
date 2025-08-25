@@ -51,7 +51,12 @@ local function stepPlayer(player: Player, dt: number)
 	if movingMode == "run" then
 		drain = (PlayerConfig.staminaRunDrainPerSecond or 15) * dt
 	elseif movingMode == "swim" then
-		drain = (PlayerConfig.staminaSwimDrainPerSecond or 15) * dt
+		-- Only drain when actually moving in water
+		local vel = character and character.PrimaryPart and character.PrimaryPart.AssemblyLinearVelocity or Vector3.zero
+		local horizontal = Vector3.new(vel.X, 0, vel.Z).Magnitude
+		if horizontal > 1 then
+			drain = (PlayerConfig.staminaSwimDrainPerSecond or 15) * dt
+		end
 	else
 		-- walking: regen
 		stamina = math.min(maxStamina, stamina + (PlayerConfig.staminaRegenPerSecond or 12) * dt)
@@ -70,6 +75,15 @@ local function stepPlayer(player: Player, dt: number)
 		humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
 		if not allow and humanoid.Jump == true then
 			humanoid.Jump = false
+		end
+	end
+
+	-- Health penalty if swimming with zero stamina while moving
+	if movingMode == "swim" and stamina <= 0 and humanoid and character and character.PrimaryPart then
+		local vel = character.PrimaryPart.AssemblyLinearVelocity
+		local horizontal = Vector3.new(vel.X, 0, vel.Z).Magnitude
+		if horizontal > 1 then
+			humanoid:TakeDamage((PlayerConfig.staminaSwimHealthDrainPerSecond or 5) * dt)
 		end
 	end
 	-- Debug samples

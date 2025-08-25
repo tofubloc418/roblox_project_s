@@ -215,9 +215,8 @@ function Controller:Start()
                 local pos = f.AbsolutePosition
                 local size = f.AbsoluteSize
                 local x = pos.X + size.X * 0.5
-                local y = pos.Y + size.Y + 6
-                local inset = GuiService:GetGuiInset()
-                timerLabel.Position = UDim2.fromOffset(x - inset.X, y - inset.Y)
+                local y = pos.Y + size.Y + 4
+                timerLabel.Position = UDim2.fromOffset(x, y)
                 timerLabel.AnchorPoint = Vector2.new(0.5, 0)
             end
         end
@@ -227,6 +226,10 @@ function Controller:Start()
         if hum and topHud then
             local hpFrac = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
             topHud.HealthFill.Size = UDim2.fromScale(hpFrac, 1)
+            if topHud.HealthCap then
+                -- Health cap is full width; adjust if you later support max health modifiers
+                topHud.HealthCap.Size = UDim2.fromScale(1, 1)
+            end
         end
         -- Stamina from player attribute "Stamina" (0..max) and "MaxStamina"
         if topHud then
@@ -234,6 +237,12 @@ function Controller:Start()
             local maxStamina = player:GetAttribute("MaxStamina") or 100
             local stFrac = math.clamp(maxStamina > 0 and (stamina / maxStamina) or 0, 0, 1)
             topHud.StaminaFill.Size = UDim2.fromScale(stFrac, 1)
+            if topHud.StaminaCap then
+                -- Dynamic capacity cap: fraction of absolute maximum (baseMaxStamina or larger via meds)
+                -- Here, cap spans 100% of the bar since MaxStamina already represents the current cap.
+                -- If you introduce a global absolute maximum, scale cap to (MaxStamina / absoluteMax).
+                topHud.StaminaCap.Size = UDim2.fromScale(1, 1)
+            end
             -- Player count
             local count = #PlayersService:GetPlayers()
             topHud.PlayerCount.Text = tostring(count)

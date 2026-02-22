@@ -100,7 +100,7 @@ function MedController:Use()
 	if emitter then
 		emitter.Enabled = false
 	end
-	if humanoid and self.originalWalkSpeed then
+	if humanoid then
 		humanoid.WalkSpeed = self.originalWalkSpeed
 	end
 

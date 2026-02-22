@@ -17,7 +17,6 @@ local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForCh
 local LootSystemModules = script.Parent:WaitForChild("LootSystem")
 local LootBoxService = require(LootSystemModules:WaitForChild("LootBoxService"))
 local DropFactory = require(LootSystemModules:WaitForChild("DropFactory"))
-local LootSpawnService = require(LootSystemModules:WaitForChild("LootSpawnService"))
 local BreakableCrate = require(LootSystemModules:WaitForChild("BreakableCrate"))
 
 -- Inventory module
@@ -68,27 +67,17 @@ end
 InventoryService:Initialize()
 DropFactory:Initialize(InventoryService)
 LootBoxService:Initialize(DropFactory)
-LootSpawnService:Initialize(BreakableCrate)
 GunService:Initialize()
 MeleeService:Initialize()
 MedService:Initialize()
 
--- Wire up BreakableCrate registration
+-- Wire up BreakableCrate registration for static crates in the map (CrateType attribute)
 local function registerCrate(crateModel: Model)
 	return BreakableCrate:RegisterCrate(crateModel, LootBoxService, DamageService)
 end
 
--- Override LootSpawnService registration to use our function
-LootSpawnService.BreakableCrateComponent = {
-	RegisterCrate = registerCrate
-}
-
--- Register existing crates in workspace
+-- Register existing crates in workspace (static loot crates placed in map design)
 BreakableCrate.RegisterExistingCrates(LootBoxService, DamageService)
-
--- Trigger procedural crate spawning on init
-local spawnedOnInit = LootSpawnService:SpawnCratesForRound()
-print(string.format("[LootSpawn] Spawned %d crates on init", spawnedOnInit))
 
 -- Listen for new crates added to workspace
 workspace.DescendantAdded:Connect(function(descendant)
@@ -158,7 +147,6 @@ print("[Initializer] Initialization complete")
 _G.Services = {
 	LootBoxService = LootBoxService,
 	DropFactory = DropFactory,
-	LootSpawnService = LootSpawnService,
 	DamageService = DamageService,
 	BreakableCrate = BreakableCrate,
 }

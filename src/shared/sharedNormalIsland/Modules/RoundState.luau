@@ -74,16 +74,6 @@ function RoundState:GetCrateRollRng(crateId: string): Random
 	return rng
 end
 
--- Get a general RNG for procedural spawning
-function RoundState:GetSpawnRng(): Random
-	if not self.IsInitialized then
-		warn("RoundState not initialized, using default seed")
-		self:Initialize()
-	end
-	
-	return Random.new(self.RoundSeed)
-end
-
 -- Reset the round state (for testing or new rounds)
 function RoundState:Reset()
 	self.RoundSeed = 0

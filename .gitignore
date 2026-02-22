@@ -49,3 +49,10 @@ luac.out
 kitchen/
 
 sourcemap.json
+
+# Rokit
+~/.rokit/
+
+# Wally
+Packages/
+wally.lock

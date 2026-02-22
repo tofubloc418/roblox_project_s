@@ -91,7 +91,8 @@ ContextActionService:BindAction("ToggleInventory", onToggleInventory, false, Enu
 -- Hotbar keys
 UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean)
 	if gpe then return end
-	
+	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
+
 	if input.KeyCode.Value >= Enum.KeyCode.One.Value and input.KeyCode.Value <= Enum.KeyCode.Five.Value then
 		local slotIndex = input.KeyCode.Value - Enum.KeyCode.One.Value + 1
 		requestEquip:FireServer(slotIndex)

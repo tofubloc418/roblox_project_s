@@ -94,25 +94,26 @@ function M.isAreaFree(centerX, centerZ, width, height, buffer)
 end
 
 -- Automatically mark water areas outside the boundary
+-- Spawn area (core + sand) is 1800 studs; grid is 1900. Mark outer rim as water.
 function M.markWaterAreas()
 	local halfWidth = M.totalWidth / 2
+	local spawnHalfWidth = 900 -- Core + sand rim = 1800, half = 900
 	local N = math.ceil(M.totalWidth / M.cellSize)
-	
-	-- Mark ocean areas (outside playable zone) as water
+
 	for ix = 1, N do
 		for iz = 1, N do
 			local worldX = (ix - 0.5) * M.cellSize - halfWidth
 			local worldZ = (iz - 0.5) * M.cellSize - halfWidth
-			
-			-- Mark as water if outside playable square area
-			if math.abs(worldX) > halfWidth or math.abs(worldZ) > halfWidth then
+
+			-- Mark as water if outside playable spawn area (core + sand)
+			if math.abs(worldX) > spawnHalfWidth or math.abs(worldZ) > spawnHalfWidth then
 				M.grid[ix][iz] = M.OCCUPANCY_TYPES.WATER
 			end
 		end
 	end
-	
-	print(string.format("[OccupancyMap] Marked water areas outside %.1f x %.1f square bounds", 
-		halfWidth * 2, halfWidth * 2))
+
+	print(string.format("[OccupancyMap] Marked water areas outside %.1f x %.1f spawn bounds",
+		spawnHalfWidth * 2, spawnHalfWidth * 2))
 end
 
 return M 

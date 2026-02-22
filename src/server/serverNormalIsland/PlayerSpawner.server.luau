@@ -143,9 +143,16 @@ end
 local function handlePlayerSpawn(player)
 	local pos = getNextSpawnPoint()
 	local hrp = player.Character:WaitForChild("HumanoidRootPart", 10)
-	if hrp then 
-        print("[SpawnManager] Spawning", player.Name, "at", pos)
-		hrp.CFrame = CFrame.new(pos) 
+	if hrp then
+		print("[SpawnManager] Spawning", player.Name, "at", pos)
+		hrp.CFrame = CFrame.new(pos)
+	else
+		warn("[SpawnManager] HumanoidRootPart timeout for", player.Name, "- spawning at fallback position")
+		-- Fallback: try to move character via Humanoid or spawn at default
+		local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+		if humanoid and humanoid.RootPart then
+			humanoid.RootPart.CFrame = CFrame.new(pos)
+		end
 	end
 	
 	-- Remove player from waiting queue after successful spawn

@@ -6,8 +6,6 @@ local setSprintRemote: RemoteEvent = inputRemotes:WaitForChild("SetSprint")
 local jumpPressedRemote: RemoteEvent = inputRemotes:WaitForChild("JumpPressed")
 
 local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local humanoid: Humanoid = character:WaitForChild("Humanoid")
 
 -- Toggle sprint desire and adjust walkspeed locally for responsiveness
 local function setSprint(desired: boolean)
@@ -26,6 +24,7 @@ end
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
+	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
 	if input.KeyCode == Enum.KeyCode.LeftShift then
 		setSprint(true)
 	elseif input.KeyCode == Enum.KeyCode.Space then
@@ -36,6 +35,8 @@ UserInputService.InputBegan:Connect(function(input, gp)
 end)
 
 UserInputService.InputEnded:Connect(function(input, gp)
+	if gp then return end
+	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
 	if input.KeyCode == Enum.KeyCode.LeftShift then
 		setSprint(false)
 	elseif input.KeyCode == Enum.KeyCode.Space then
@@ -49,11 +50,14 @@ player:GetAttributeChangedSignal("Stamina"):Connect(function()
 	if stamina <= 0 then
 		setSprint(false)
 	end
-    -- Client jump gating for immediate UX: mirror server
-    local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
-    local cost = PlayerConfig.jumpStaminaCost or 20
-    local allow = stamina >= cost
-    humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
+	-- Client jump gating for immediate UX: mirror server
+	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if humanoid then
+		local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
+		local cost = PlayerConfig.jumpStaminaCost or 20
+		local allow = stamina >= cost
+		humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
+	end
 end)
 
 -- Sink Space when jumping is disallowed to prevent attempt

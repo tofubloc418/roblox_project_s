@@ -2,7 +2,7 @@
 
 ## CRITICAL: Directory Usage Rules
 
-### ⛔ DEPRECATED - DO NOT EDIT
+### DEPRECATED - DO NOT EDIT
 The following directories are **DEPRECATED** and must **NEVER** be edited:
 - `src/client/clientBattleground/`
 - `src/server/serverBattleground/`
@@ -14,7 +14,7 @@ The following directories are **DEPRECATED** and must **NEVER** be edited:
 - Must NEVER have existing files modified
 - Are legacy code that is no longer in use
 
-### ✅ ACTIVE DIRECTORIES
+### ACTIVE DIRECTORIES
 All new development should happen in:
 - `src/client/clientNormalIsland/` - Client-side code for the island
 - `src/server/serverNormalIsland/` - Server-side code for the island

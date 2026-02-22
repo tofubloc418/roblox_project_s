@@ -81,14 +81,17 @@ if workspace.CurrentCamera then
     rebuild()
 end
 
--- Hide crosshair when UI cursor is enabled (optional tie-in)
+-- Hide crosshair when UI cursor is enabled (use same instance as CursorManager)
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local cursorFlag = Instance.new("BoolValue")
-cursorFlag.Name = "UICursorEnabled"
-cursorFlag.Value = false
-cursorFlag.Parent = ReplicatedStorage
+local cursorFlag = ReplicatedStorage:FindFirstChild("UICursorEnabled")
+if not cursorFlag then
+	cursorFlag = Instance.new("BoolValue")
+	cursorFlag.Name = "UICursorEnabled"
+	cursorFlag.Value = false
+	cursorFlag.Parent = ReplicatedStorage
+end
 cursorFlag.Changed:Connect(function()
-    root.Visible = not cursorFlag.Value
+	root.Visible = not cursorFlag.Value
 end)
 
 

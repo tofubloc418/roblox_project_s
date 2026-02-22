@@ -16,7 +16,6 @@ src/shared/sharedNormalIsland/
 │       ├── LootConfig.luau
 │       ├── ItemDefinitions.luau
 │       ├── LootPools.luau
-│       ├── SpawnConfig.luau
 │       └── DropRules.luau
 ├── Modules/
 │   ├── MapMath.luau
@@ -43,7 +42,6 @@ src/server/serverNormalIsland/
 │   └── InventoryService.luau
 ├── LootSystem/
 │   ├── LootBoxService.luau
-│   ├── LootSpawnService.luau
 │   ├── DropFactory.luau
 │   └── BreakableCrate.luau
 └── Environment/

@@ -51,7 +51,7 @@ Item categories (GUN, GRENADE, AMMO, MED, ARMOR, ATTACHMENT), rarities (COMMONâ€
 
 ### RoundState
 
-Singleton for round seed and deterministic RNG. `Initialize(seed)`, `GetSeed()`, `GetCrateRollRng(crateId)`, `GetSpawnRng()`.
+Singleton for round seed and deterministic RNG. `Initialize(seed)`, `GetSeed()`, `GetCrateRollRng(crateId)`.
 
 ### FastCastRedux
 
@@ -63,7 +63,7 @@ Raycast-based projectile system for guns.
 
 ### Initializer
 
-Bootstraps all services: RoundState, InventoryService, DropFactory, LootBoxService, LootSpawnService, BreakableCrate, GunService, MeleeService, MedService. Enforces R15, first-person camera, character config (scale, WalkSpeed, etc.). Registers crates in workspace. Exposes `MatchInfo.StartTime`.
+Bootstraps all services: RoundState, InventoryService, DropFactory, LootBoxService, BreakableCrate, GunService, MeleeService, MedService. Enforces R15, first-person camera, character config (scale, WalkSpeed, etc.). Registers static crates in workspace (models with `CrateType` attribute). Exposes `MatchInfo.StartTime`.
 
 ### PlayerSpawner
 
@@ -89,9 +89,9 @@ Authoritative med item usage (heal, adrenaline). Listens on MedRemotes.UseMed.
 
 Player inventory state. Listens on InventoryRemotes (UpdateInventory, RequestEquip, RequestSwap).
 
-### LootBoxService / DropFactory / LootSpawnService / BreakableCrate
+### LootBoxService / DropFactory / BreakableCrate
 
-Crate breaking, item drops, procedural crate spawning. BreakableCrate registers models with `CrateType` attribute.
+Crate breaking, item drops. BreakableCrate registers static crates in workspace (models with `CrateType` attribute). Loot rolls use deterministic RNG per crate via `CrateId`.
 
 ### Stamina / FallDamage
 

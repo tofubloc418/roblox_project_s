@@ -8,8 +8,7 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 
 -- Modules
-local structureModules = ReplicatedStorage:WaitForChild("Structure")
-local MinimapConfig = require(structureModules:WaitForChild("MinimapConfig"))
+local MinimapConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MinimapConfig"))
 
 -- Create RemoteEvents folder
 local remoteEvents = ReplicatedStorage:FindFirstChild("RemoteEvents")

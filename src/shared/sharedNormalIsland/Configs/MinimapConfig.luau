@@ -84,9 +84,9 @@ MinimapConfig.Controls = {
 
 -- Minimap assets for each island
 MinimapConfig.minimapAssets = {
-    ["NormalIsland1"] = "rbxassetid://93578867554772", -- USING TEST MAP FOR NOW
-    ["NormalIsland2"] = "rbxassetid://121230759887612",
-    ["NormalIsland3"] = "rbxassetid://121230759887612",
+    ["NormalIsland1"] = "rbxassetid://128918368774464",
+    ["NormalIsland2"] = "rbxassetid://128918368774464",
+    ["NormalIsland3"] = "rbxassetid://128918368774464",
 }
 
 -- Function to get the correct minimap asset based on game name

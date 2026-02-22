@@ -4,20 +4,19 @@
   "tree": {
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
-              "ReplicatedStorage": {
-            "Structure": {
-              "$path": "src/shared/sharedNormalIsland/Structure"
-            },
-            "Modules": {
-              "$path": "src/shared/sharedNormalIsland/Modules"
-            }
-          },
+    "ReplicatedStorage": {
+      "$path": "src/shared/sharedNormalIsland",
+      "$ignoreUnknownInstances": true
+    },
     "ServerScriptService": {
-      "$path": "src/server/serverNormalIsland"
+      "$path": "src/server/serverNormalIsland",
+      "$ignoreUnknownInstances": true
     },
     "StarterPlayer": {
+      "$ignoreUnknownInstances": true,
       "StarterPlayerScripts": {
-        "$path": "src/client/clientNormalIsland"
+        "$path": "src/client/clientNormalIsland",
+        "$ignoreUnknownInstances": true
       }
     }
   }

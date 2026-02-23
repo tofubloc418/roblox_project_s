@@ -52,7 +52,9 @@ function CursorManager._apply()
 		cursorFlag.Value = false
 
 		if PlayerConfig.forceShiftLock then
-			RunService:BindToRenderStep(RENDER_STEP_NAME, Enum.RenderPriority.Character.Value, function()
+			-- Run immediately after Camera (201) to avoid fighting with Character-priority updates
+			local CAMERA_PLUS_ONE = Enum.RenderPriority.Camera.Value + 1
+			RunService:BindToRenderStep(RENDER_STEP_NAME, CAMERA_PLUS_ONE, function()
 				UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 				UserInputService.MouseIconEnabled = false
 

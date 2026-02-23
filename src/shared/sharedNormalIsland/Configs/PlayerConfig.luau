@@ -47,7 +47,7 @@ local PlayerConfig: PlayerStats = {
 		depth = 1,
 		head = 1,
 	},
-	forceShiftLock = false,
+	forceShiftLock = true,
 	shiftLockZoom = 12,
 	shiftLockOffset = Vector3.new(5, 0.2, 0),
 	cameraFaceYawOffsetDeg = -30,

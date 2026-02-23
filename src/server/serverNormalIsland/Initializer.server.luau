@@ -41,8 +41,6 @@ print("[Initializer] Starting...")
 -- Note: Some environments may not expose typed members on StarterPlayer in Luau; use attributes instead
 game:GetService("StarterPlayer"):SetAttribute("ForceR15", true)
 game:GetService("StarterPlayer"):SetAttribute("IgnoreCharacterAppearance", true)
--- Enforce first-person camera for all players by default
-game:GetService("StarterPlayer").CameraMode = Enum.CameraMode.LockFirstPerson
 
 -- Initialize RoundState with a seed
 local roundState = RoundState.Current()
@@ -126,8 +124,6 @@ local function applyCharacterConfig(character: Model)
 end
 
 Players.PlayerAdded:Connect(function(player)
-    -- Force first-person for this player on join
-    player.CameraMode = Enum.CameraMode.LockFirstPerson
 	-- Initialize stamina attributes
 	if player:GetAttribute("MaxStamina") == nil then
 		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)

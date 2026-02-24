@@ -63,7 +63,7 @@ Raycast-based projectile system for guns.
 
 ### Initializer
 
-Bootstraps all services: RoundState, InventoryService, DropFactory, LootBoxService, BreakableCrate, GunService, MeleeService, MedService. Enforces R15, first-person camera, character config (scale, WalkSpeed, etc.). Registers static crates in workspace (models with `CrateType` attribute). Exposes `MatchInfo.StartTime`.
+Bootstraps all services: RoundState, InventoryService, DropFactory, LootBoxService, BreakableCrate, GunService, MeleeService, MedService. Enforces R15, character config (scale, WalkSpeed, etc.). Registers static crates in workspace (models with `CrateType` attribute). Exposes `MatchInfo.StartTime`.
 
 ### PlayerSpawner
 
@@ -111,15 +111,15 @@ Entry: `MinimapController.client.luau` requires `Map/MinimapController`. Builds 
 
 ### CursorManager
 
-`setEnabledFor(source, enabled)`. Toggles mouse/camera between gameplay (LockFirstPerson) and UI (Classic + cursor). Sources: `"FullMap"`, `"Inventory"`. Sets `ReplicatedStorage.UICursorEnabled`.
+`setEnabledFor(source, enabled)`. Shows cursor when UI is open (FullMap, Inventory). Sets `ReplicatedStorage.UICursorEnabled`.
 
 ### Crosshair
 
-Screen-center crosshair. Hides when `UICursorEnabled` is true.
+Disabled (hidden). Stub can be re-enabled by setting `root.Visible = true` and restoring crosshair lines.
 
 ### Sprint
 
-Left Shift toggles sprint. Uses `WantsSprint` attribute, Stamina server sync. Jump blocked when stamina &lt; cost (ContextActionService).
+Left Ctrl toggles sprint. Uses `WantsSprint` attribute, Stamina server sync. Jump blocked when stamina &lt; cost (ContextActionService).
 
 ### InventoryController / InventoryUI
 

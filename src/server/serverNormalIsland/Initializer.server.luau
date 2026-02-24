@@ -5,8 +5,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local _StarterPlayer = game:GetService("StarterPlayer")
-local ServerStorage = game:GetService("ServerStorage")
 
 -- Shared modules
 local _LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
@@ -38,9 +36,10 @@ local MedService = require(MedModules:WaitForChild("MedService"))
 
 print("[Initializer] Starting...")
 
--- Note: Some environments may not expose typed members on StarterPlayer in Luau; use attributes instead
-game:GetService("StarterPlayer"):SetAttribute("ForceR15", true)
-game:GetService("StarterPlayer"):SetAttribute("IgnoreCharacterAppearance", true)
+local StarterPlayer = game:GetService("StarterPlayer")
+
+StarterPlayer:SetAttribute("ForceR15", true)
+StarterPlayer:SetAttribute("IgnoreCharacterAppearance", true)
 
 -- Initialize RoundState with a seed
 local roundState = RoundState.Current()
@@ -91,32 +90,54 @@ local function applyCharacterConfig(character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 
-	-- Rig type
 	if PlayerConfig.humanoidRigType == "R15" then
 		humanoid.RigType = Enum.HumanoidRigType.R15
+
+		-- Force blocky R15 (no Rthro): reset body part IDs and proportions to default
+		task.defer(function()
+			local ok, dc = pcall(function()
+				return humanoid:GetAppliedDescription()
+			end)
+			if ok and dc then
+				dc.Head = 0
+				dc.Torso = 0
+				dc.LeftArm = 0
+				dc.RightArm = 0
+				dc.LeftLeg = 0
+				dc.RightLeg = 0
+				dc.HeadScale = 1
+				dc.HeightScale = 1
+				dc.WidthScale = 1
+				dc.BodyTypeScale = 1
+				dc.DepthScale = 1
+				dc.ProportionScale = 1
+				pcall(function()
+					humanoid:ApplyDescription(dc)
+				end)
+				-- Re-apply PlayerConfig scale after blocky reset
+				local scale = PlayerConfig.scale
+				if scale then
+					local function setScale(name: string, value: number)
+						local s = humanoid:FindFirstChild(name)
+						if not s then
+							s = Instance.new("NumberValue")
+							s.Name = name
+							s.Parent = humanoid
+						end
+						s.Value = value
+					end
+					setScale("BodyHeightScale", scale.height)
+					setScale("BodyWidthScale", scale.width)
+					setScale("BodyDepthScale", scale.depth)
+					setScale("HeadScale", scale.head)
+				end
+			end
+		end)
 	else
 		humanoid.RigType = Enum.HumanoidRigType.R6
 	end
 
-	-- Scaling (R15 only)
-	local scale = PlayerConfig.scale
-	if scale then
-		local function setScale(name: string, value: number)
-			local s = humanoid:FindFirstChild(name)
-			if not s then
-				s = Instance.new("NumberValue")
-				s.Name = name
-				s.Parent = humanoid
-			end
-			s.Value = value
-		end
-		setScale("BodyHeightScale", scale.height)
-		setScale("BodyWidthScale", scale.width)
-		setScale("BodyDepthScale", scale.depth)
-		setScale("HeadScale", scale.head)
-	end
-
-	-- Basic movement/health (optional)
+	-- Basic movement/health
 	humanoid.WalkSpeed = PlayerConfig.walkSpeed
 	humanoid.JumpPower = PlayerConfig.jumpPower
 	humanoid.MaxHealth = PlayerConfig.maxHealth
@@ -124,7 +145,6 @@ local function applyCharacterConfig(character: Model)
 end
 
 Players.PlayerAdded:Connect(function(player)
-	-- Initialize stamina attributes
 	if player:GetAttribute("MaxStamina") == nil then
 		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)
 	end

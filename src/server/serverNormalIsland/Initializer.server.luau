@@ -5,8 +5,6 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
-local _StarterPlayer = game:GetService("StarterPlayer")
-local ServerStorage = game:GetService("ServerStorage")
 
 -- Shared modules
 local _LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
@@ -38,9 +36,10 @@ local MedService = require(MedModules:WaitForChild("MedService"))
 
 print("[Initializer] Starting...")
 
--- Note: Some environments may not expose typed members on StarterPlayer in Luau; use attributes instead
-game:GetService("StarterPlayer"):SetAttribute("ForceR15", true)
-game:GetService("StarterPlayer"):SetAttribute("IgnoreCharacterAppearance", true)
+local StarterPlayer = game:GetService("StarterPlayer")
+
+StarterPlayer:SetAttribute("ForceR15", true)
+StarterPlayer:SetAttribute("IgnoreCharacterAppearance", true)
 
 -- Initialize RoundState with a seed
 local roundState = RoundState.Current()
@@ -124,7 +123,6 @@ local function applyCharacterConfig(character: Model)
 end
 
 Players.PlayerAdded:Connect(function(player)
-	-- Initialize stamina attributes
 	if player:GetAttribute("MaxStamina") == nil then
 		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)
 	end

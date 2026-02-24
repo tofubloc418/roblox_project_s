@@ -15,11 +15,6 @@ export type PlayerStats = {
 	maxHealth: number,
 	humanoidRigType: string, -- "R15" | "R6"
 	scale: PlayerScale,
-	-- Camera/controls
-	forceShiftLock: boolean,
-	shiftLockZoom: number,
-	shiftLockOffset: Vector3?,
-	cameraFaceYawOffsetDeg: number,
 	-- Stamina
 	baseMaxStamina: number,
 	staminaRegenPerSecond: number,
@@ -42,15 +37,11 @@ local PlayerConfig: PlayerStats = {
 	maxHealth = 100,
 	humanoidRigType = "R15",
 	scale = {
-		height = 1,
-		width = 1,
-		depth = 1,
-		head = 1,
+		height = 1.5,
+		width = 1.5,
+		depth = 1.5,
+		head = 1.5,
 	},
-	forceShiftLock = true,
-	shiftLockZoom = 12,
-	shiftLockOffset = Vector3.new(5, 0.2, 0),
-	cameraFaceYawOffsetDeg = -30,
 	baseMaxStamina = 100,
 	staminaRegenPerSecond = 12,
 	staminaRunDrainPerSecond = 15,

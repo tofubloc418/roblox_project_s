@@ -25,7 +25,7 @@ end
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
-	if input.KeyCode == Enum.KeyCode.LeftShift then
+	if input.KeyCode == Enum.KeyCode.LeftControl then
 		setSprint(true)
 	elseif input.KeyCode == Enum.KeyCode.Space then
 		-- Explicit jump press logger for debugging
@@ -37,7 +37,7 @@ end)
 UserInputService.InputEnded:Connect(function(input, gp)
 	if gp then return end
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
-	if input.KeyCode == Enum.KeyCode.LeftShift then
+	if input.KeyCode == Enum.KeyCode.LeftControl then
 		setSprint(false)
 	elseif input.KeyCode == Enum.KeyCode.Space then
 		print("[Input] Space released")

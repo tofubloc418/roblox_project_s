@@ -14,6 +14,11 @@
     },
     "StarterPlayer": {
       "$ignoreUnknownInstances": true,
+      "$properties": {
+        "EnableMouseLockOption": true,
+        "CameraMinZoomDistance": 0.5,
+        "CameraMaxZoomDistance": 24
+      },
       "StarterPlayerScripts": {
         "$path": "src/client/clientNormalIsland",
         "$ignoreUnknownInstances": true

@@ -27,7 +27,6 @@ local DamageService = require(CombatModules:WaitForChild("DamageService"))
 
 -- Weapon modules
 local WeaponModules = script.Parent:WaitForChild("Weapons")
-local GunService = require(WeaponModules:WaitForChild("GunService"))
 local MeleeService = require(WeaponModules:WaitForChild("MeleeService"))
 
 -- Med modules
@@ -64,7 +63,6 @@ end
 InventoryService:Initialize()
 DropFactory:Initialize(InventoryService)
 LootBoxService:Initialize(DropFactory)
-GunService:Initialize()
 MeleeService:Initialize()
 MedService:Initialize()
 

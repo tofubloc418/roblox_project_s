@@ -232,13 +232,6 @@ function DropFactory:SpawnDrop(itemId: string, stackCount: number, position: Vec
 		dropModel:SetAttribute("ItemId", itemId)
 		dropModel:SetAttribute("CurrentStack", stackCount)
 		dropModel:SetAttribute("MaxStack", itemData.stackMax or 1)
-		
-		-- For guns, initialize ammo if not set
-		local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
-		local gunConfig = GunConfigs[itemId]
-		if gunConfig and not dropModel:GetAttribute("CurrentAmmo") then
-			dropModel:SetAttribute("CurrentAmmo", gunConfig.magazineCapacity)
-		end
 	end
 
 	-- Position the drop

@@ -42,26 +42,10 @@ LootConfig.Tiers = {
 
 -- Crate type definitions
 LootConfig.CrateTypes = {
-	["TestCrate"] = {
-		AllowedPools = {
-			ItemDefinitions.Categories.GUN,
-		},
-		RarityWeights = {
-			[ItemDefinitions.Rarities.COMMON] = 50,
-			[ItemDefinitions.Rarities.UNCOMMON] = 50,
-		},
-		CategoryWeights = {
-			[ItemDefinitions.Categories.GUN] = 100,
-		},
-		BundleCount = 1,
-		MaxHealth = 100,
-	},
 	-- Standard loot crate
 	["Normal"] = {
 		AllowedPools = {
-			ItemDefinitions.Categories.GUN,
 			ItemDefinitions.Categories.GRENADE,
-			ItemDefinitions.Categories.AMMO,
 			ItemDefinitions.Categories.MED,
 			ItemDefinitions.Categories.ARMOR,
 		},
@@ -73,23 +57,19 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Rarities.LEGENDARY] = 0,
 		},
 		CategoryWeights = {
-			[ItemDefinitions.Categories.GUN] = 20,
-			[ItemDefinitions.Categories.GRENADE] = 15,
-			[ItemDefinitions.Categories.AMMO] = 25,
-			[ItemDefinitions.Categories.MED] = 20,
-			[ItemDefinitions.Categories.ARMOR] = 15,
+			[ItemDefinitions.Categories.GRENADE] = 20,
+			[ItemDefinitions.Categories.MED] = 45,
+			[ItemDefinitions.Categories.ARMOR] = 30,
 			[ItemDefinitions.Categories.ATTACHMENT] = 5,
 		},
 		BundleCount = 1,
 		MaxHealth = 100,
 	},
-	
+
 	-- Better loot crate
 	["NormalPlus"] = {
 		AllowedPools = {
-			ItemDefinitions.Categories.GUN,
 			ItemDefinitions.Categories.GRENADE,
-			ItemDefinitions.Categories.AMMO,
 			ItemDefinitions.Categories.MED,
 			ItemDefinitions.Categories.ARMOR,
 			ItemDefinitions.Categories.ATTACHMENT,
@@ -102,44 +82,15 @@ LootConfig.CrateTypes = {
 			[ItemDefinitions.Rarities.LEGENDARY] = 2,
 		},
 		CategoryWeights = {
-			[ItemDefinitions.Categories.GUN] = 25,
-			[ItemDefinitions.Categories.GRENADE] = 10,
-			[ItemDefinitions.Categories.AMMO] = 20,
-			[ItemDefinitions.Categories.MED] = 20,
-			[ItemDefinitions.Categories.ARMOR] = 15,
+			[ItemDefinitions.Categories.GRENADE] = 15,
+			[ItemDefinitions.Categories.MED] = 40,
+			[ItemDefinitions.Categories.ARMOR] = 35,
 			[ItemDefinitions.Categories.ATTACHMENT] = 10,
 		},
 		BundleCount = 2,
 		MaxHealth = 150,
 	},
-	
-	-- Weapon crate
-	["WeaponCrate"] = {
-		AllowedPools = {
-			ItemDefinitions.Categories.GUN,
-			ItemDefinitions.Categories.AMMO,
-			ItemDefinitions.Categories.ATTACHMENT,
-		},
-		RarityWeights = {
-			[ItemDefinitions.Rarities.COMMON] = 40,
-			[ItemDefinitions.Rarities.UNCOMMON] = 35,
-			[ItemDefinitions.Rarities.RARE] = 20,
-			[ItemDefinitions.Rarities.EPIC] = 5,
-			[ItemDefinitions.Rarities.LEGENDARY] = 0,
-		},
-		CategoryWeights = {
-			[ItemDefinitions.Categories.GUN] = 40,
-			[ItemDefinitions.Categories.AMMO] = 40,
-			[ItemDefinitions.Categories.ATTACHMENT] = 20,
-		},
-		BundleCount = 1,
-		GuaranteeAtLeast = {
-			category = ItemDefinitions.Categories.GUN,
-			count = 1,
-		},
-		MaxHealth = 120,
-	},
-	
+
 	-- Grenade box
 	["GrenadeBox"] = {
 		AllowedPools = {ItemDefinitions.Categories.GRENADE},
@@ -174,7 +125,6 @@ LootConfig.CrateTypes = {
 	-- High tier loot crate
 	["Elite"] = {
 		AllowedPools = {
-			ItemDefinitions.Categories.GUN,
 			ItemDefinitions.Categories.ARMOR,
 			ItemDefinitions.Categories.ATTACHMENT,
 			ItemDefinitions.Categories.MED,

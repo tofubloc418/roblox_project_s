@@ -221,14 +221,7 @@ function InventoryService:AddItem(player: Player, itemId: string, amount: number
 					tool:SetAttribute("CurrentStack", stackCount)
 					tool:SetAttribute("MaxStack", maxStack)
 					
-					-- For guns, initialize ammo
-					local GunConfigs = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Weapons"):WaitForChild("GunConfigs"))
-					local gunConfig = GunConfigs[itemId]
-					if gunConfig then
-						tool:SetAttribute("CurrentAmmo", gunConfig.magazineCapacity)
-					end
-					
-					tool.Parent = backpack
+				tool.Parent = backpack
 					remaining = remaining - stackCount
 					
 					if not firstSlotWithItem then

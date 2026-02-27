@@ -24,10 +24,10 @@ export type PlayerStats = {
 	jumpStaminaCost: number,
 	-- Adrenaline
 	baseMaxAdrenaline: number,
-	-- Fall damage
-	fallDamageMinSpeed: number, -- velocity magnitude to start taking damage
-	fallDamageMaxSpeed: number, -- velocity magnitude that maps to max damage
-	fallDamageMaxPercent: number, -- percent of MaxHealth dealt at/above max speed (0..1)
+	-- Fall damage (damage per stud beyond threshold, capped)
+	fallDamageMinHeight: number, -- studs fallen before damage starts
+	fallDamagePerStud: number, -- damage per stud beyond threshold
+	fallDamageCap: number, -- max damage
 }
 
 local PlayerConfig: PlayerStats = {
@@ -49,9 +49,9 @@ local PlayerConfig: PlayerStats = {
 	staminaSwimHealthDrainPerSecond = 5,
 	jumpStaminaCost = 5,
 	baseMaxAdrenaline = 100,
-	fallDamageMinSpeed = 50,
-	fallDamageMaxSpeed = 120,
-	fallDamageMaxPercent = 0.7,
+	fallDamageMinHeight = 4,
+	fallDamagePerStud = 6.25,
+	fallDamageCap = 100,
 }
 
 return PlayerConfig

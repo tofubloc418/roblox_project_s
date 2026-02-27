@@ -95,7 +95,7 @@ Crate breaking, item drops. BreakableCrate registers static crates in workspace 
 
 ### Stamina / FallDamage
 
-Stamina drain (sprint, swim, jump). Fall damage based on impact velocity.
+Stamina drain (sprint, swim, jump). Fall damage based on fall distance (6.25 damage/stud beyond 4 studs, capped at 100).
 
 ---
 

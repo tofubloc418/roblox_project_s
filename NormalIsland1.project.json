@@ -6,7 +6,10 @@
     "$ignoreUnknownInstances": true,
     "ReplicatedStorage": {
       "$path": "src/shared/sharedNormalIsland",
-      "$ignoreUnknownInstances": true
+      "$ignoreUnknownInstances": true,
+      "Packages": {
+        "$path": "Packages"
+      }
     },
     "ServerScriptService": {
       "$path": "src/server/serverNormalIsland",
@@ -25,4 +28,4 @@
       }
     }
   }
-} 
+}

@@ -49,21 +49,26 @@ src/server/serverNormalIsland/
     └── FallDamage.server.luau
 
 src/client/clientNormalIsland/
-├── MinimapController.client.luau   # Entry point → Map/MinimapController
+├── MinimapController.client.luau   # Entry point → GUI/Map/MinimapController
 ├── Init/
-│   ├── Crosshair.client.luau
 │   └── Sprint.client.luau
-├── Map/
-│   ├── MinimapController.luau       # Main HUD controller (minimap, full map, top-right HUD)
-│   ├── MinimapView.luau
-│   ├── FullMapView.luau
-│   └── PingIcons.luau
-├── Hud/
-│   ├── HudBuilder.luau              # buildMinimap, buildInventory, buildTopRightHud
-│   └── CursorManager.luau           # UI cursor toggle (FullMap, Inventory)
-├── Inventory/
-│   ├── InventoryController.client.luau
-│   └── InventoryUI.luau
+├── GUI/                            # All GUI code consolidated
+│   ├── Inventory/                 # React Lua inventory UI
+│   │   ├── InventoryController.client.luau
+│   │   ├── InventoryApp.luau
+│   │   ├── InventoryGrid.luau
+│   │   ├── InventorySlot.luau
+│   │   ├── Hotbar.luau
+│   │   └── ItemIconResolver.luau
+│   ├── Map/
+│   │   ├── MinimapController.luau  # Main HUD controller (minimap, full map, top-right HUD)
+│   │   ├── MinimapView.luau
+│   │   └── FullMapView.luau
+│   ├── Hud/
+│   │   ├── HudBuilder.luau         # buildMinimap, buildTopRightHud
+│   │   └── CursorManager.luau      # UI cursor toggle (FullMap, Inventory)
+│   └── Init/
+│       └── Crosshair.client.luau
 ├── Med/
 │   └── MedController.client.luau
 └── Weapons/

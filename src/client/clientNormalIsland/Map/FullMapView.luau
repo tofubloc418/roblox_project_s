@@ -10,7 +10,6 @@ local FullMapView = {}
 export type FullMapViewType = {
     Frame: Frame,
     Image: ImageLabel,
-    PingContainer: Frame,
 }
 
 function FullMapView.new(parent: Instance): FullMapViewType
@@ -46,14 +45,7 @@ function FullMapView.new(parent: Instance): FullMapViewType
     img.ZIndex = 11
     img.Parent = frame
 
-    local pings = Instance.new("Frame")
-    pings.Name = "PingContainer"
-    pings.Size = UDim2.fromScale(1, 1)
-    pings.BackgroundTransparency = 1
-    pings.ZIndex = 12
-    pings.Parent = frame
-
-    return {Frame = frame, Image = img, PingContainer = pings}
+    return {Frame = frame, Image = img}
 end
 
 return FullMapView

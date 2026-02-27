@@ -12,7 +12,6 @@ export type MinimapViewType = {
     Frame: Frame,
     Content: Frame,
     Image: ImageLabel,
-    PingContainer: Frame,
 }
 
 function MinimapView.new(parent: Instance): MinimapViewType
@@ -44,13 +43,7 @@ function MinimapView.new(parent: Instance): MinimapViewType
     img.ScaleType = Enum.ScaleType.Stretch
     img.Parent = content
 
-    local pings = Instance.new("Frame")
-    pings.Name = "PingContainer"
-    pings.Size = UDim2.fromScale(1, 1)
-    pings.BackgroundTransparency = 1
-    pings.Parent = frame
-
-    return {Frame = frame, Content = content, Image = img, PingContainer = pings}
+    return {Frame = frame, Content = content, Image = img}
 end
 
 function MinimapView.panTo(view: MinimapViewType, playerUV: Vector2)

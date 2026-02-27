@@ -48,38 +48,9 @@ MinimapConfig.PlayerIcon = {
     RotationOffset = 0, -- degrees; flip icon if asset points opposite
 }
 
--- Ping settings
-MinimapConfig.Ping = {
-    Types = {
-        LOCATION = {
-            Icon = "rbxassetid://6031075938", -- Location marker
-            Color = Color3.fromRGB(255, 200, 0),
-            BeamColor = ColorSequence.new(Color3.fromRGB(255, 200, 0)),
-        },
-        DANGER = {
-            Icon = "rbxassetid://6031075931", -- Warning icon
-            Color = Color3.fromRGB(255, 50, 50),
-            BeamColor = ColorSequence.new(Color3.fromRGB(255, 50, 50)),
-        },
-        HELP = {
-            Icon = "rbxassetid://6031075933", -- Help icon
-            Color = Color3.fromRGB(50, 255, 50),
-            BeamColor = ColorSequence.new(Color3.fromRGB(50, 255, 50)),
-        },
-    },
-    IconSize = UDim2.new(0, 24, 0, 24),
-    BeamWidth = 2,
-    BeamHeight = 1000,
-    MaxPingsPerPlayer = 1,
-    Cooldown = 0.2,
-    LifetimeSeconds = 20,
-    FadeOutSeconds = 10,
-}
-
 -- Input settings
 MinimapConfig.Controls = {
     ToggleMapKey = Enum.KeyCode.M,
-    PingModifierKey = Enum.KeyCode.C,
 }
 
 -- Minimap assets for each island
@@ -94,15 +65,6 @@ function MinimapConfig.getMinimapAsset()
     local gameName = game.Name
     return MinimapConfig.minimapAssets[gameName] or MinimapConfig.minimapAssets["NormalIsland1"]
 end
-
-export type PingType = "LOCATION" | "DANGER" | "HELP"
-
-export type PingData = {
-    Type: PingType,
-    Position: Vector3,
-    PlayerId: number,
-    Timestamp: number,
-}
 
 -- Convert world position to minimap UV coordinates (0-1)
 function MinimapConfig.worldToUV(worldPos: Vector3): Vector2

@@ -18,8 +18,8 @@ local HudBuilder = {}
 
 export type MinimapBuild = {
 	ScreenGui: ScreenGui,
-	Mini: { Frame: Frame, Content: Frame, Image: ImageLabel, PingContainer: Frame },
-	Full: { Frame: Frame, Image: ImageLabel, PingContainer: Frame },
+	Mini: { Frame: Frame, Content: Frame, Image: ImageLabel },
+	Full: { Frame: Frame, Image: ImageLabel },
 	PlayerIcon: ImageLabel,
 	FullMapPlayerIcon: ImageLabel,
 }

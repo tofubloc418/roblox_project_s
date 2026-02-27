@@ -1,6 +1,6 @@
 --!strict
 
--- HudBuilder: centralizes client HUD UI construction (minimap and inventory UI)
+-- HudBuilder: centralizes client HUD UI construction (minimap, top-right HUD)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -9,10 +9,6 @@ local MinimapConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForC
 local MapModules = script.Parent.Parent:WaitForChild("Map")
 local MinimapView = require(MapModules:WaitForChild("MinimapView"))
 local FullMapView = require(MapModules:WaitForChild("FullMapView"))
-
--- Inventory dependencies
-local InventoryModules = script.Parent.Parent:WaitForChild("Inventory")
-local InventoryUI = require(InventoryModules:WaitForChild("InventoryUI"))
 
 local HudBuilder = {}
 
@@ -56,42 +52,6 @@ function HudBuilder.buildMinimap(playerGui: PlayerGui): MinimapBuild
 		Full = full,
 		PlayerIcon = playerIcon,
 		FullMapPlayerIcon = fullMapPlayerIcon,
-	}
-end
-
-export type InventoryBuild = {
-	Screen: ScreenGui,
-	HotbarGui: ScreenGui,
-	Grid: Frame,
-	Hotbar: Frame,
-	SlotButtons: { ImageButton },
-	HotbarButtons: { ImageButton },
-}
-
--- Build inventory screens, grid, hotbar and slots
-function HudBuilder.buildInventory(rows: number, cols: number): InventoryBuild
-	local screen, hotbarGui = InventoryUI.createScreens()
-	local grid = InventoryUI.buildInventoryGrid(screen, rows, cols)
-	local hotbar = InventoryUI.buildHotbar(hotbarGui, cols)
-
-	local slotButtons: { ImageButton } = {}
-	local totalSlots = rows * cols
-	for i = 1, totalSlots do
-		slotButtons[i] = InventoryUI.createSlot(grid, i)
-	end
-
-	local hotbarButtons: { ImageButton } = {}
-	for i = 1, cols do
-		hotbarButtons[i] = InventoryUI.createSlot(hotbar, i)
-	end
-
-	return {
-		Screen = screen,
-		HotbarGui = hotbarGui,
-		Grid = grid,
-		Hotbar = hotbar,
-		SlotButtons = slotButtons,
-		HotbarButtons = hotbarButtons,
 	}
 end
 
@@ -182,7 +142,7 @@ function HudBuilder.buildTopRightHud(playerGui: PlayerGui)
 	countBox.Name = "PlayerCountBox"
 	countBox.LayoutOrder = 2
 	countBox.Size = UDim2.fromOffset(boxWidth, boxWidth)
-	countBox.BackgroundColor3 = Color3.fromRGB(25,25,25)
+	countBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 	countBox.BackgroundTransparency = 0.35
 	countBox.BorderSizePixel = 0
 	countBox.Parent = container
@@ -196,7 +156,7 @@ function HudBuilder.buildTopRightHud(playerGui: PlayerGui)
 	countLabel.Position = UDim2.fromScale(0.5, 0.5)
 	countLabel.Size = UDim2.fromScale(1, 1)
 	countLabel.BackgroundTransparency = 1
-	countLabel.TextColor3 = Color3.fromRGB(255,255,255)
+	countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 	countLabel.TextScaled = true
 	countLabel.Font = Enum.Font.GothamBold
 	countLabel.Text = "0"
@@ -213,7 +173,3 @@ function HudBuilder.buildTopRightHud(playerGui: PlayerGui)
 end
 
 return HudBuilder
-
-
-
-

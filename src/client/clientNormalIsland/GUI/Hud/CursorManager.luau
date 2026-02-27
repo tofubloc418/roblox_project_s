@@ -15,7 +15,7 @@ end
 
 local CursorManager = {}
 
-local activeSources: {[string]: boolean} = {}
+local activeSources: { [string]: boolean } = {}
 
 function CursorManager._apply()
 	local hasAny = next(activeSources) ~= nil

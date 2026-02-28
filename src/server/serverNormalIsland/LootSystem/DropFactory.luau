@@ -518,7 +518,8 @@ function DropFactory:Pickup(dropModel: Instance, player: Player)
 			end
 			
 			-- Find empty slot
-			for slot = 1, 15 do
+			local invSize = self.InventoryService and self.InventoryService.INVENTORY_SIZE or 16
+			for slot = 1, invSize do
 				if not usedSlots[slot] then
 					-- Use the existing tool
 					dropModel:SetAttribute("SlotIndex", slot)

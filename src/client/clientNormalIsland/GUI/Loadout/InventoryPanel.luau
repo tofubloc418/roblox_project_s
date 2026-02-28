@@ -1,0 +1,137 @@
+--!strict
+-- Center panel: functional inventory grid connected to server
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
+
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
+local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
+local InventorySlot = require(script.Parent:WaitForChild("InventorySlot"))
+type InventoryData = InventoryTypes.InventoryData
+type ItemStack = InventoryTypes.ItemStack
+
+export type InventoryPanelProps = {
+	inventoryData: InventoryData,
+	rows: number,
+	cols: number,
+	columnWidth: number?,
+	gridRef: { current: Frame? }?,
+	onDragStart: (index: number) -> (),
+	onMouseEnter: (index: number) -> (),
+	onMouseLeave: (index: number) -> (),
+}
+
+local P = ThemeConfig.Padding
+local F = ThemeConfig.Font
+local C = ThemeConfig.Colors
+
+local function InventoryPanel(props: InventoryPanelProps)
+	local rows = props.rows
+	local cols = props.cols
+	local columnWidth = props.columnWidth or 400
+	local inventoryData = props.inventoryData
+	local slotCount = rows * cols
+
+	-- Compute slot size from column width: cols * slotSize + (cols-1) * padding = columnWidth
+	local slotSize = math.floor((columnWidth - (cols - 1) * P.InventorySlot) / cols)
+	local gridWidth = cols * slotSize + (cols - 1) * P.InventorySlot
+	local gridHeight = rows * slotSize + (rows - 1) * P.InventorySlot
+	local panelHeight = F.SectionHeaderHeight + P.HeaderToContent + gridHeight
+
+	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
+	local innerSlotSize = slotSize - 2 * borderWidth
+
+	local slots: { [string]: any } = {}
+	for i = 1, slotCount do
+		local raw = inventoryData.slots[i]
+		local stack: ItemStack? = if raw and typeof(raw) == "table" then raw :: ItemStack else nil
+		local isActive = inventoryData.equippedSlot == i
+		slots["Slot" .. i] = React.createElement(GradientBorder, {
+			size = innerSlotSize,
+			layoutOrder = i,
+			onMouseEnter = function()
+				props.onMouseEnter(i)
+			end,
+			onMouseLeave = function()
+				props.onMouseLeave(i)
+			end,
+			onMouseButton1Down = function()
+				props.onDragStart(i)
+			end,
+		}, {
+			Slot = React.createElement(InventorySlot, {
+				index = i,
+				stack = stack,
+				active = isActive,
+				size = innerSlotSize,
+				onDragStart = function()
+					props.onDragStart(i)
+				end,
+				onMouseEnter = function()
+					props.onMouseEnter(i)
+				end,
+				onMouseLeave = function()
+					props.onMouseLeave(i)
+				end,
+			}),
+		})
+	end
+
+	return React.createElement("Frame", {
+		Name = "InventoryPanel",
+		Size = UDim2.fromOffset(gridWidth, panelHeight),
+		BackgroundTransparency = 1,
+		LayoutOrder = 2,
+	}, {
+		Layout = React.createElement("UIListLayout", {
+			FillDirection = Enum.FillDirection.Vertical,
+			Padding = UDim.new(0, P.HeaderToContent),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+		}),
+		Header = React.createElement("TextLabel", {
+			Name = "Header",
+			Size = UDim2.fromOffset(gridWidth, F.SectionHeaderHeight),
+			BackgroundTransparency = 1,
+			Text = "BACKPACK",
+			TextColor3 = C.Text.Primary,
+			Font = F.Family,
+			TextSize = F.SectionHeaderSize,
+			TextXAlignment = Enum.TextXAlignment.Left,
+			LayoutOrder = 0,
+		}),
+		Grid = React.createElement("Frame", {
+			Name = "Grid",
+			-- Explicit width so UIGridLayout wraps at the correct column count
+			Size = UDim2.fromOffset(gridWidth, gridHeight),
+			BackgroundTransparency = 1,
+			LayoutOrder = 1,
+			ref = props.gridRef,
+		}, {
+			GridLayout = React.createElement("UIGridLayout", {
+				CellSize = UDim2.fromOffset(slotSize, slotSize),
+				CellPadding = UDim2.fromOffset(P.InventorySlot, P.InventorySlot),
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				FillDirectionMaxCells = cols,
+			}),
+			Slot1 = slots["Slot1"],
+			Slot2 = slots["Slot2"],
+			Slot3 = slots["Slot3"],
+			Slot4 = slots["Slot4"],
+			Slot5 = slots["Slot5"],
+			Slot6 = slots["Slot6"],
+			Slot7 = slots["Slot7"],
+			Slot8 = slots["Slot8"],
+			Slot9 = slots["Slot9"],
+			Slot10 = slots["Slot10"],
+			Slot11 = slots["Slot11"],
+			Slot12 = slots["Slot12"],
+			Slot13 = slots["Slot13"],
+			Slot14 = slots["Slot14"],
+			Slot15 = slots["Slot15"],
+			Slot16 = slots["Slot16"],
+		}),
+	})
+end
+
+return InventoryPanel

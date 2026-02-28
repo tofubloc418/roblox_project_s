@@ -55,6 +55,7 @@ loadoutScreen.Name = "LoadoutScreen"
 loadoutScreen.ResetOnSpawn = false
 loadoutScreen.Enabled = false
 loadoutScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
+loadoutScreen.IgnoreGuiInset = true
 loadoutScreen.Parent = playerGui
 
 -- Mount React root

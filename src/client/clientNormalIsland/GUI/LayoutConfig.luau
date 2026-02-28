@@ -20,7 +20,7 @@ LayoutConfig.DefaultViewportSize = Vector2.new(1920, 1080)
 LayoutConfig.Container = {
 	AnchorPoint = Vector2.new(1, 0.5),
 	Position = UDim2.fromScale(0.95, 0.5),
-	VerticalMarginScale = 0.04, -- 4% from top and bottom (was 10%)
+	VerticalMarginScale = 0.10, -- 10% from top and bottom
 }
 
 --[[

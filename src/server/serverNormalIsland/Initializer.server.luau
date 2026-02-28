@@ -33,6 +33,10 @@ local MeleeService = require(WeaponModules:WaitForChild("MeleeService"))
 local MedModules = script.Parent:WaitForChild("Med")
 local MedService = require(MedModules:WaitForChild("MedService"))
 
+-- Stats module
+local StatsModules = script.Parent:WaitForChild("Stats")
+local StatsService = require(StatsModules:WaitForChild("StatsService"))
+
 print("[Initializer] Starting...")
 
 local StarterPlayer = game:GetService("StarterPlayer")
@@ -60,6 +64,7 @@ if not startTime then
 end
 
 -- Initialize services
+StatsService:Initialize()
 InventoryService:Initialize()
 DropFactory:Initialize(InventoryService)
 LootBoxService:Initialize(DropFactory)
@@ -87,6 +92,10 @@ end)
 local function applyCharacterConfig(character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
+
+	local player = Players:GetPlayerFromCharacter(character)
+	local maxHealth = player and player:GetAttribute("MaxHP") or PlayerConfig.maxHealth
+	local walkSpeed = player and player:GetAttribute("WalkSpeed") or PlayerConfig.walkSpeed
 
 	if PlayerConfig.humanoidRigType == "R15" then
 		humanoid.RigType = Enum.HumanoidRigType.R15
@@ -135,19 +144,20 @@ local function applyCharacterConfig(character: Model)
 		humanoid.RigType = Enum.HumanoidRigType.R6
 	end
 
-	-- Basic movement/health
-	humanoid.WalkSpeed = PlayerConfig.walkSpeed
+	-- Basic movement/health (from stats system when available)
+	humanoid.WalkSpeed = walkSpeed
 	humanoid.JumpPower = PlayerConfig.jumpPower
-	humanoid.MaxHealth = PlayerConfig.maxHealth
-	humanoid.Health = PlayerConfig.maxHealth
+	humanoid.MaxHealth = maxHealth
+	humanoid.Health = maxHealth
 end
 
 Players.PlayerAdded:Connect(function(player)
+	-- StatsService replicates MaxStamina (from MaxEnergy) on container creation
 	if player:GetAttribute("MaxStamina") == nil then
 		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)
 	end
 	if player:GetAttribute("Stamina") == nil then
-		player:SetAttribute("Stamina", PlayerConfig.baseMaxStamina or 100)
+		player:SetAttribute("Stamina", player:GetAttribute("MaxStamina") or PlayerConfig.baseMaxStamina or 100)
 	end
 	player:SetAttribute("WantsSprint", false)
 	player.CharacterAdded:Connect(function(character)
@@ -159,10 +169,9 @@ print("[Initializer] Initialization complete")
 
 -- Export refs for convenience (optional)
 _G.Services = {
+	StatsService = StatsService,
 	LootBoxService = LootBoxService,
 	DropFactory = DropFactory,
 	DamageService = DamageService,
 	BreakableCrate = BreakableCrate,
 }
-
-

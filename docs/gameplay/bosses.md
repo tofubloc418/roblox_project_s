@@ -32,4 +32,4 @@ Bosses may appear in variants across different islands with adjusted stats and m
 
 See [World & Progression](./world-progression.md) for island structure and progression systems.
 
-[Back to Overview](./game-deseign.md)
+[Back to Overview](./game-design.md)

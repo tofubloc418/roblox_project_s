@@ -21,4 +21,4 @@ For detailed scaling mechanics and how attributes factor into damage calculation
 
 ---
 
-[Back to Overview](./game-deseign.md)
+[Back to Overview](./game-design.md)

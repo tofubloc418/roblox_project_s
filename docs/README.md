@@ -6,7 +6,7 @@ Welcome to the Project S documentation. This directory contains all design docum
 
 The [Gameplay](./gameplay/) directory contains all game design, mechanics, and system specifications:
 
-- **[Game Design Overview](./gameplay/game-deseign.md)** - Start here for an overview of Project S
+- **[Game Design Overview](./gameplay/game-design.md)** - Start here for an overview of Project S
 - **[Core Game Mechanics](./gameplay/mechanics.md)** - Gameplay loop and core systems
 - **[Attributes & Player Stats](./gameplay/attributes.md)** - Character attribute system
 - **[Combat & Damage System](./gameplay/combat-system.md)** - Detailed damage pipeline

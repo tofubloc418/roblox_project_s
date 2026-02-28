@@ -53,4 +53,4 @@ Project S features multiple types of enemies across its islands:
 
 ---
 
-[Back to Overview](./game-deseign.md)
+[Back to Overview](./game-design.md)

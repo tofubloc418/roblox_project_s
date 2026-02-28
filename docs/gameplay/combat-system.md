@@ -67,4 +67,4 @@ See the Lua implementation in the source code for reference implementations of t
 
 ---
 
-[Back to Overview](./game-deseign.md)
+[Back to Overview](./game-design.md)

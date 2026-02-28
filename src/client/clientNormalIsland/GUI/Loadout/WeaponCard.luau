@@ -151,6 +151,7 @@ local function WeaponCard(props: WeaponCardProps)
 					Padding = UDim.new(0, P.AbilitySlot),
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
 				}),
 				Ability1 = abilitySlots["Ability1"],
 				Ability2 = abilitySlots["Ability2"],

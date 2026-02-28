@@ -143,7 +143,7 @@ ThemeConfig.Loadout = {
 	ColumnRatioEquip = 3,
 	ColumnRatioInv = 4,
 	ColumnRatioQuick = 3,
-	AbilitySlotSize = 32,
+	AbilitySlotSize = 48,
 	OuterCardHeightRatio = 6 / 9, -- height:width
 }
 

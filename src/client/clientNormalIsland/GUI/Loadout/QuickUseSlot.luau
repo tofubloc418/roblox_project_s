@@ -33,7 +33,7 @@ local function QuickUseSlot(props: QuickUseSlotProps)
 		if icon then
 			imageId = icon
 		else
-			displayText = displayName
+			displayText = displayName or ""
 		end
 		if stack.maxStack > 1 then
 			stackText = tostring(stack.count)

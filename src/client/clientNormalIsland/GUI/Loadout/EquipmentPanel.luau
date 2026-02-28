@@ -27,11 +27,10 @@ local F = ThemeConfig.Font
 local C = ThemeConfig.Colors
 
 local function EquipmentPanel(props: EquipmentPanelProps)
-	local equipment = props.equipment or {}
+	local equipment = (props.equipment or {}) :: EquipmentData
 	local weapons = props.weapons or {}
 	local columnWidth = props.columnWidth or 250
 	local inventorySlotSize = props.inventorySlotSize or 64
-	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 3
 
 	return React.createElement("Frame", {
 		Name = "EquipmentPanel",
@@ -90,7 +89,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 				Slot = React.createElement(EquipmentSlot, {
 					slotId = "Backpack",
 					label = "Backpack",
-					item = equipment.Backpack,
+					item = equipment["Backpack" :: EquipmentSlotId],
 					layoutOrder = 1,
 					size = UDim2.new(1, 0, 1, 0),
 					onClick = function()
@@ -109,7 +108,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 				Slot = React.createElement(EquipmentSlot, {
 					slotId = "Shield",
 					label = "Shield",
-					item = equipment.Shield,
+					item = equipment["Shield" :: EquipmentSlotId],
 					layoutOrder = 2,
 					size = UDim2.new(1, 0, 1, 0),
 					onClick = function()

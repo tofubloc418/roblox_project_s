@@ -1,1 +1,0 @@
-require(script.Parent:WaitForChild("GUI"):WaitForChild("Map"):WaitForChild("MinimapController"))

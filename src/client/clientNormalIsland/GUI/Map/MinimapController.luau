@@ -4,7 +4,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local PlayersService = game:GetService("Players")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -24,7 +23,6 @@ local _screenGui: ScreenGui
 local mini, full
 local playerIcon: ImageLabel
 local fullMapPlayerIcon: ImageLabel
-local topHud
 local timerLabel: TextLabel
 
 function Controller:Initialize()
@@ -34,8 +32,6 @@ function Controller:Initialize()
 	full = build.Full
 	playerIcon = build.PlayerIcon
 	fullMapPlayerIcon = build.FullMapPlayerIcon
-
-	topHud = HudBuilder.buildTopRightHud(playerGui)
 
 	timerLabel = Instance.new("TextLabel")
 	timerLabel.Name = "MatchTimer"
@@ -111,26 +107,6 @@ function Controller:Start()
 				timerLabel.Position = UDim2.fromOffset(x, y)
 				timerLabel.AnchorPoint = Vector2.new(0.5, 0)
 			end
-		end
-		local character = player.Character
-		local hum = character and character:FindFirstChildOfClass("Humanoid")
-		if hum and topHud then
-			local hpFrac = math.clamp(hum.Health / hum.MaxHealth, 0, 1)
-			topHud.HealthFill.Size = UDim2.fromScale(hpFrac, 1)
-			if topHud.HealthCap then
-				topHud.HealthCap.Size = UDim2.fromScale(1, 1)
-			end
-		end
-		if topHud then
-			local stamina = player:GetAttribute("Stamina") or 0
-			local maxStamina = player:GetAttribute("MaxStamina") or 100
-			local stFrac = math.clamp(maxStamina > 0 and (stamina / maxStamina) or 0, 0, 1)
-			topHud.StaminaFill.Size = UDim2.fromScale(stFrac, 1)
-			if topHud.StaminaCap then
-				topHud.StaminaCap.Size = UDim2.fromScale(1, 1)
-			end
-			local count = #PlayersService:GetPlayers()
-			topHud.PlayerCount.Text = tostring(count)
 		end
 	end)
 end

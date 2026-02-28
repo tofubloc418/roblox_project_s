@@ -28,8 +28,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	if input.KeyCode == Enum.KeyCode.LeftControl then
 		setSprint(true)
 	elseif input.KeyCode == Enum.KeyCode.Space then
-		-- Explicit jump press logger for debugging
-		print("[Input] Space pressed for jump")
 		jumpPressedRemote:FireServer()
 	end
 end)
@@ -39,8 +37,6 @@ UserInputService.InputEnded:Connect(function(input, gp)
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
 	if input.KeyCode == Enum.KeyCode.LeftControl then
 		setSprint(false)
-	elseif input.KeyCode == Enum.KeyCode.Space then
-		print("[Input] Space released")
 	end
 end)
 
@@ -68,7 +64,6 @@ local function blockJump(_, state, input)
         local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
         local cost = PlayerConfig.jumpStaminaCost or 20
         if stamina < cost then
-            print("[Input] Jump blocked (client) due to low stamina")
             return Enum.ContextActionResult.Sink
         end
     end

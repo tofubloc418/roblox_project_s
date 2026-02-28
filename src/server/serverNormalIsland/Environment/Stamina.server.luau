@@ -86,10 +86,6 @@ local function stepPlayer(player: Player, dt: number)
 			humanoid:TakeDamage((PlayerConfig.staminaSwimHealthDrainPerSecond or 5) * dt)
 		end
 	end
-	-- Debug samples
-	if math.random() < 0.05 then
-		print(string.format("[Stamina] %s dt=%.2f mode=%s stamina=%.1f/%d", player.Name, dt, movingMode, stamina, maxStamina))
-	end
 end
 
 -- Jump cost: hook Humanoid.Jumping per character
@@ -103,7 +99,6 @@ local function onCharacter(player: Player, character: Model)
 			local cost = PlayerConfig.jumpStaminaCost or 20
 			if stamina >= cost then
 				player:SetAttribute("Stamina", stamina - cost)
-				print(string.format("[Stamina] %s jump cost=%.1f -> %.1f", player.Name, cost, stamina - cost))
 			else
 				-- Prevent jump by lowering JumpPower briefly
 				local jp = humanoid.JumpPower
@@ -112,12 +107,6 @@ local function onCharacter(player: Player, character: Model)
 					humanoid.JumpPower = jp
 				end)
 			end
-		end
-	end)
-	-- Redundant logging via state change
-	humanoid.StateChanged:Connect(function(_, new)
-		if new == Enum.HumanoidStateType.Jumping then
-			print(string.format("[Stamina] %s state Jumping (redundant log)", player.Name))
 		end
 	end)
 end
@@ -140,7 +129,6 @@ end)
 -- Remote handlers for reliable input intent
 setSprintRemote.OnServerEvent:Connect(function(player: Player, desired: boolean)
 	player:SetAttribute("WantsSprint", desired == true)
-	print(string.format("[Input] %s sprint=%s", player.Name, tostring(desired)))
 end)
 
 jumpPressedRemote.OnServerEvent:Connect(function(player: Player)
@@ -159,7 +147,6 @@ jumpPressedRemote.OnServerEvent:Connect(function(player: Player)
 
 	if stamina >= cost then
 		player:SetAttribute("Stamina", stamina - cost)
-		print(string.format("[Stamina] %s jump (remote) cost=%.1f -> %.1f", player.Name, cost, stamina - cost))
 	else
 		if humanoid then
 			local jp = humanoid.JumpPower

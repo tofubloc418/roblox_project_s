@@ -194,7 +194,6 @@ function MeleeController:Attack(itemId: string)
     end
     self.lastAttackAt = now
     local animator = getAnimator()
-    print(string.format("[MeleeClient] Attack item=%s auto=%s cd=%.2f", itemId, tostring(cfg.auto), cfg.cooldownSeconds or -1))
     if animator then
         local tracks = self.attackTracks
         -- Fists: load on demand from ReplicatedStorage
@@ -207,7 +206,6 @@ function MeleeController:Attack(itemId: string)
                 if anim and anim:IsA("Animation") then
                     local track = animator:LoadAnimation(anim)
                     if track then
-                        print("[MeleeClient] Play fists animation")
                         track:Play()
                     end
                 end
@@ -224,7 +222,6 @@ function MeleeController:Attack(itemId: string)
             if #tracks > 0 then
                 local track = tracks[self.sequenceIndex]
                 if track then
-                    print(string.format("[MeleeClient] Play melee anim index=%d/%d", self.sequenceIndex, #tracks))
                     track:Play()
                 end
                 self.sequenceIndex += 1
@@ -235,7 +232,6 @@ function MeleeController:Attack(itemId: string)
         end
     end
 
-    print("[MeleeClient] FireServer MeleeAttack")
     meleeAttack:FireServer(itemId)
 end
 

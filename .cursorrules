@@ -1,35 +1,5 @@
 # Cursor AI Rules for This Project
 
-## CRITICAL: Directory Usage Rules
-
-### DEPRECATED - DO NOT EDIT
-The following directories are **DEPRECATED** and must **NEVER** be edited:
-- `src/client/clientBattleground/`
-- `src/server/serverBattleground/`
-- `src/shared/sharedBattleground/`
-
-**These directories:**
-- Should ONLY be used as reference when EXPLICITLY instructed by the user
-- Must NEVER have new files added
-- Must NEVER have existing files modified
-- Are legacy code that is no longer in use
-
-### ACTIVE DIRECTORIES
-All new development should happen in:
-- `src/client/clientNormalIsland/` - Client-side code for the island
-- `src/server/serverNormalIsland/` - Server-side code for the island
-- `src/shared/sharedNormalIsland/` - Shared modules for the island
-- `src/client/clientMain/` - Main client code
-- `src/server/serverMain/` - Main server code
-- `src/shared/sharedMain/` - Main shared code
-
-## Project Structure Rules
-
-1. **Always check which directory you're working in** before creating or editing files
-2. **Default to NormalIsland directories** for any island-related features
-3. **Ask for clarification** if unsure whether something belongs in Main or NormalIsland
-4. **Never assume battleground directories** are the right place for new code
-
 ## File Naming Conventions
 
 - Use `.luau` extension for all Lua files
@@ -37,3 +7,39 @@ All new development should happen in:
 - Use camelCase for instance/variable names
 - Server scripts should end with `.server.luau`
 - Client scripts should end with `.client.luau`
+
+## Roblox GUI Development
+
+- **Always use React Lua** for all GUI-related work in Roblox
+- Do not use Roact, Fusion, or other UI frameworks—use React Lua exclusively
+- Structure GUI components as React Lua components with hooks (e.g., `useState`, `useEffect`) where appropriate
+
+### ZIndex and Layering
+
+- When using `ZIndexBehavior = Global` on a ScreenGui, every GuiObject's ZIndex is compared across the **entire** hierarchy, not just among siblings. Default ZIndex is 1.
+- Always assign **explicit ZIndex values** to layered elements (e.g. gradient, mask, content, overlay) so render order is deterministic. Never rely on sibling order when ZIndex values are equal.
+- Slot content (labels, icons, buttons) must have ZIndex ≥ the mask/layer that occludes the gradient, or it will be invisible. Use `LayoutConfig.ZIndex.Content` (or equivalent) for all slot content.
+
+### Layout and Positioning
+
+- Use `IgnoreGuiInset = true` on ScreenGuis when you need true viewport centering; the default safe-area inset shifts the coordinate system and can make top/bottom margins appear asymmetric.
+- For horizontal centering of a row of elements, set `HorizontalAlignment = Enum.HorizontalAlignment.Center` on the parent's `UIListLayout` (or `UIGridLayout`).
+- For vertical centering, use `VerticalAlignment = Enum.VerticalAlignment.Center`.
+
+### Config Organization
+
+- **ThemeConfig**: colors, fonts, padding, corner radii, strokes—visual/theme values.
+- **LayoutConfig**: positions, ZIndex layers, slot sizes, structural constants—layout and positioning. Keep these separate from theme values.
+
+## Terminal Commands
+
+When working in the terminal, use Windows syntax (PowerShell/CMD), not Linux/Bash syntax.
+
+- **Command chaining:** Use `;` instead of `&&` (e.g., `cd foo; npm install`). Use `; if ($?) { ... }` instead of `&&` for conditional chaining in PowerShell.
+- **Path separators:** Use backslash `\` for paths (e.g., `src\components\Button.luau`), though forward slash `/` often works in PowerShell too.
+- **Environment variables:** Use `$env:VAR` (PowerShell) or `%VAR%` (CMD), not `$VAR` or `${VAR}`.
+- **Line continuation:** Use backtick `` ` `` (PowerShell) or `^` (CMD) at end of line, not `\`.
+- **File operations:** Use `Copy-Item`/`Move-Item` (PowerShell) or `copy`/`move` (CMD), not `cp`/`mv`.
+- **List directory:** Use `Get-ChildItem` or `dir`, not `ls`.
+- **Remove/delete:** Use `Remove-Item` (PowerShell) or `del`/`rmdir`, not `rm` or `rm -rf`.
+- **Current directory:** Use `.\` for current dir in paths (e.g., `.\script.ps1`), not `./`.

@@ -5,13 +5,18 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 local ContextActionService = game:GetService("ContextActionService")
+local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
+
+local function getViewportSize(): Vector2
+	local cam = workspace.CurrentCamera
+	return (cam and cam.ViewportSize) or Vector2.new(1920, 1080)
+end
 
 -- Remotes
 local remotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
 local updateInventory = remotes:WaitForChild("UpdateInventory")
-local requestEquip = remotes:WaitForChild("RequestEquip")
 local requestSwap = remotes:WaitForChild("RequestSwap")
 
 -- Modules
@@ -19,24 +24,25 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
-local InventoryApp = require(script.Parent:WaitForChild("InventoryApp"))
-local Hotbar = require(script.Parent:WaitForChild("Hotbar"))
+local LoadoutApp = require(script.Parent:WaitForChild("LoadoutApp"))
 
 type InventoryData = InventoryTypes.InventoryData
+type LoadoutData = InventoryTypes.LoadoutData
 
 -- Config
-local ROWS = 3
-local COLS = 5
-local SLOT_COUNT = ROWS * COLS
+local ROWS = 4
+local COLS = 4
 
 -- State
-local inventoryData: InventoryData = {
-	slots = {},
-	equippedSlot = nil,
+local loadoutData: LoadoutData = {
+	inventory = { slots = {}, equippedSlot = nil },
+	equipment = nil,
+	weapons = nil,
+	quickUse = nil,
 }
-local inventoryOpen = false
+local loadoutOpen = false
 local dragStartSlot: number? = nil
-local gridRef = { current = nil :: Frame? }
+local inventoryGridRef = { current = nil :: Frame? }
 
 -- Create ScreenGuis
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
@@ -44,90 +50,67 @@ StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
-local inventoryScreen = Instance.new("ScreenGui")
-inventoryScreen.Name = "InventoryScreen"
-inventoryScreen.ResetOnSpawn = false
-inventoryScreen.Enabled = false
-inventoryScreen.Parent = playerGui
+local loadoutScreen = Instance.new("ScreenGui")
+loadoutScreen.Name = "LoadoutScreen"
+loadoutScreen.ResetOnSpawn = false
+loadoutScreen.Enabled = false
+loadoutScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
+loadoutScreen.IgnoreGuiInset = true
+loadoutScreen.Parent = playerGui
 
-local hotbarScreen = Instance.new("ScreenGui")
-hotbarScreen.Name = "Hotbar"
-hotbarScreen.ResetOnSpawn = false
-hotbarScreen.Enabled = true
-hotbarScreen.Parent = playerGui
+-- Mount React root
+local loadoutRoot = ReactRoblox.createRoot(loadoutScreen)
 
--- Mount React roots
-local inventoryRoot = ReactRoblox.createRoot(inventoryScreen)
-local hotbarRoot = ReactRoblox.createRoot(hotbarScreen)
-
-local function renderInventory()
-	inventoryRoot:render(React.createElement(InventoryApp, {
-		inventoryData = inventoryData,
+local function renderLoadout()
+	loadoutRoot:render(React.createElement(LoadoutApp, {
+		loadoutData = loadoutData,
 		rows = ROWS,
 		cols = COLS,
-		gridRef = gridRef,
+		viewportSize = getViewportSize(),
+		inventoryGridRef = inventoryGridRef,
 		onDragStart = function(i: number)
-			if inventoryOpen then
+			if loadoutOpen then
 				dragStartSlot = i
 			end
 		end,
-		onEquip = function(i: number)
-			if inventoryOpen then
-				requestEquip:FireServer(i)
-			end
-		end,
+		onEquipmentClick = function(_slotId: InventoryTypes.EquipmentSlotId) end,
+		onAbilityClick = function(_weaponIndex: number, _abilityIndex: number) end,
+		onQuickUseClick = function(_index: number) end,
 		onMouseEnter = function(_i: number) end,
 		onMouseLeave = function(_i: number) end,
 	}))
 end
 
-local function renderHotbar()
-	hotbarRoot:render(React.createElement(Hotbar, {
-		cols = COLS,
-		inventoryData = inventoryData,
-		onEquip = function(i: number)
-			requestEquip:FireServer(i)
-		end,
-	}))
-end
-
 local function render()
-	renderInventory()
-	renderHotbar()
+	renderLoadout()
 end
 
 -- Handle inventory updates from server
 updateInventory.OnClientEvent:Connect(function(newData: InventoryData)
-	inventoryData = newData
+	loadoutData = {
+		inventory = newData,
+		equipment = loadoutData.equipment,
+		weapons = loadoutData.weapons,
+		quickUse = loadoutData.quickUse,
+	}
 	render()
 end)
 
--- Inventory toggle
-local function onToggleInventory(_actionName: string, inputState: Enum.UserInputState, _inputObject: InputObject?)
+-- Loadout toggle (Tab keybind)
+local function onToggleLoadout(_actionName: string, inputState: Enum.UserInputState, _inputObject: InputObject?)
 	if inputState == Enum.UserInputState.Begin then
-		inventoryOpen = not inventoryOpen
-		inventoryScreen.Enabled = inventoryOpen
-		CursorManager.setEnabledFor("Inventory", inventoryOpen)
+		loadoutOpen = not loadoutOpen
+		loadoutScreen.Enabled = loadoutOpen
+		CursorManager.setEnabledFor("Loadout", loadoutOpen)
 	end
 	return Enum.ContextActionResult.Sink
 end
-ContextActionService:BindAction("ToggleInventory", onToggleInventory, false, Enum.KeyCode.Tab)
+ContextActionService:BindAction("ToggleLoadout", onToggleLoadout, false, Enum.KeyCode.Tab)
 
--- Hotbar keys
-UserInputService.InputBegan:Connect(function(input: InputObject, gpe: boolean)
-	if gpe then return end
-	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
-
-	if input.KeyCode.Value >= Enum.KeyCode.One.Value and input.KeyCode.Value <= Enum.KeyCode.Five.Value then
-		local slotIndex = input.KeyCode.Value - Enum.KeyCode.One.Value + 1
-		requestEquip:FireServer(slotIndex)
-	end
-end)
-
--- Global mouse release for completing drags
+-- Global mouse release for completing drags (inventory grid only)
 UserInputService.InputEnded:Connect(function(input: InputObject, _gpe: boolean)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 and dragStartSlot then
-		local grid = gridRef.current
+		local grid = inventoryGridRef.current
 		if grid then
 			local mouse = localPlayer:GetMouse()
 			local mousePos = Vector2.new(mouse.X, mouse.Y)
@@ -156,6 +139,16 @@ UserInputService.InputEnded:Connect(function(input: InputObject, _gpe: boolean)
 			end
 		end
 		dragStartSlot = nil
+	end
+end)
+
+-- Re-render when viewport changes (resize, etc.)
+local lastViewportSize = getViewportSize()
+RunService.Heartbeat:Connect(function()
+	local current = getViewportSize()
+	if current ~= lastViewportSize then
+		lastViewportSize = current
+		render()
 	end
 end)
 

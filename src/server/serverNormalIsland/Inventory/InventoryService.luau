@@ -10,7 +10,7 @@ type InventoryData = InventoryTypes.InventoryData
 local InventoryService = {}
 InventoryService.__index = InventoryService
 
-local INVENTORY_SIZE = 15
+local INVENTORY_SIZE = 16
 
 -- Remote events
 local remotes = ReplicatedStorage:FindFirstChild("InventoryRemotes")
@@ -489,4 +489,5 @@ end
 
 -- Create singleton
 local instance = InventoryService.new()
+instance.INVENTORY_SIZE = INVENTORY_SIZE
 return instance

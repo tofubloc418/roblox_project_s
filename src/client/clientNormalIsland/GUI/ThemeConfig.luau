@@ -147,4 +147,32 @@ ThemeConfig.Loadout = {
 	OuterCardHeightRatio = 6 / 9, -- height:width
 }
 
+--[[
+	HUD LOADOUT (in-game equipment section, lower-right corner)
+]]
+ThemeConfig.HudLoadout = {
+	-- Gap between the three columns and between the two weapon cards (same value)
+	ColumnGap = 16,
+
+	-- Q and 3 slot visual area (square) — 1.5x scale
+	SlotSize = 120,
+
+	-- Weapon slot visual area (slightly wider than square to fit name in bar)
+	WeaponSlotWidth = 168,
+	WeaponSlotHeight = 120,
+
+	-- Keybind bar attached to the top of each slot
+	BarHeight = 45,
+	BarFontSize = 26,
+
+	-- Active slot bar: white background, dark text
+	BarActiveBackground = Color3.fromRGB(255, 255, 255),
+	BarActiveText = Color3.fromRGB(22, 22, 28),
+
+	-- Inactive slot bar: dark/semi-transparent background, white text
+	BarInactiveBackground = Color3.fromRGB(35, 35, 42),
+	BarInactiveText = Color3.fromRGB(255, 255, 255),
+	BarInactiveBackgroundTransparency = 0.4,
+}
+
 return ThemeConfig

@@ -1,14 +1,14 @@
 # HUD Loadout UI Specification
 
-This document specifies the in-game HUD equipment section that appears in the lower-right corner of the screen. The design is inspired by the Arc Raiders equipment HUD, adapted to our game’s systems and constraints.
+This document specifies the in-game HUD equipment section that appears in the lower-right corner of the screen. The design is inspired by the Arc Raiders equipment HUD, adapted to our game's systems and constraints.
 
 ---
 
 ## 1. Action key area (top of section)
 
-- **Unarmed:** Do **not** implement an action key for “unarmed”. There is no separate unarmed key in this UI.
+- **Unarmed:** Do **not** implement an action key for "unarmed". There is no separate unarmed key in this UI.
 - **Flashlight:** For now, only the **flashlight** action is shown in this area, with its keybind (e.g. a bar with the key centered).
-- This area sits above or beside the main slot columns as the single “action” row for now.
+- This area sits above or beside the main slot columns as the single "action" row for now.
 
 ---
 
@@ -19,13 +19,13 @@ There are four logical slots, each with a **bar** attached to the top of a **vis
 | Slot        | Keybind | Purpose                                      |
 |------------|---------|----------------------------------------------|
 | Quick slot | **Q**   | Current quick-use item; radial to change it. |
-| Unequip    | **3**   | “Fists” — unequip all (like Arc Raiders’ unarmed). |
+| Unequip    | **3**   | "Fists" — unequip all (like Arc Raiders' unarmed). |
 | Weapon 1   | **1**   | First weapon slot.                           |
 | Weapon 2   | **2**   | Second weapon slot.                          |
 
 - **Bar (all slots):** A bar attached to the **top** of the square visual slot. The bar shows the **keybind**, centered.
 - **Weapon bars only:** Keybind is **left-aligned**, weapon **name** is **right-aligned** in the same bar.
-- Because the weapon bar must fit the name, the weapon **visual slot** is **slightly wider than a square** (still compact compared to Arc Raiders’ long rectangles). Bar width matches the slot width.
+- Because the weapon bar must fit the name, the weapon **visual slot** is **slightly wider than a square** (still compact compared to Arc Raiders' long rectangles). Bar width matches the slot width.
 
 ---
 
@@ -71,7 +71,9 @@ There are four logical slots, each with a **bar** attached to the top of a **vis
 ## 6. Quick slot (Q) behavior
 
 - **Tap Q:** Equip the **current** quick slot item (the one selected in the radial).
-- **Hold Q + move mouse:** Open the **radial dial** to choose which quick slot item is “current,” then equip that item. The radial options must match the **quick slot section of the loadout** (same items, same order).
+- **Hold Q + move mouse:** Open the **radial dial** to choose which quick slot item is "current," then equip that item. The radial options must match the **quick slot section of the loadout** (same items, same order).
+
+For a full technical breakdown of how the radial dial works -- segment rendering, hover effect, virtual cursor, camera lock, slot selection math, and how to reuse the module for other purposes -- see **[radial-dial.md](radial-dial.md)**.
 
 ---
 
@@ -88,7 +90,7 @@ There are four logical slots, each with a **bar** attached to the top of a **vis
 - **Single source of truth:**  
   The **player HUD loadout section** and the **loadout screen** must share **one source of truth** that defines:
   - Which weapons are equipped (slots 1 and 2).
-  - Which items are in the quick slots and which one is “current” for Q.
+  - Which items are in the quick slots and which one is "current" for Q.
   - Unequip state (3 / fists).
 
 - **Modularization for data:**  
@@ -103,7 +105,7 @@ There are four logical slots, each with a **bar** attached to the top of a **vis
 - [ ] **Action area:** No unarmed key; only flashlight for now.
 - [ ] **Four slots:** Q, 3, 1, 2 — each with a top bar (keybind centered; for weapons: key left, name right) and visual slot.
 - [ ] **Weapon slots:** No ammo; slightly wider than square to fit name in bar; 16 pt gap between the two weapon cards.
-- [ ] **Three columns:** Q | 3 | 1–2; 16 pt gap between columns; bottom-aligned.
+- [ ] **Three columns:** Q | 3 | 1—2; 16 pt gap between columns; bottom-aligned.
 - [ ] **Active weapon:** Bar + visual; inactive: bar only. Shrink visual only when switching between weapon 1 and 2; no change when switching to Q or 3.
 - [ ] **Q:** Tap = equip current quick item; hold + mouse = radial to set current and equip. Radial matches loadout quick slots.
 - [ ] **Slot 3:** Fists (unequip all).

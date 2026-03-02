@@ -38,7 +38,7 @@ local function InventorySlot(props: InventorySlotProps)
 		if icon then
 			imageId = icon
 		else
-			displayText = displayName
+			displayText = displayName or ""
 		end
 		if stack.maxStack > 1 then
 			stackText = string.format("%d/%d", stack.count, stack.maxStack)
@@ -60,8 +60,8 @@ local function InventorySlot(props: InventorySlotProps)
 		LayoutOrder = props.index,
 		ZIndex = LayoutConfig.ZIndex.Content,
 		[React.Event.MouseButton1Down] = props.onDragStart,
-		[React.Event.MouseEnter] = props.onMouseEnter,
-		[React.Event.MouseLeave] = props.onMouseLeave,
+		[React.Event.MouseEnter] = props.onMouseEnter or function() end,
+		[React.Event.MouseLeave] = props.onMouseLeave or function() end,
 	}, {
 		Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 		Stroke = React.createElement("UIStroke", {

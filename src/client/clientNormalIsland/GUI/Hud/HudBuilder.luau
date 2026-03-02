@@ -55,120 +55,103 @@ function HudBuilder.buildMinimap(playerGui: PlayerGui): MinimapBuild
 	}
 end
 
--- HUD: Health/Stamina bars and player count (top-right)
+-- HUD: Player core stats (health, energy, mana) at bottom-left
 
-function HudBuilder.buildTopRightHud(playerGui: PlayerGui)
+function HudBuilder.buildPlayerStatsHud(playerGui: PlayerGui)
 	local screen = Instance.new("ScreenGui")
-	screen.Name = "TopRightHUD"
+	screen.Name = "PlayerStatsHUD"
 	screen.ResetOnSpawn = false
 	screen.Parent = playerGui
 
+	local barWidth = 360
+	local barHeight = 12
+	local barGap = 10
+	local outlineThickness = 3
+
 	local container = Instance.new("Frame")
 	container.Name = "Container"
-	container.AnchorPoint = Vector2.new(1, 0)
-	container.Position = UDim2.fromScale(0.99, 0.02)
-	-- sizing constants
-	local barWidth = 200
-	local barHeight = 8
-	local boxWidth = 44
-	local gap = 12
-	container.Size = UDim2.fromOffset(barWidth + gap + boxWidth, 36)
+	container.AnchorPoint = Vector2.new(0, 1)
+	container.Position = UDim2.fromScale(0.02, 0.98)
+	container.Size = UDim2.fromOffset(barWidth, barHeight * 3 + barGap * 2)
 	container.BackgroundTransparency = 1
 	container.Parent = screen
 
-	-- Horizontal layout
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
-	layout.VerticalAlignment = Enum.VerticalAlignment.Top
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.Padding = UDim.new(0, gap)
-	layout.Parent = container
-
 	local barsContainer = Instance.new("Frame")
 	barsContainer.Name = "Bars"
-	barsContainer.Size = UDim2.fromOffset(barWidth, 36)
+	barsContainer.Size = UDim2.fromOffset(barWidth, container.Size.Y.Offset)
 	barsContainer.BackgroundTransparency = 1
 	barsContainer.BorderSizePixel = 0
-	barsContainer.LayoutOrder = 1
 	barsContainer.Parent = container
 
-	local function makeBar(name: string, color: Color3)
+	local function makeBar(name: string, color: Color3, layoutOrder: number)
+		-- Transparent outline container (squared)
+		local outline = Instance.new("Frame")
+		outline.Name = name .. "Outline"
+		outline.Size = UDim2.fromOffset(barWidth, barHeight)
+		outline.BackgroundTransparency = 1
+		outline.BorderSizePixel = 0
+		outline.LayoutOrder = layoutOrder
+		outline.Parent = barsContainer
+
+		local stroke = Instance.new("UIStroke")
+		stroke.Color = Color3.fromRGB(255, 255, 255)
+		stroke.Transparency = 0.6
+		stroke.Thickness = outlineThickness
+		stroke.Parent = outline
+
+		-- Transparent back: only outline shows in unfilled area
 		local back = Instance.new("Frame")
 		back.Name = name .. "Back"
-		back.Size = UDim2.fromOffset(barWidth, barHeight)
-		back.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+		back.Size = UDim2.fromScale(1, 1)
+		back.BackgroundTransparency = 1
 		back.BorderSizePixel = 0
-		back.Parent = barsContainer
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(0, 4)
-		corner.Parent = back
-		-- Max capacity cap (translucent), fills from right to left
+		back.Parent = outline
+
+		-- Cap (invisible, used only for layout; unfilled area stays transparent)
 		local cap = Instance.new("Frame")
 		cap.Name = name .. "Cap"
 		cap.AnchorPoint = Vector2.new(1, 0.5)
 		cap.Position = UDim2.fromScale(1, 0.5)
 		cap.Size = UDim2.fromScale(1, 1)
-		cap.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
-		cap.BackgroundTransparency = 0.6
+		cap.BackgroundTransparency = 1
 		cap.BorderSizePixel = 0
 		cap.ZIndex = 2
 		cap.Parent = back
-		local capCorner = Instance.new("UICorner")
-		capCorner.CornerRadius = UDim.new(0, 4)
-		capCorner.Parent = cap
-		-- Current fill, from right to left
+
+		-- Current fill, left-anchored so bar depletes right-to-left (squared)
 		local fill = Instance.new("Frame")
 		fill.Name = name .. "Fill"
-		fill.AnchorPoint = Vector2.new(1, 0.5)
-		fill.Position = UDim2.fromScale(1, 0.5)
+		fill.AnchorPoint = Vector2.new(0, 0.5)
+		fill.Position = UDim2.fromScale(0, 0.5)
 		fill.Size = UDim2.fromScale(1, 1)
 		fill.BackgroundColor3 = color
 		fill.BorderSizePixel = 0
 		fill.ZIndex = 3
 		fill.Parent = back
-		local fillCorner = Instance.new("UICorner")
-		fillCorner.CornerRadius = UDim.new(0, 4)
-		fillCorner.Parent = fill
+
 		return back, fill, cap
 	end
 
-	local healthBack, healthFill, healthCap = makeBar("Health", Color3.fromRGB(220, 70, 70))
-	healthBack.Position = UDim2.fromOffset(0, 2)
-	local staminaBack, staminaFill, staminaCap = makeBar("Stamina", Color3.fromRGB(70, 170, 220))
-	staminaBack.Position = UDim2.fromOffset(0, 20)
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Vertical
+	layout.VerticalAlignment = Enum.VerticalAlignment.Top
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Padding = UDim.new(0, barGap)
+	layout.Parent = barsContainer
 
-	local countBox = Instance.new("Frame")
-	countBox.Name = "PlayerCountBox"
-	countBox.LayoutOrder = 2
-	countBox.Size = UDim2.fromOffset(boxWidth, boxWidth)
-	countBox.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-	countBox.BackgroundTransparency = 0.35
-	countBox.BorderSizePixel = 0
-	countBox.Parent = container
-	local cbCorner = Instance.new("UICorner")
-	cbCorner.CornerRadius = UDim.new(0, 8)
-	cbCorner.Parent = countBox
-
-	local countLabel = Instance.new("TextLabel")
-	countLabel.Name = "PlayerCount"
-	countLabel.AnchorPoint = Vector2.new(0.5, 0.5)
-	countLabel.Position = UDim2.fromScale(0.5, 0.5)
-	countLabel.Size = UDim2.fromScale(1, 1)
-	countLabel.BackgroundTransparency = 1
-	countLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-	countLabel.TextScaled = true
-	countLabel.Font = Enum.Font.GothamBold
-	countLabel.Text = "0"
-	countLabel.Parent = countBox
+	local _, healthFill, healthCap = makeBar("Health", Color3.fromRGB(220, 70, 70), 1)
+	local _, manaFill, manaCap = makeBar("Mana", Color3.fromRGB(70, 170, 220), 2)
+	local _, energyFill, energyCap = makeBar("Energy", Color3.fromRGB(220, 220, 70), 3)
 
 	return {
 		Screen = screen,
 		HealthFill = healthFill,
 		HealthCap = healthCap,
-		StaminaFill = staminaFill,
-		StaminaCap = staminaCap,
-		PlayerCount = countLabel,
+		EnergyFill = energyFill,
+		EnergyCap = energyCap,
+		ManaFill = manaFill,
+		ManaCap = manaCap,
 	}
 end
 

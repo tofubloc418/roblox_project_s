@@ -86,9 +86,20 @@ LayoutConfig.SlotLabel = {
 	QUICK-USE GRID STRUCTURE
 ]]
 LayoutConfig.QuickUse = {
-	SlotCount = 6,
-	Cols      = 3,
+	SlotCount = 8,
+	Cols      = 4,
 	Rows      = 2,
+}
+
+--[[
+	HUD LOADOUT (in-game equipment section, lower-right corner)
+	Anchored to the bottom-right of the screen.
+]]
+LayoutConfig.HudLoadout = {
+	AnchorPoint = Vector2.new(1, 1),
+	Position    = UDim2.fromScale(0.98, 0.98),
+	-- ZIndex layer for the HUD Loadout ScreenGui (above world, below loadout)
+	ZIndex      = 5,
 }
 
 return LayoutConfig

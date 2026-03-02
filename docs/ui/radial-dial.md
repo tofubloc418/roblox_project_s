@@ -8,7 +8,7 @@ Arc Raiders-style donut-segment item selector, built as a standalone reusable mo
 
 1. [Module layout](#1-module-layout)
 2. [Segment rendering — how the arc shape is faked](#2-segment-rendering--how-the-arc-shape-is-faked)
-3. [Hover effect — gradient border on a donut slice](#3-hover-effect--gradient-border-on-a-donut-slice)
+3. [Hover effect — white-opaque segment highlight](#3-hover-effect--white-opaque-segment-highlight)
 4. [Icon placement and clipping](#4-icon-placement-and-clipping)
 5. [Center label](#5-center-label)
 6. [All configuration values (RadialDialConfig)](#6-all-configuration-values-radialdialconfig)
@@ -19,7 +19,6 @@ Arc Raiders-style donut-segment item selector, built as a standalone reusable mo
 11. [Data flow from quick-slots to RadialDial](#11-data-flow-from-quick-slots-to-radialdial)
 12. [How to wire a new use-case to RadialDial](#12-how-to-wire-a-new-use-case-to-radialdial)
 13. [Z-index stack](#13-z-index-stack)
-14. [Checklist — things that still need a real asset ID](#14-checklist--things-that-still-need-a-real-asset-id)
 
 ---
 
@@ -78,7 +77,7 @@ ImageTransparency  = RadialDialConfig.RingBackgroundTransparency  -- 0.5
 
 This makes every idle slot match the translucency of the rest of the HUD loadout slots.
 
-Hovered fill: see section 4.
+Hovered fill: see section 3.
 
 ### Why size = `2 × OuterRadius`?
 
@@ -86,22 +85,16 @@ The image is drawn as a large square centered at the dial center. Its size in pi
 
 ---
 
-## 3. Hover effect — gradient border on a donut slice
+## 3. Hover effect — white-opaque segment highlight
 
-The existing `GradientBorder` component works on rectangular `Frame`s using a white overlay + `UIGradient` + an inner mask. That approach does not apply to arc-shaped images.
-
-Instead, `RadialDialSegment` implements the gradient border concept directly using the same segment image:
-
-**On hover the `ImageColor3` and `ImageTransparency` swap to:**
+On hover, the segment's `ImageLabel` switches to:
 
 ```
 ImageColor3        = RadialDialConfig.HoveredSegmentColor        -- RGB(255,255,255)
 ImageTransparency  = RadialDialConfig.HoveredSegmentTransparency -- 0.0
 ```
 
-This makes the segment flash white-opaque on hover, exactly like the Arc Raiders reference. The gradient animation (rotating white/cyan/purple rim) used on square slots **is not applied** here because the image-tint approach does not support a border-only ring on a custom shape. The white-opaque flash serves as the hover indicator for arc segments.
-
-> If a proper animated gradient rim is desired in the future, a second larger segment `ImageLabel` can be layered below the fill, with a `UIGradient` child and its `ImageTransparency` toggled on hover — the same pattern as `GradientBorder.luau` but using the sector image instead of a rectangular frame.
+The segment flashes white and fully opaque; the rest of the time it uses `RingBackgroundColor` and `RingBackgroundTransparency` (section 2).
 
 ---
 
@@ -157,7 +150,7 @@ The dial does not hide the center label when nothing is hovered — it shows "Ca
 
 ## 6. All configuration values (RadialDialConfig)
 
-All numbers are at the **reference viewport size** (`ReferenceViewportSize = 1080`). At runtime they are multiplied by the viewport scale factor (see section 8).
+All numbers are at the **reference viewport size** (`ReferenceViewportSize = 1080`). At runtime they are multiplied by the viewport scale factor (see section 7).
 
 | Constant | Value | Purpose |
 |---|---|---|
@@ -239,7 +232,7 @@ local delta = UserInputService:GetMouseDelta()
 virtualCursorOffset += Vector2.new(delta.X, delta.Y)
 ```
 
-`virtualCursorOffset` is clamped to `VIRTUAL_CURSOR_MAX_RADIUS = 400` px so the vector never grows unboundedly. The sector under the virtual cursor is derived from this offset (see section 10).
+`virtualCursorOffset` is clamped to `VIRTUAL_CURSOR_MAX_RADIUS = 400` px so the vector never grows unboundedly. The sector under the virtual cursor is derived from this offset (see section 9).
 
 **Why a virtual cursor?** Center-locking prevents the mouse from leaving the screen and avoids the cursor snapping back, which would break the rotation feel. The delta approach means the "cursor" starts at dead center every time the dial opens — the player always begins in "Cancel" state and must nudge the mouse to select a slot.
 
@@ -308,7 +301,7 @@ if highlightedIndex then
 end
 ```
 
-The border still appears on empty slots during hover (so the player can see what they are pointing at), and the center label still says "Empty Slot". But releasing Q on an empty slot is a no-op: the previously equipped quick-slot item stays equipped.
+The segment still highlights (white) on empty slots during hover (so the player can see what they are pointing at), and the center label still says "Empty Slot". But releasing Q on an empty slot is a no-op: the previously equipped quick-slot item stays equipped.
 
 ---
 
@@ -364,12 +357,3 @@ Nothing in `RadialDial.luau`, `RadialDialSegment.luau`, `RadialDialTypes.luau`, 
 | `CenterLabel` | `13` | Item name / "Cancel" TextLabel |
 
 The full-screen black overlay is a sibling `Frame` on `HudRadialScreen` at ZIndex `0` (below `Annulus`), rendered by `HudRadialDial` wrapping `RadialDial`.
-
----
-
-## 14. Checklist — things that still need a real asset ID
-
-| Item | Status | Notes |
-|---|---|---|
-| `SegmentImageId` | placeholder `rbxassetid://84415060524194` | Upload final 45° donut-slice PNG (512×512, white on transparent, center at image center, ~8 px gap baked into each edge). Update value in `RadialDialConfig.luau`. |
-| `UseDebugColors` | `true` | Set to `false` before shipping. At that point the debug-red sector and debug-blue icon-square frames both become fully transparent and only the image tint / icon are visible. |

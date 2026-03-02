@@ -27,6 +27,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
@@ -83,7 +84,8 @@ local HOLD_THRESHOLD_SECS = 0.2    -- seconds before Q is treated as a hold
 local radialVisible = false
 local qPressTime: number? = nil
 local highlightedIndex: number? = nil
-local lastMousePos = Vector2.new(0, 0)
+-- When dial is open, mouse is center-locked; we use accumulated delta as a "virtual" cursor for sector selection.
+local virtualCursorOffset = Vector2.new(0, 0)
 
 -- ── Render helpers ───────────────────────────────────────────────────────────
 
@@ -110,19 +112,10 @@ end
 local function renderRadial()
 	local state = HudLoadoutDataAdapter.getState()
 	radialRoot:render(React.createElement(HudRadialDial, {
-		items = state.quickUseItems,
-		currentIndex = state.currentQuickSlotIndex,
+		items            = state.quickUseItems,
 		highlightedIndex = highlightedIndex,
-		visible = radialVisible,
-		viewportSize = getViewportSize(),
-		onSelect = function(index: number)
-			HudLoadoutDataAdapter.setCurrentQuickSlotIndex(index)
-			HudLoadoutDataAdapter.setActiveSlot("QuickUse")
-			radialVisible = false
-			radialScreen.Enabled = false
-			renderRadial()
-			renderHud()
-		end,
+		visible          = radialVisible,
+		viewportSize     = getViewportSize(),
 	}))
 end
 
@@ -152,57 +145,141 @@ end)
 
 -- ── Radial dial mouse tracking ───────────────────────────────────────────────
 
--- Compute which slot index corresponds to the current mouse angle.
-local function getHighlightedSlotFromMouse(
-	items: { [number]: any },
-	mousePos: Vector2,
-	viewport: Vector2
-): number?
-	local cx = viewport.X / 2
-	local cy = viewport.Y / 2
-	local dx = mousePos.X - cx
-	local dy = mousePos.Y - cy
-	if math.abs(dx) < 2 and math.abs(dy) < 2 then
+-- Compute which of the 8 fixed slots an offset-from-center is pointing at.
+-- offsetFromCenter: (dx, dy) from screen center. Returns nil when within radial dead zone (Cancel).
+local VIRTUAL_CURSOR_DEADZONE_RADIUS = 70   -- virtual pixels; inside this circle = Cancel (larger = easier to cancel)
+local VIRTUAL_CURSOR_MAX_RADIUS = 400
+
+local function getHighlightedSlotFromOffset(offsetFromCenter: Vector2): number?
+	local dx, dy = offsetFromCenter.X, offsetFromCenter.Y
+	local distSq = dx * dx + dy * dy
+	if distSq < VIRTUAL_CURSOR_DEADZONE_RADIUS * VIRTUAL_CURSOR_DEADZONE_RADIUS then
 		return nil
 	end
 
-	-- Collect occupied slots
-	local slotIndices: { number } = {}
-	for i = 1, 6 do
-		if items[i] ~= nil then
-			table.insert(slotIndices, i)
+	-- Angle: 0 = right, clockwise. Normalize so 0 = top.
+	local mouseAngle = math.atan2(dy, dx)                          -- [-π, π]
+	local normalized = (mouseAngle + math.pi / 2) % (2 * math.pi)   -- [0, 2π], 0 = top
+
+	local sectorSize = 2 * math.pi / 8
+	local sectorIdx  = math.floor((normalized + sectorSize / 2) / sectorSize) % 8 + 1
+
+	return sectorIdx
+end
+
+-- When dial opens: lock mouse, hide cursor/crosshair, take over camera so it follows the
+-- character but does not rotate from mouse (Scriptable + manual update each frame).
+-- When dial closes: restore camera type and cursor/crosshair visibility.
+local previousCameraType: Enum.CameraType? = nil
+local previousMouseIconEnabled: boolean? = nil
+local GUIsHiddenForRadial: { ScreenGui } = {}
+
+-- Saved when radial opens: camera look direction and offset from character root to camera (so we can follow character).
+local radialCameraLookVector: Vector3? = nil
+local radialCameraOffsetFromRoot: Vector3? = nil
+
+local CROSSHAIR_GUI_NAMES = { "CrosshairGui", "ShiftLockGui", "CursorGui" }
+
+local function setRadialDialOpen(open: boolean)
+	local cam = workspace.CurrentCamera
+	if open then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+
+		previousMouseIconEnabled = UserInputService.MouseIconEnabled
+		UserInputService.MouseIconEnabled = false
+
+		table.clear(GUIsHiddenForRadial)
+		for _, child in ipairs(playerGui:GetChildren()) do
+			if child:IsA("ScreenGui") then
+				for _, name in ipairs(CROSSHAIR_GUI_NAMES) do
+					if child.Name == name and child.Enabled then
+						child.Enabled = false
+						table.insert(GUIsHiddenForRadial, child :: ScreenGui)
+						break
+					end
+				end
+			end
+		end
+
+		if cam then
+			previousCameraType = cam.CameraType
+			cam.CameraType = Enum.CameraType.Scriptable
+			radialCameraLookVector = cam.CFrame.LookVector
+			local character = localPlayer.Character
+			if character then
+				local root = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
+				if root then
+					radialCameraOffsetFromRoot = cam.CFrame.Position - root.Position
+				else
+					radialCameraOffsetFromRoot = Vector3.new(0, 0, 0)
+				end
+			else
+				radialCameraOffsetFromRoot = Vector3.new(0, 0, 0)
+			end
+		end
+
+		virtualCursorOffset = Vector2.new(0, 0)
+	else
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+		if previousMouseIconEnabled ~= nil then
+			UserInputService.MouseIconEnabled = previousMouseIconEnabled
+			previousMouseIconEnabled = nil
+		end
+
+		for _, gui in ipairs(GUIsHiddenForRadial) do
+			if gui.Parent then
+				gui.Enabled = true
+			end
+		end
+		table.clear(GUIsHiddenForRadial)
+
+		if cam and previousCameraType ~= nil then
+			cam.CameraType = previousCameraType
+			previousCameraType = nil
+		end
+		radialCameraLookVector = nil
+		radialCameraOffsetFromRoot = nil
+
+		virtualCursorOffset = Vector2.new(0, 0)
+	end
+end
+
+-- Update scriptable camera every frame so it follows the character (RenderStepped = after movement, before render).
+RunService.RenderStepped:Connect(function()
+	if not radialVisible then return end
+
+	local cam = workspace.CurrentCamera
+	-- Scriptable camera: follow character position but keep fixed look direction (no mouse rotation).
+	-- Use localPlayer.Character (CameraSubject can be cleared when camera is Scriptable).
+	if cam and radialCameraLookVector and radialCameraOffsetFromRoot then
+		local character = localPlayer.Character
+		if character then
+			local root = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
+			if root then
+				local camPos = root.Position + radialCameraOffsetFromRoot
+				cam.CFrame = CFrame.lookAt(camPos, camPos + radialCameraLookVector)
+			end
 		end
 	end
-	local count = #slotIndices
-	if count == 0 then return nil end
-
-	-- Mouse angle (0 = right, 90 = down); items start at top (-90°)
-	local mouseAngle = math.atan2(dy, dx)                     -- [-π, π]
-	local normalized = (mouseAngle + math.pi / 2) % (2 * math.pi)  -- [0, 2π], 0=top
-
-	-- Find closest item angle
-	local sectorSize = (2 * math.pi) / count
-	local sectorIdx = math.floor(normalized / sectorSize) + 1
-	sectorIdx = math.clamp(sectorIdx, 1, count)
-	return slotIndices[sectorIdx]
-end
+end)
 
 RunService.Heartbeat:Connect(function()
 	if not radialVisible then return end
 
-	local mouse = localPlayer:GetMouse()
-	local mousePos = Vector2.new(mouse.X, mouse.Y)
+	-- Mouse is center-locked; use delta to update virtual cursor, then derive sector.
+	local delta = UserInputService:GetMouseDelta()
+	virtualCursorOffset = virtualCursorOffset + Vector2.new(delta.X, delta.Y)
 
-	if mousePos ~= lastMousePos then
-		lastMousePos = mousePos
-		local state = HudLoadoutDataAdapter.getState()
-		highlightedIndex = getHighlightedSlotFromMouse(
-			state.quickUseItems,
-			mousePos,
-			getViewportSize()
-		)
-		renderRadial()
+	-- Clamp so we don't overflow and angle stays stable
+	local len = math.sqrt(virtualCursorOffset.X * virtualCursorOffset.X + virtualCursorOffset.Y * virtualCursorOffset.Y)
+	if len > VIRTUAL_CURSOR_MAX_RADIUS then
+		local scale = VIRTUAL_CURSOR_MAX_RADIUS / len
+		virtualCursorOffset = Vector2.new(virtualCursorOffset.X * scale, virtualCursorOffset.Y * scale)
 	end
+
+	highlightedIndex = getHighlightedSlotFromOffset(virtualCursorOffset)
+	renderRadial()
 end)
 
 -- ── Key bindings ─────────────────────────────────────────────────────────────
@@ -250,10 +327,11 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 				if radialVisible then
 					radialVisible = false
 					radialScreen.Enabled = false
+					setRadialDialOpen(false)
 					renderRadial()
 				end
 			else
-				-- Hold release: apply highlighted selection if any
+				-- Hold release: apply highlighted selection and equip quick slot (same as tap Q).
 				if radialVisible then
 					if highlightedIndex then
 						HudLoadoutDataAdapter.setCurrentQuickSlotIndex(highlightedIndex)
@@ -261,6 +339,7 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 					end
 					radialVisible = false
 					radialScreen.Enabled = false
+					setRadialDialOpen(false)
 					highlightedIndex = nil
 					renderRadial()
 					renderHud()
@@ -278,6 +357,7 @@ RunService.Heartbeat:Connect(function()
 		if held >= HOLD_THRESHOLD_SECS then
 			radialVisible = true
 			radialScreen.Enabled = true
+			setRadialDialOpen(true)
 			renderRadial()
 		end
 	end

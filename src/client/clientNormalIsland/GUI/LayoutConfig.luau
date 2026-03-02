@@ -86,8 +86,8 @@ LayoutConfig.SlotLabel = {
 	QUICK-USE GRID STRUCTURE
 ]]
 LayoutConfig.QuickUse = {
-	SlotCount = 6,
-	Cols      = 3,
+	SlotCount = 8,
+	Cols      = 4,
 	Rows      = 2,
 }
 

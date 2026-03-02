@@ -36,14 +36,16 @@ local _state: HudLoadoutState = {
 		displayName = "",
 	},
 	quickUseItems = {
-		[1] = { itemId = "Bandage",  count = 3, maxStack = 5 },
-		[2] = { itemId = "Medkit",   count = 1, maxStack = 1 },
+		[1] = nil,
+		[2] = nil,
 		[3] = nil,
 		[4] = nil,
 		[5] = nil,
 		[6] = nil,
+		[7] = nil,
+		[8] = nil,
 	},
-	currentQuickSlotIndex = 1,
+	currentQuickSlotIndex = nil,
 	flashlightOn = false,
 }
 

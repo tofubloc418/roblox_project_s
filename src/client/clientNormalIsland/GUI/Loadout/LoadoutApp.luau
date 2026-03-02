@@ -50,7 +50,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local inventoryWidth = math.floor(availableForColumns * L.ColumnRatioInv / COLUMN_RATIO_TOTAL)
 	local quickUseWidth = math.floor(availableForColumns * L.ColumnRatioQuick / COLUMN_RATIO_TOTAL)
 
-	-- Inventory slot size (square) for EquipmentPanel backpack/shield height
+	-- Inventory slot size (square) for EquipmentPanel backpack/armor height
 	local inventorySlotSize = math.floor((inventoryWidth - (cols - 1) * P.InventorySlot) / cols)
 
 	return React.createElement("Frame", {

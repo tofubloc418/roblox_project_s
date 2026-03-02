@@ -92,6 +92,7 @@ For a full technical breakdown of how the radial dial works -- segment rendering
   - Which weapons are equipped (slots 1 and 2).
   - Which items are in the quick slots and which one is "current" for Q.
   - Unequip state (3 / fists).
+  - Backpack and Armor (equipped in loadout screen; not shown in HUD but part of the same loadout data).
 
 - **Modularization for data:**  
   The HUD loadout UI code must be **modularized** so that:

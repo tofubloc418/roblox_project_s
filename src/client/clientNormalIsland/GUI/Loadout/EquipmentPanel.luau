@@ -1,5 +1,5 @@
 --!strict
--- Left panel: Backpack, Shield, 2 Weapon Cards
+-- Left panel: Backpack, Armor, 2 Weapon Cards
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -75,11 +75,11 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			}, {
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
-				Padding = UDim.new(0, P.BackpackShieldGap),
+				Padding = UDim.new(0, P.BackpackArmorGap),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			Backpack = React.createElement(GradientBorder, {
-				size = UDim2.new(0.5, -P.BackpackShieldGap / 2, 1, 0),
+				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 1,
 				onActivated = function()
@@ -97,22 +97,22 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 					end,
 				}),
 			}),
-			Shield = React.createElement(GradientBorder, {
-				size = UDim2.new(0.5, -P.BackpackShieldGap / 2, 1, 0),
+			Armor = React.createElement(GradientBorder, {
+				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 2,
 				onActivated = function()
-					props.onEquipmentClick("Shield")
+					props.onEquipmentClick("Armor")
 				end,
 			}, {
 				Slot = React.createElement(EquipmentSlot, {
-					slotId = "Shield",
-					label = "Shield",
-					item = equipment["Shield" :: EquipmentSlotId],
+					slotId = "Armor",
+					label = "Armor",
+					item = equipment["Armor" :: EquipmentSlotId],
 					layoutOrder = 2,
 					size = UDim2.new(1, 0, 1, 0),
 					onClick = function()
-						props.onEquipmentClick("Shield")
+						props.onEquipmentClick("Armor")
 					end,
 				}),
 			}),

@@ -1,5 +1,5 @@
 --!strict
--- Backpack/Shield slot (accepts optional item data; visual only for now)
+-- Backpack/Armor slot (accepts optional item data; visual only for now)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))

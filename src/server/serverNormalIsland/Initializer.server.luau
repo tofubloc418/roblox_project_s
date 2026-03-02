@@ -7,19 +7,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 
 -- Shared modules
-local _LootConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("LootConfig"))
 local RoundState = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
-
--- Server modules
-local LootSystemModules = script.Parent:WaitForChild("LootSystem")
-local LootBoxService = require(LootSystemModules:WaitForChild("LootBoxService"))
-local DropFactory = require(LootSystemModules:WaitForChild("DropFactory"))
-local BreakableCrate = require(LootSystemModules:WaitForChild("BreakableCrate"))
-
--- Inventory module
-local InventoryModules = script.Parent:WaitForChild("Inventory")
-local InventoryService = require(InventoryModules:WaitForChild("InventoryService"))
 
 -- Combat modules
 local CombatModules = script.Parent:WaitForChild("Combat")
@@ -48,6 +37,33 @@ StarterPlayer:SetAttribute("IgnoreCharacterAppearance", true)
 local roundState = RoundState.Current()
 roundState:Initialize()
 
+-- Create InventoryRemotes (placeholder until new InventoryService is implemented)
+-- Client LoadoutController and HudLoadout depend on these existing
+local inventoryRemotes = ReplicatedStorage:FindFirstChild("InventoryRemotes")
+if not inventoryRemotes then
+	inventoryRemotes = Instance.new("Folder")
+	inventoryRemotes.Name = "InventoryRemotes"
+	inventoryRemotes.Parent = ReplicatedStorage
+
+	local updateInventory = Instance.new("RemoteEvent")
+	updateInventory.Name = "UpdateInventory"
+	updateInventory.Parent = inventoryRemotes
+
+	local requestEquip = Instance.new("RemoteEvent")
+	requestEquip.Name = "RequestEquip"
+	requestEquip.Parent = inventoryRemotes
+
+	local requestSwap = Instance.new("RemoteEvent")
+	requestSwap.Name = "RequestSwap"
+	requestSwap.Parent = inventoryRemotes
+
+	local requestDrop = Instance.new("RemoteEvent")
+	requestDrop.Name = "RequestDrop"
+	requestDrop.Parent = inventoryRemotes
+
+	-- No server handlers: inventory system is deprecated. Client UI will not receive updates.
+end
+
 -- Expose universal match start time
 local matchInfoFolder = ReplicatedStorage:FindFirstChild("MatchInfo")
 if not matchInfoFolder then
@@ -65,28 +81,8 @@ end
 
 -- Initialize services
 StatsService:Initialize()
-InventoryService:Initialize()
-DropFactory:Initialize(InventoryService)
-LootBoxService:Initialize(DropFactory)
 MeleeService:Initialize()
 MedService:Initialize()
-
--- Wire up BreakableCrate registration for static crates in the map (CrateType attribute)
-local function registerCrate(crateModel: Model)
-	return BreakableCrate:RegisterCrate(crateModel, LootBoxService, DamageService)
-end
-
--- Register existing crates in workspace (static loot crates placed in map design)
-BreakableCrate.RegisterExistingCrates(LootBoxService, DamageService)
-
--- Listen for new crates added to workspace
-workspace.DescendantAdded:Connect(function(descendant)
-	if descendant:IsA("Model") and descendant:GetAttribute("CrateType") then
-		-- Small delay to ensure attributes are set
-		task.wait(0.1)
-		registerCrate(descendant)
-	end
-end)
 
 -- Enforce humanoid rig type and scale on character spawn
 local function applyCharacterConfig(character: Model)
@@ -170,8 +166,5 @@ print("[Initializer] Initialization complete")
 -- Export refs for convenience (optional)
 _G.Services = {
 	StatsService = StatsService,
-	LootBoxService = LootBoxService,
-	DropFactory = DropFactory,
 	DamageService = DamageService,
-	BreakableCrate = BreakableCrate,
 }

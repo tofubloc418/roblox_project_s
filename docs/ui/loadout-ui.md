@@ -22,8 +22,13 @@ The loadout screen consists of three main sections, ordered left-to-right:
 
 - **Structure:**  
   - The Equipment section is visually and functionally inspired by Arc Raiders.
-  - At the top: *Backpack* slot and *Shield* slot.
+  - At the top: *Backpack* slot and *Armor* slot.
   - Below: Two *Equipped Weapon* slots.
+  - **Arc Raiders–style loadout:** At any given time, players can equip at most 1 Backpack, 1 Armor, and 2 Weapons.
+
+- **Armor behavior:**  
+  - Equipped armor has **no cosmetic effect** — the character's appearance stays the same.
+  - When equipping or unequipping armor, a "suiting up" / "suiting down" animation plays on the player for visual feedback.
 
 - **Weapon Abilities:**  
   - Unlike Arc Raiders (which feature weapon augments like mags, silencers, etc.), our system replaces those augment slots with **ability slots**.

@@ -10,7 +10,7 @@ export type InventoryData = {
 }
 
 -- Entry-point types for loadout UI (filled when equipment/abilities features land)
-export type EquipmentSlotId = "Backpack" | "Shield" | "Weapon1" | "Weapon2"
+export type EquipmentSlotId = "Backpack" | "Armor" | "Weapon1" | "Weapon2"
 export type AbilitySlotData = { abilityId: string, isUltimate: boolean }
 export type WeaponData = { itemId: string, abilities: { [number]: AbilitySlotData? } }
 export type EquipmentData = { [EquipmentSlotId]: ItemStack? }

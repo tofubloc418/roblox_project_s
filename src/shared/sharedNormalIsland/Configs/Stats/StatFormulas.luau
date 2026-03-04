@@ -27,10 +27,6 @@ local function calculateCritChance(luck: number): number
 	return Defaults.CritChance + (luck * Scaling.LuckCritChancePerPoint)
 end
 
-local function calculateCritDamageMultiplier(luck: number): number
-	return Defaults.CritDamageMultiplier + (luck * Scaling.LuckCritDamagePerPoint)
-end
-
 local function calculateMoveSpeed(dexterity: number): number
 	return Defaults.MoveSpeed + (dexterity * Scaling.DexterityMoveSpeedPerPoint)
 end
@@ -53,7 +49,6 @@ local function calculateAllDerived(attributes: CoreAttributes): DerivedStats
 		MaxMana = calculateMaxMana(attributes.Intelligence),
 		MaxEnergy = calculateMaxEnergy(attributes.Endurance),
 		CritChance = calculateCritChance(attributes.Luck),
-		CritDamageMultiplier = calculateCritDamageMultiplier(attributes.Luck),
 		MoveSpeed = calculateMoveSpeed(attributes.Dexterity),
 		WalkSpeed = calculateWalkSpeed(attributes.Dexterity),
 		RunSpeed = calculateRunSpeed(attributes.Dexterity),
@@ -73,7 +68,6 @@ return {
 	calculateMaxMana = calculateMaxMana,
 	calculateMaxEnergy = calculateMaxEnergy,
 	calculateCritChance = calculateCritChance,
-	calculateCritDamageMultiplier = calculateCritDamageMultiplier,
 	calculateMoveSpeed = calculateMoveSpeed,
 	calculateWalkSpeed = calculateWalkSpeed,
 	calculateRunSpeed = calculateRunSpeed,

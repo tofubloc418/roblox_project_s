@@ -20,9 +20,8 @@ export type AttributeScaling = {
 	DexterityMoveSpeedPerPoint: number,
 	DexterityFallReductionPerPoint: number,
 
-	-- Luck: crit
+	-- Luck: crit chance
 	LuckCritChancePerPoint: number,
-	LuckCritDamagePerPoint: number,
 }
 
 export type DerivedStatDefaults = {
@@ -57,7 +56,6 @@ local StatsConfig = {
 		DexterityFallReductionPerPoint = 0.005, -- 0.5% per point
 
 		LuckCritChancePerPoint = 0.005, -- 0.5% per point
-		LuckCritDamagePerPoint = 0.01, -- 1% per point (base 1.5x -> 1.5 + 0.01*Luck)
 	} :: AttributeScaling,
 
 	-- Base values for derived stats before attribute contribution (at 10 Dex: WalkSpeed=14, RunSpeed=50)
@@ -66,7 +64,6 @@ local StatsConfig = {
 		MaxMana = 0,
 		MaxEnergy = 0,
 		CritChance = 0,
-		CritDamageMultiplier = 1.5,
 		MoveSpeed = 9,
 		WalkSpeed = 9,
 		RunSpeed = 45,
@@ -86,7 +83,6 @@ local StatsConfig = {
 		MaxMana = { min = 0, max = math.huge },
 		MaxEnergy = { min = 1, max = math.huge },
 		CritChance = { min = 0, max = 1 },
-		CritDamageMultiplier = { min = 1, max = 3 },
 		WalkSpeed = { min = 1, max = 200 },
 		RunSpeed = { min = 1, max = 200 },
 		FallDamageReduction = { min = 0, max = 1 },
@@ -107,7 +103,6 @@ local StatsConfig = {
 		"WalkSpeed",
 		"RunSpeed",
 		"CritChance",
-		"CritDamageMultiplier",
 		"FallDamageReduction",
 	},
 }

@@ -13,7 +13,7 @@
 --
 -- WHAT IT DOES NOT DO:
 --   - No ability activation, cooldown tracking, or damage.
---   - No DataStore access — all persistence is via DataManager.
+--   - No DataStore access — all persistence is via dataService (path-based get/set).
 --   - No inventory mutations — reads EquipmentData to find active weapons but
 --     never moves items.
 --
@@ -30,9 +30,30 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local DataManager    = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataManager"))
+local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local _ItemRegistry  = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+
+local DataService = DataServiceBootstrap.GetDataService()
+
+local function getAbilityPresets(player: Player): AbilityPresetsData?
+	local ds = DataService
+	if type(ds.get) == "function" then
+		return ds.get(player, { "abilityPresets" }) :: AbilityPresetsData?
+	end
+	if type(ds.Get) == "function" then
+		return ds.Get(player, { "abilityPresets" }) :: AbilityPresetsData?
+	end
+	return nil
+end
+
+local function setAbilityPresetKey(player: Player, presetKey: string, preset: SerializedPreset)
+	local ds = DataService
+	local path = { "abilityPresets", presetKey }
+	if type(ds.set) == "function" then ds.set(player, path, preset) return end
+	if type(ds.Set) == "function" then ds.Set(player, path, preset) return end
+	if type((ds :: any).set) == "function" then (ds :: any):set(player, path, preset) end
+end
 
 type PlayerData         = InventoryTypes.PlayerData
 type AbilityPresetsData = InventoryTypes.AbilityPresetsData
@@ -88,8 +109,7 @@ local AbilityDataService = {}
 	Returns nil if data is not loaded.
 ]]
 function AbilityDataService.GetAbilityPresets(player: Player): AbilityPresetsData?
-	local data = DataManager.GetPlayerData(player)
-	return data and data.abilityPresets or nil
+	return getAbilityPresets(player)
 end
 
 --[[
@@ -98,9 +118,9 @@ end
 	Returns an empty table (not nil) if no preset has been saved yet for that key.
 ]]
 function AbilityDataService.GetPresetForKey(player: Player, presetKey: string): SerializedPreset
-	local data = DataManager.GetPlayerData(player)
-	if not data then return {} end
-	return data.abilityPresets[presetKey] or {}
+	local presets = getAbilityPresets(player)
+	if not presets then return {} end
+	return presets[presetKey] or {}
 end
 
 --[[
@@ -119,8 +139,8 @@ function AbilityDataService.SetPresetSlot(
 	isUltimate: boolean?
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
-	if not data then return false end
+	local presets = getAbilityPresets(player)
+	if not presets then return false end
 
 	-- Validate inputs.
 	if type(presetKey) ~= "string" or #presetKey == 0 then return false end
@@ -131,17 +151,16 @@ function AbilityDataService.SetPresetSlot(
 		return false
 	end
 
-	-- Ensure preset table exists.
-	if not data.abilityPresets[presetKey] then
-		data.abilityPresets[presetKey] = {}
+	-- Copy preset for this key (or start fresh).
+	local preset: SerializedPreset = {}
+	for k, v in pairs(presets[presetKey] or {}) do
+		preset[k] = v
 	end
-	local preset = data.abilityPresets[presetKey]
 
 	-- Clearing the slot.
 	if abilityId == nil then
 		preset[slotIndex] = nil
-		DataManager.MarkDirty(player)
-		AbilityDataService.SyncAbilityPresets(player)
+		setAbilityPresetKey(player, presetKey, preset)
 		return true
 	end
 
@@ -152,7 +171,6 @@ function AbilityDataService.SetPresetSlot(
 		if not alreadyUlt then
 			local ultCount = countUltimates(preset)
 			if ultCount >= MAX_ULTIMATE_PER_PRESET then
-				-- Evict the existing ultimate to make room.
 				for i, slot in pairs(preset) do
 					if slot and slot.ult then
 						preset[i] = nil
@@ -168,8 +186,7 @@ function AbilityDataService.SetPresetSlot(
 		ult = isUltimate and true or nil,
 	}) :: SerializedPresetSlot
 
-	DataManager.MarkDirty(player)
-	AbilityDataService.SyncAbilityPresets(player)
+	setAbilityPresetKey(player, presetKey, preset)
 	return true
 end
 
@@ -178,11 +195,8 @@ end
 	Removes all ability assignments for a given weapon tag / preset key.
 ]]
 function AbilityDataService.ClearPreset(player: Player, presetKey: string)
-	local data = DataManager.GetPlayerData(player)
-	if not data or type(presetKey) ~= "string" then return end
-	data.abilityPresets[presetKey] = {}
-	DataManager.MarkDirty(player)
-	AbilityDataService.SyncAbilityPresets(player)
+	if type(presetKey) ~= "string" then return end
+	setAbilityPresetKey(player, presetKey, {})
 end
 
 --[[
@@ -216,14 +230,9 @@ end
 
 --[[
 	SyncAbilityPresets(player)
-	Fires the SyncAbilityPresets RemoteEvent to the given player with their
-	full AbilityPresetsData.
+	No-op. Replication to the client is automatic via dataService. Kept for API compatibility.
 ]]
-function AbilityDataService.SyncAbilityPresets(player: Player)
-	local data = DataManager.GetPlayerData(player)
-	if not data then return end
-	_syncAbilityPresets:FireClient(player, data.abilityPresets)
-end
+function AbilityDataService.SyncAbilityPresets(_player: Player) end
 
 -- ── Initialization ────────────────────────────────────────────────────────────
 

@@ -14,14 +14,15 @@ local function getViewportSize(): Vector2
 	return (cam and cam.ViewportSize) or Vector2.new(1920, 1080)
 end
 
--- ── Remotes ───────────────────────────────────────────────────────────────────
+-- ── Remotes (request-only; state comes from DataService) ───────────────────────
 local remotes          = ReplicatedStorage:WaitForChild("InventoryRemotes")
-local syncFullState    = remotes:WaitForChild("SyncFullState")    :: RemoteEvent
 local requestMove      = remotes:WaitForChild("RequestMove")      :: RemoteEvent
 local _requestEquip    = remotes:WaitForChild("RequestEquip")     :: RemoteEvent
 local requestUnequip   = remotes:WaitForChild("RequestUnequip")   :: RemoteEvent
 
 -- ── Modules ───────────────────────────────────────────────────────────────────
+local DataService = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("DataService"))
+local DataServiceClient = DataService.client
 local React         = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local ReactRoblox   = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
@@ -40,11 +41,9 @@ type EquipmentSlotId = InventoryTypes.EquipmentSlotId
 type InventorySyncPayload = InventoryTypes.InventorySyncPayload
 type SerializedItem       = InventoryTypes.SerializedItem
 
--- ── Conversion: server payload → UI-layer LoadoutData ─────────────────────────
+-- ── Conversion: DataService payload → UI-layer LoadoutData ─────────────────────
 -- The React components (LoadoutApp, InventoryPanel, EquipmentPanel) expect
--- the old ItemStack format.  This function converts on every SyncFullState.
--- When the UI components are later updated to work with SerializedItem directly,
--- this layer can be removed.
+-- the old ItemStack format.  This function converts when we read from DataService.
 
 local function toItemStack(item: SerializedItem): ItemStack
 	return { itemId = item.tid, count = item.cnt or 1, maxStack = 1 }
@@ -170,10 +169,48 @@ local function render()
 	}))
 end
 
--- ── Server data subscription ──────────────────────────────────────────────────
-syncFullState.OnClientEvent:Connect(function(payload: InventorySyncPayload)
-	loadoutData = buildLoadoutData(payload)
-	render()
+-- ── DataService: initial state + updates (replication is automatic) ────────────
+local function dsGet(path: { string }): any?
+	local client = DataServiceClient
+	if type(client.get) == "function" then return client.get(localPlayer, path) end
+	if type(client.Get) == "function" then return client.Get(localPlayer, path) end
+	if type((client :: any).get) == "function" then return (client :: any):get(localPlayer, path) end
+	return nil
+end
+
+local function refreshLoadoutFromData()
+	local inv = dsGet({ "inventory" })
+	local eq  = dsGet({ "equipment" })
+	local qu  = dsGet({ "quickUse" })
+	local cur = dsGet({ "currency" })
+	if type(inv) == "table" and type(eq) == "table" and type(qu) == "table" then
+		local payload: InventorySyncPayload = {
+			inventory = inv,
+			equipment = eq,
+			quickUse  = qu,
+			currency  = type(cur) == "table" and cur or { gold = 0 },
+		}
+		loadoutData = buildLoadoutData(payload)
+		render()
+	end
+end
+
+task.spawn(function()
+	local client = DataServiceClient
+	if type(client.init) == "function" then client.init(localPlayer)
+	elseif type((client :: any).init) == "function" then (client :: any):init(localPlayer) end
+	local waitForData = client.waitForData or client.WaitForData or (client :: any).waitForData
+	if type(waitForData) == "function" then waitForData(localPlayer) end
+	refreshLoadoutFromData()
+	local getChangedSignal = client.getChangedSignal or client.GetChangedSignal or (client :: any).getChangedSignal
+	if type(getChangedSignal) == "function" then
+		for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" } }) do
+			local sig = getChangedSignal(localPlayer, path)
+			if sig and type(sig.Connect) == "function" then
+				sig:Connect(refreshLoadoutFromData)
+			end
+		end
+	end
 end)
 
 -- ── Loadout toggle (Tab) ──────────────────────────────────────────────────────

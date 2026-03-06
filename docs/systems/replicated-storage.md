@@ -81,7 +81,7 @@ ReplicatedStorage/
 │   ├── MapMath.luau
 │   └── FastCastRedux.luau
 │
-├── Packages/                         -- Third-party (React, ReactRoblox)
+├── Packages/                         -- Third-party (React, ReactRoblox, DataService)
 │   └── ...
 │
 ├── Assets/                           -- Visual prefabs, ability scripts, consumable scripts
@@ -155,9 +155,9 @@ ReplicatedStorage/
 │       └── ...
 │
 ├── InventoryRemotes/                 -- Created at runtime by server
-│   ├── SyncFullState     (RemoteEvent)
-│   ├── SyncSlotUpdate    (RemoteEvent)
-│   ├── SyncCurrency      (RemoteEvent)
+│   ├── SyncFullState     (RemoteEvent)  -- No longer fired; state from dataService
+│   ├── SyncSlotUpdate    (RemoteEvent)  -- No longer fired
+│   ├── SyncCurrency      (RemoteEvent)  -- No longer fired
 │   ├── RequestMove       (RemoteEvent)
 │   ├── RequestEquip      (RemoteEvent)
 │   ├── RequestUnequip    (RemoteEvent)
@@ -169,13 +169,15 @@ ReplicatedStorage/
 │   ├── AbilityActivated  (RemoteEvent)   -- Server→Clients: VFX notification
 │   ├── AbilityCooldownSync (RemoteEvent) -- Server→Client: cooldown state
 │   ├── RequestSetAbilityPreset (RemoteEvent) -- Set/clear ability in preset
-│   ├── SyncAbilityPresets (RemoteEvent)  -- Full preset sync on join
+│   ├── SyncAbilityPresets (RemoteEvent)  -- No longer fired; presets from dataService
 │   ├── RequestUseConsumable (RemoteEvent) -- Use consumable from quick bar
 │   └── ConsumableActivated (RemoteEvent) -- Server→Clients: VFX notification
 │
 └── MatchInfo/                        -- Created at runtime by server
     └── StartTime         (NumberValue)
 ```
+
+**DataService and replication:** The **leifstout/dataservice** package (under `Packages/DataService`) provides persistence and replication. It may create its own remotes (e.g. via Networker) under a different path for state sync. The InventoryRemotes listed above that previously carried full payloads (SyncFullState, SyncSlotUpdate, SyncCurrency, SyncAbilityPresets) are **no longer fired** by the server for state; the client reads inventory, equipment, quickUse, and abilityPresets from the dataService client API. Gameplay request remotes (RequestMove, RequestEquip, etc.) are unchanged.
 
 ---
 

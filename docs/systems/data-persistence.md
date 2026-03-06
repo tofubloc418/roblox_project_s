@@ -239,69 +239,50 @@ Total typical case: ~20–30 KB — well within DataStore's 4 MB limit.
 
 ---
 
-## IV. DataStore Architecture
+## IV. DataStore Architecture & DataService
+
+Persistence is provided by the **leifstout/dataservice** package, which uses **ProfileStore** (or equivalent) under the hood. The server initializes the dataService with a default `PlayerData` template; session locking and auto-save are handled by the package.
 
 ### Key Structure
 
-| DataStore Name | Key Pattern | Contents |
-|---------------|-------------|----------|
+| Store Name   | Key Pattern     | Contents           |
+|-------------|-----------------|--------------------|
 | `PlayerData_v1` | `"player_{userId}"` | Full `PlayerData` table |
 
-One DataStore, one key per player. The `_v1` suffix is the store version; if a breaking migration is needed, a new store name is created and old data is migrated on first load.
+One store, one key per player. The default template is built from `DataManager.createDefaultData(0)` in the server **DataServiceBootstrap** module.
 
 ### Session Locking
 
-To prevent item duplication from multi-server exploits:
+Session locking is handled by the dataService/ProfileStore layer: only one server owns a player's data at a time. The package manages claim/release on `PlayerAdded` / `PlayerRemoving` and `BindToClose`.
 
-1. On `PlayerAdded`, the server reads the player's DataStore key.
-2. If `sessionId` is set and does not match the current server's `game.JobId`, the data is stale from a crashed server. The system waits up to 30 seconds, re-reading periodically, before force-claiming.
-3. On successful claim, `sessionId` is set to the current `game.JobId` and the data is saved immediately.
-4. On `PlayerRemoving`, `sessionId` is cleared and a final save is performed.
-5. On `BindToClose`, all active player data is saved with `sessionId` cleared.
+### Replication
 
-### Save Pipeline
-
-```
-1. Player action mutates in-memory data
-2. DataManager marks data as dirty
-3. Auto-save loop (every 60s) checks dirty flag
-4. If dirty: serialize → UpdateAsync → clear dirty flag
-5. On PlayerRemoving: immediate save (if dirty)
-6. On BindToClose: save all remaining players
-```
+Replication to the client is **automatic** when the server updates data via the dataService path-based API (`set` / `update`). No manual `SyncToClient` or `SyncAbilityPresets` calls are used; the client reads from the dataService client API (`get`, and optionally `getChangedSignal` for path-based updates).
 
 ### Load Pipeline
 
-```
-1. PlayerAdded fires
-2. DataManager:LoadPlayerData(player) called
-3. Read DataStore key with GetAsync
-4. If nil: create default PlayerData (new player)
-5. Run migration if data.version < CURRENT_VERSION
-6. Claim session lock (set sessionId = game.JobId)
-7. Hydrate in-memory data structures
-8. Sync initial state to client
-```
+1. `PlayerAdded` fires.
+2. Initializer (or bootstrap) waits for the player's data via `DataServiceBootstrap.WaitForPlayerData(player)`.
+3. The package loads the profile (or creates from template with Reconcile).
+4. Server code reads/writes via path-based `DataService:get(player, path)` and `DataService:set(player, path, value)` (or equivalent). The client receives replicated updates automatically.
+5. Character attributes are applied from loaded data to `StatsService` as before.
 
 ---
 
-## V. Server-Side Data Manager
+## V. Server-Side Data Access (dataService)
 
-The `DataManager` module is the sole gateway to DataStore operations. No other module reads or writes DataStore directly.
+The **dataService** package is the gateway to persistence. The server uses path-based get/set/update; the **DataServiceBootstrap** module initializes the package and exposes `WaitForPlayerData(player)` for the Initializer.
 
-### API Surface
+### Path-Based API (server)
 
-```
-DataManager.LoadPlayerData(player: Player) -> PlayerData
-DataManager.SavePlayerData(player: Player) -> boolean
-DataManager.GetPlayerData(player: Player) -> PlayerData?   -- In-memory only, no DataStore call
-DataManager.MarkDirty(player: Player)                       -- Flags data for next save cycle
-DataManager.SaveAll()                                       -- Called by BindToClose
-```
+- **Read:** `DataService:get(player, path)` — e.g. `get(player, {})` for full data, `get(player, {"inventory", "slots"})` for a subtree.
+- **Write:** `DataService:set(player, path, value)` — e.g. `set(player, {"equipment", "Weapon1"}, item)`.
 
-### In-Memory Cache
+Paths align with the schema: `{"inventory"}`, `{"inventory","slots", slotIndex}`, `{"equipment","Weapon1"}`, `{"quickUse","slots", index}`, `{"abilityPresets", presetKey}`, etc.
 
-Once loaded, `PlayerData` lives in a server-side dictionary: `_cache[player.UserId] = playerData`. All gameplay systems read/write this cache. The cache is authoritative during the session; DataStore is only touched on save/load.
+### DataManager (template only)
+
+The **DataManager** module now only exports `createDefaultData(userId)` for use as the ProfileStore/default template. It does not perform load, save, or cache operations; those are handled by the dataService package.
 
 ---
 
@@ -338,7 +319,7 @@ InventoryService:TransferToStash(player, inventorySlot, stashSlot) -> boolean
 InventoryService:TransferFromStash(player, stashSlot, inventorySlot) -> boolean
 
 -- Sync
-InventoryService:SyncToClient(player)  -- Fires UpdateInventory remote
+InventoryService:SyncToClient(player)  -- No-op; replication is automatic via dataService
 ```
 
 ### Containers
@@ -358,36 +339,38 @@ The system uses a `Container` abstraction to unify inventory, stash, and equipme
 
 ## VII. Client-Server Sync
 
-### Remotes
+### State replication (dataService)
 
-All remotes live under `ReplicatedStorage.InventoryRemotes` (same folder name as before, reused).
+Inventory, equipment, quickUse, currency, and abilityPresets are **replicated to the client automatically** by the dataService package when the server calls `set`/`update` on the path-based API. The client reads state via the dataService client API (`get`, and optionally `getChangedSignal` for path-based updates). LoadoutController and HudLoadoutDataAdapter build their UI state from these reads; they do not rely on SyncFullState or SyncAbilityPresets for state.
 
-| Remote | Direction | Payload | Purpose |
-|--------|-----------|---------|---------|
-| `SyncFullState` | Server → Client | `{ inventory, equipment, quickUse, currency }` | Sent on join and after bulk changes |
-| `SyncSlotUpdate` | Server → Client | `{ container, slot, item: SerializedItem? }` | Granular single-slot update |
-| `SyncCurrency` | Server → Client | `{ gold, premium? }` | Currency change notification |
-| `RequestMove` | Client → Server | `{ fromContainer, fromSlot, toContainer, toSlot }` | Drag-and-drop move/swap |
-| `RequestEquip` | Client → Server | `{ instanceId, slot }` | Equip item to equipment slot |
-| `RequestUnequip` | Client → Server | `{ slot }` | Unequip from equipment slot |
-| `RequestDrop` | Client → Server | `{ instanceId }` | Drop item into world |
-| `RequestUseQuick` | Client → Server | `{ quickSlot }` | Use consumable in quick slot |
-| `RequestAssignQuick` | Client → Server | `{ instanceId, quickSlot }` | Assign item to quick bar |
-| `RequestStashTransfer` | Client → Server | `{ direction, fromSlot, toSlot }` | Move between inventory and stash |
-| `RequestAbility` | Client → Server | `{ weaponSlot, abilitySlotIndex }` | Activate an ability |
-| `AbilityActivated` | Server → Clients | `{ playerId, abilityId, weaponSlot }` | Notify nearby clients for VFX |
-| `AbilityCooldownSync` | Server → Client | `{ abilityId, remainingCooldown }` | Sync cooldown state |
-| `RequestSetAbilityPreset` | Client → Server | `{ presetKey, slotIndex, abilityId?, isUltimate? }` | Set/clear ability in preset |
-| `SyncAbilityPresets` | Server → Client | `{ presets: AbilityPresetsData }` | Full preset sync on join |
-| `RequestUseConsumable` | Client → Server | `{ quickSlot }` | Use consumable from quick bar |
-| `ConsumableActivated` | Server → Clients | `{ playerId, consumableId }` | Notify nearby clients for VFX |
+### Remotes (InventoryRemotes)
 
-### Sync Strategy
+All gameplay remotes remain under `ReplicatedStorage.InventoryRemotes`. **Request** remotes are unchanged; **sync** remotes are no longer fired by the server for state (dataService replicates instead).
 
-- **Full sync** on join and after any operation that touches multiple slots (e.g. sorting, bulk stash transfer). Includes `SyncFullState` for inventory/equipment and `SyncAbilityPresets` for all ability presets.
-- **Granular sync** (`SyncSlotUpdate`) for single-slot changes (equip, use, pick up one item). Reduces bandwidth and avoids re-rendering the entire UI.
-- **Ability preset sync**: When a player changes an ability preset (via the ability management UI), the server confirms and the client updates its local mirror. The full preset table is only sent on join; individual changes are confirmed per-slot.
-- The client maintains a local mirror of inventory state and ability presets for immediate UI rendering. All mutations go through server remotes; the client never mutates its mirror directly.
+| Remote | Direction | Purpose |
+|--------|-----------|---------|
+| `SyncFullState` | Server → Client | **No longer fired.** State comes from dataService client. |
+| `SyncSlotUpdate` | Server → Client | **No longer fired.** |
+| `SyncCurrency` | Server → Client | **No longer fired.** |
+| `RequestMove` | Client → Server | Drag-and-drop move/swap |
+| `RequestEquip` | Client → Server | Equip item to equipment slot |
+| `RequestUnequip` | Client → Server | Unequip from equipment slot |
+| `RequestDrop` | Client → Server | Drop item into world |
+| `RequestUseQuick` | Client → Server | Use consumable in quick slot |
+| `RequestAssignQuick` | Client → Server | Assign item to quick bar |
+| `RequestStashTransfer` | Client → Server | Move between inventory and stash |
+| `RequestAbility` | Client → Server | Activate an ability |
+| `AbilityActivated` | Server → Clients | Notify nearby clients for VFX |
+| `AbilityCooldownSync` | Server → Client | Sync cooldown state |
+| `RequestSetAbilityPreset` | Client → Server | Set/clear ability in preset |
+| `SyncAbilityPresets` | Server → Client | **No longer fired.** Presets come from dataService. |
+| `RequestUseConsumable` | Client → Server | Use consumable from quick bar |
+| `ConsumableActivated` | Server → Clients | Notify nearby clients for VFX |
+
+### Sync strategy
+
+- The client obtains initial and updated state via the dataService client API (path-based `get` and, if available, `getChangedSignal`). No manual sync remotes are used for inventory/equipment/quickUse/abilityPresets.
+- All mutations go through server request remotes; the server updates state via the dataService path-based API, and replication to the client is automatic.
 
 ---
 
@@ -466,30 +449,25 @@ Each migration function receives the old data table and returns the updated tabl
 ## XI. Module Dependency Graph
 
 ```
-DataManager (sole DataStore access)
-    ↓ provides PlayerData cache (inventory, equipment, abilityPresets, etc.)
-InventoryService (reads/writes inventory/equipment cache)
-    ↓ calls
+DataServiceBootstrap (inits dataService server + template)
+    ↓
+dataService package (ProfileStore, path-based get/set, replication)
+    ↓
+InventoryService (DataService:get/set paths: inventory, equipment, quickUse, stash)
+AbilityDataService (DataService:get/set paths: abilityPresets)
+    ↓
 StatsService (equipment modifiers via StatModifier)
-    ↓ calls
+    ↓
 ModifierService (converts ItemModifier → StatModifier)
 
-AbilityService (reads/writes abilityPresets cache)
-    ↓ reads ability assets from ReplicatedStorage.Assets.Abilities
-    ↓ calls DamageService, StatsService, HitDetection, StatusEffects
-    ↓ fires ability remotes to clients
+AbilityService (reads abilityPresets via AbilityDataService; fires ability remotes)
+ConsumableService (calls InventoryService; fires consumable remotes)
 
-ConsumableService (reads consumable assets from ReplicatedStorage.Assets.Consumables)
-    ↓ calls InventoryService (decrement stack), DamageService, StatsService
-    ↓ fires consumable remotes to clients
-
-InventoryService + AbilityService + ConsumableService
-    ↓ fire remotes
-Client UI (LoadoutController, HudLoadoutController, AbilityManagement)
-    ↓ sends requests
-Server services (validate and execute)
-    ↓ mark dirty
-DataManager (saves on next cycle)
+Client UI (LoadoutController, HudLoadoutDataAdapter)
+    ↓ request remotes (RequestMove, RequestEquip, etc.)
+Server handlers (validate, then DataService:set/update)
+    ↓ replication automatic
+dataService client (client reads via get / getChangedSignal)
 ```
 
 ---

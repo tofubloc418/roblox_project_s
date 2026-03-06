@@ -13,7 +13,7 @@
 --   - No stat calculation or modifier application.
 --   - No ability activation or cooldown management.
 --   - No world-drop spawning (RequestDrop removes the item from data only).
---   - No DataStore access; all persistence goes through DataManager.
+--   - No DataStore access; all persistence goes through dataService (path-based get/set/update).
 --
 -- CONTAINER MODEL:
 --   The four containers are: "inventory", "stash", "equipment", "quickuse".
@@ -25,10 +25,40 @@
 local _Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
--- Server-side dependencies (relative path through ServerScriptService tree).
-local DataManager  = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataManager"))
+-- Server-side dependencies.
+local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+
+local DataService = DataServiceBootstrap.GetDataService()
+
+-- Path-based read: get full PlayerData or nil.
+local function getPlayerData(player: Player): PlayerData?
+	local ds = DataService
+	if type(ds.get) == "function" then
+		return ds.get(player, {}) :: PlayerData?
+	end
+	if type(ds.Get) == "function" then
+		return ds.Get(player, {}) :: PlayerData?
+	end
+	return nil
+end
+
+-- Path-based write. Path is array of keys, e.g. {"inventory", "slots", 1}.
+local function setAtPath(player: Player, path: { string | number }, value: any)
+	local ds = DataService
+	if type(ds.set) == "function" then
+		ds.set(player, path, value)
+		return
+	end
+	if type(ds.Set) == "function" then
+		ds.Set(player, path, value)
+		return
+	end
+	if type((ds :: any).set) == "function" then
+		(ds :: any):set(player, path, value)
+	end
+end
 
 type PlayerData         = InventoryTypes.PlayerData
 type SerializedItem     = InventoryTypes.SerializedItem
@@ -188,27 +218,27 @@ local InventoryService = {}
 -- ─── Read accessors ───────────────────────────────────────────────────────────
 
 function InventoryService.GetInventory(player: Player): StoredInventoryData?
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	return data and data.inventory or nil
 end
 
 function InventoryService.GetEquipment(player: Player): StoredEquipmentData?
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	return data and data.equipment or nil
 end
 
 function InventoryService.GetStash(player: Player): StashData?
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	return data and data.stash or nil
 end
 
 function InventoryService.GetQuickUse(player: Player): StoredQuickUseData?
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	return data and data.quickUse or nil
 end
 
 function InventoryService.GetCurrency(player: Player): CurrencyData?
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	return data and data.currency or nil
 end
 
@@ -228,7 +258,7 @@ function InventoryService.AddItem(
 	modifiers: { SerializedMod }?
 ): SerializedItem?
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data or not templateId or templateId == "" then return nil end
 
 	local template  = ItemRegistry.GetTemplate(templateId)
@@ -237,17 +267,24 @@ function InventoryService.AddItem(
 
 	-- Try to fill existing stacks first.
 	if stackMax > 1 and remaining > 0 then
-		for _, existing in pairs(data.inventory.slots) do
+		for slot, existing in pairs(data.inventory.slots) do
 			if existing and existing.tid == templateId and not existing.mods then
 				local currentCount = existing.cnt or 1
 				local canAdd       = stackMax - currentCount
 				if canAdd > 0 then
 					local addAmount = math.min(canAdd, remaining)
-					existing.cnt   = currentCount + addAmount
-					remaining      -= addAmount
+					existing = {
+						iid = existing.iid,
+						tid = existing.tid,
+						cnt = currentCount + addAmount,
+						lvl = existing.lvl,
+						dur = existing.dur,
+						mods = existing.mods,
+						cdat = existing.cdat,
+					}
+					remaining -= addAmount
+					setAtPath(player, { "inventory", "slots", slot }, existing)
 					if remaining <= 0 then
-						DataManager.MarkDirty(player)
-						InventoryService.SyncToClient(player)
 						return existing
 					end
 				end
@@ -269,9 +306,7 @@ function InventoryService.AddItem(
 		mods = (modifiers and #modifiers > 0) and modifiers or nil,
 	}
 
-	data.inventory.slots[freeSlot] = newItem
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
+	setAtPath(player, { "inventory", "slots", freeSlot }, newItem)
 	return newItem
 end
 
@@ -284,23 +319,27 @@ end
 	Returns true on success.
 ]]
 function InventoryService.RemoveItem(player: Player, instanceId: string): boolean
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 
 	local containerId, slot = findItemById(data, instanceId)
 	if not containerId or slot == nil then return false end
 
-	setItemAt(data, containerId :: ContainerId, slot, nil)
+	if containerId == "inventory" then
+		setAtPath(player, { "inventory", "slots", slot :: number }, nil)
+	elseif containerId == "equipment" then
+		setAtPath(player, { "equipment", slot :: string }, nil)
+	elseif containerId == "stash" then
+		setAtPath(player, { "stash", "slots", slot :: number }, nil)
+	end
 
 	-- Clear dangling quickuse references.
 	for i, qiid in pairs(data.quickUse.slots) do
 		if qiid == instanceId then
-			data.quickUse.slots[i] = nil
+			setAtPath(player, { "quickUse", "slots", i }, nil)
 		end
 	end
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -320,7 +359,7 @@ function InventoryService.MoveItem(
 	toSlot: number | string
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 
 	local item     = getItemAt(data, fromContainer, fromSlot)
@@ -345,12 +384,16 @@ function InventoryService.MoveItem(
 		if not canEquipInSlot(destItem, slotId) then return false end
 	end
 
-	-- Perform atomic swap.
-	setItemAt(data, fromContainer, fromSlot, destItem)
-	setItemAt(data, toContainer,   toSlot,   item)
+	-- Perform swap via path-based set.
+	local function pathFor(container: ContainerId, s: number | string): { string | number }
+		if container == "inventory" then return { "inventory", "slots", s :: number } end
+		if container == "equipment" then return { "equipment", s :: string } end
+		if container == "stash" then return { "stash", "slots", s :: number } end
+		return {}
+	end
+	setAtPath(player, pathFor(fromContainer, fromSlot), destItem)
+	setAtPath(player, pathFor(toContainer, toSlot), item)
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -369,7 +412,7 @@ function InventoryService.EquipItem(
 	slotId: EquipmentSlotId
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 	if not VALID_EQUIPMENT_SLOTS[slotId] then return false end
 
@@ -387,23 +430,28 @@ function InventoryService.EquipItem(
 	local existing: SerializedItem? = (data.equipment :: any)[slotId]
 
 	if existing then
-		-- Try to return the existing item to the source slot.
 		if fromContainer == "inventory" then
-			data.inventory.slots[fromSlot :: number] = existing
+			setAtPath(player, { "inventory", "slots", fromSlot :: number }, existing)
 		else
 			local freeSlot = findFreeInventorySlot(data)
 			if not freeSlot then return false end
-			data.inventory.slots[freeSlot] = existing
-			setItemAt(data, fromContainer :: ContainerId, fromSlot, nil)
+			setAtPath(player, { "inventory", "slots", freeSlot }, existing)
+			if fromContainer == "stash" then
+				setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+			else
+				setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+			end
 		end
 	else
-		setItemAt(data, fromContainer :: ContainerId, fromSlot, nil)
+		if fromContainer == "inventory" then
+			setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+		elseif fromContainer == "stash" then
+			setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+		end
 	end
 
-	(data.equipment :: any)[slotId] = item
+	setAtPath(player, { "equipment", slotId }, item)
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -413,7 +461,7 @@ end
 	Returns true on success.
 ]]
 function InventoryService.UnequipItem(player: Player, slotId: EquipmentSlotId): boolean
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 
 	local item: SerializedItem? = (data.equipment :: any)[slotId]
@@ -422,11 +470,9 @@ function InventoryService.UnequipItem(player: Player, slotId: EquipmentSlotId): 
 	local freeSlot = findFreeInventorySlot(data)
 	if not freeSlot then return false end
 
-	data.inventory.slots[freeSlot] = item;
-	(data.equipment :: any)[slotId] = nil
+	setAtPath(player, { "inventory", "slots", freeSlot }, item)
+	setAtPath(player, { "equipment", slotId }, nil)
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -443,16 +489,14 @@ function InventoryService.AssignQuickUse(
 	quickSlot: number
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
 
 	local containerId = findItemById(data, instanceId)
 	if not containerId then return false end
 
-	data.quickUse.slots[quickSlot] = instanceId
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
+	setAtPath(player, { "quickUse", "slots", quickSlot }, instanceId)
 	return true
 end
 
@@ -461,13 +505,11 @@ end
 	Empties a quick-use reference slot.
 ]]
 function InventoryService.ClearQuickUse(player: Player, quickSlot: number): boolean
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
 
-	data.quickUse.slots[quickSlot] = nil
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
+	setAtPath(player, { "quickUse", "slots", quickSlot }, nil)
 	return true
 end
 
@@ -484,7 +526,7 @@ function InventoryService.TransferToStash(
 	stashSlot: number
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 
 	local item = data.inventory.slots[inventorySlot]
@@ -496,11 +538,9 @@ function InventoryService.TransferToStash(
 		if targetSlot == 0 then return false end
 	end
 
-	data.stash.slots[targetSlot]       = item
-	data.inventory.slots[inventorySlot] = nil
+	setAtPath(player, { "stash", "slots", targetSlot }, item)
+	setAtPath(player, { "inventory", "slots", inventorySlot }, nil)
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -515,7 +555,7 @@ function InventoryService.TransferFromStash(
 	inventorySlot: number
 ): boolean
 
-	local data = DataManager.GetPlayerData(player)
+	local data = getPlayerData(player)
 	if not data then return false end
 
 	local item = data.stash.slots[stashSlot]
@@ -527,11 +567,9 @@ function InventoryService.TransferFromStash(
 		if targetSlot == 0 then return false end
 	end
 
-	data.inventory.slots[targetSlot] = item
-	data.stash.slots[stashSlot]       = nil
+	setAtPath(player, { "inventory", "slots", targetSlot }, item)
+	setAtPath(player, { "stash", "slots", stashSlot }, nil)
 
-	DataManager.MarkDirty(player)
-	InventoryService.SyncToClient(player)
 	return true
 end
 
@@ -539,22 +577,10 @@ end
 
 --[[
 	SyncToClient(player)
-	Fires SyncFullState to the client with the current inventory, equipment,
-	quickUse, and currency.  Strips server-only fields (sessionId, etc.).
+	No-op. Replication to the client is automatic via dataService when the server
+	calls set/update. Kept for API compatibility; do not call.
 ]]
-function InventoryService.SyncToClient(player: Player)
-	local data = DataManager.GetPlayerData(player)
-	if not data then return end
-
-	local payload: InventorySyncPayload = {
-		inventory = data.inventory,
-		equipment = data.equipment,
-		quickUse  = data.quickUse,
-		currency  = data.currency,
-	}
-
-	_syncFullState:FireClient(player, payload)
-end
+function InventoryService.SyncToClient(_player: Player) end
 
 -- ─── Initialization ───────────────────────────────────────────────────────────
 
@@ -564,7 +590,7 @@ end
 	wires up client request handlers, and registers a PlayerAdded hook so data
 	is synced to the client after loading.
 
-	Must be called after DataManager.Initialize().
+	Must be called after DataServiceBootstrap.Initialize().
 ]]
 function InventoryService.Initialize()
 

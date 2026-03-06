@@ -7,3 +7,4 @@ realm = "shared"
 [dependencies]
 React = "jsdotlua/react@17.1.0"
 ReactRoblox = "jsdotlua/react-roblox@17.1.0"
+DataService = "leifstout/dataservice@1.0.0"

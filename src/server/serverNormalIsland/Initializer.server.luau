@@ -3,13 +3,13 @@
 	Server entry point.  Starts all services in dependency order.
 
 	Boot order:
-	  1. DataManager     – DataStore gateway + autosave
+	  1. DataServiceBootstrap – dataService server init (ProfileStore + template)
 	  2. InventoryService – creates ALL InventoryRemotes, wires request handlers
 	  3. AbilityDataService – wires preset request handler (uses remotes from step 2)
 	  4. StatsService    – per-player stat containers
 	  5. MeleeService    – melee attack handling
 	  6. MedService      – consumable healing (legacy; will be replaced by asset scripts)
-	  7. PlayerAdded handler – load data, sync to client, init attributes
+	  7. PlayerAdded handler – wait for player data (dataService), apply attributes (replication is automatic)
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,7 +20,9 @@ local RoundState   = require(ReplicatedStorage:WaitForChild("Modules"):WaitForCh
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 
 -- ── Data layer ────────────────────────────────────────────────────────────────
-local DataManager       = require(script.Parent:WaitForChild("Data"):WaitForChild("DataManager"))
+local DATA_FOLDER = "Data"
+local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
+local DataServiceBootstrap = require(script.Parent:WaitForChild(DATA_FOLDER):WaitForChild(DATA_SERVICE_BOOTSTRAP_NAME))
 local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
 
@@ -63,8 +65,8 @@ ensureMatchInfo()
 
 -- ── Service boot ──────────────────────────────────────────────────────────────
 
--- 1. DataManager: DataStore, autosave loop, BindToClose, PlayerRemoving cleanup.
-DataManager.Initialize()
+-- 1. DataServiceBootstrap: dataService server init (ProfileStore + template).
+DataServiceBootstrap.Initialize()
 
 -- 2. InventoryService: creates InventoryRemotes folder + all RemoteEvents,
 --    wires server-side handlers for RequestMove, RequestEquip, etc.
@@ -133,14 +135,11 @@ end
 -- ── Player lifecycle ──────────────────────────────────────────────────────────
 
 local function onPlayerAdded(player: Player)
-	-- Load persistent data first (blocks until DataStore responds).
-	local data = DataManager.LoadPlayerData(player)
+	-- Wait for dataService to load this player's profile (blocks until ready).
+	local data = DataServiceBootstrap.WaitForPlayerData(player)
+	-- Replication to client is automatic; no SyncToClient or SyncAbilityPresets.
 
-	-- Sync inventory, equipment, quick-use, and ability presets to client.
 	if data then
-		InventoryService.SyncToClient(player)
-		AbilityDataService.SyncAbilityPresets(player)
-
 		-- Apply saved character attributes to the stats container.
 		local container = StatsService:GetContainer(player)
 		if container and data.character and data.character.attributes then
@@ -177,7 +176,7 @@ print("[Initializer] Initialization complete")
 
 -- Export service refs for other server scripts (optional convenience).
 _G.Services = {
-	DataManager       = DataManager,
+	DataServiceBootstrap = DataServiceBootstrap,
 	InventoryService  = InventoryService,
 	AbilityDataService = AbilityDataService,
 	StatsService      = StatsService,

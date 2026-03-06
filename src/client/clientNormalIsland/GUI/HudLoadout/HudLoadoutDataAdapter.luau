@@ -5,22 +5,24 @@
 	Single source-of-truth for the HUD Loadout UI state.
 
 	BACKEND CONNECTION:
-	  When required, this module immediately connects to the InventoryRemotes:
-	    • SyncFullState     → updates weapon1/weapon2 and quickUseItems from
-	                          server inventory/equipment data.
-	    • SyncAbilityPresets → stores presets; exposed via getAbilityPresets().
-
-	  Other write methods (setActiveSlot, setExpandedWeapon, etc.) remain as
-	  pure client-side UI state mutations and do not touch the server.
+	  Data is read from the dataService client API (path-based get + optional
+	  getChangedSignal). Initial state and updates come from DataService:get()
+	  for inventory, equipment, quickUse, and abilityPresets; we build
+	  InventorySyncPayload and call receiveServerPayload().
 
 	CONTROLLER INTERFACE (unchanged):
 	  Controllers read state via getState(), mutate it via the write methods,
 	  and re-render via subscribe(). React components are purely presentational.
 ]]
 
+local Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudLoadoutTypes  = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+
+local DataService = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("DataService"))
+local DataServiceClient = DataService.client
+local localPlayer = Players.LocalPlayer
 
 type HudLoadoutState    = HudLoadoutTypes.HudLoadoutState
 type HudActiveSlot      = HudLoadoutTypes.HudActiveSlot
@@ -241,30 +243,71 @@ function HudLoadoutDataAdapter.setQuickUseItems(items: { [number]: ItemStack? })
 	_notify()
 end
 
--- ── Remote connections ────────────────────────────────────────────────────────
--- Connect as soon as this module is required (i.e. when HudLoadoutController loads).
--- WaitForChild is used so this is safe even if Initializer is still booting.
-
-local function connectRemotes()
-	local remotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
-
-	-- SyncFullState: update weapon/quickuse HUD data.
-	local syncFullState = remotes:WaitForChild("SyncFullState") :: RemoteEvent
-	syncFullState.OnClientEvent:Connect(function(payload: InventorySyncPayload)
-		HudLoadoutDataAdapter.receiveServerPayload(payload)
-	end)
-
-	-- SyncAbilityPresets: store for ability selection UI.
-	local syncAbilityPresets = remotes:WaitForChild("SyncAbilityPresets") :: RemoteEvent
-	syncAbilityPresets.OnClientEvent:Connect(function(presets: AbilityPresetsData)
-		if type(presets) == "table" then
-			_abilityPresets = presets
-			-- No re-render needed; the ability UI pulls presets on demand.
-		end
-	end)
+-- Call DataService client get (supports .get or :get).
+local function dsGet(path: { string }): any?
+	local client = DataServiceClient
+	if type(client.get) == "function" then
+		return client.get(localPlayer, path)
+	end
+	if type(client.Get) == "function" then
+		return client.Get(localPlayer, path)
+	end
+	if type((client :: any).get) == "function" then
+		return (client :: any):get(localPlayer, path)
+	end
+	return nil
 end
 
--- Connect in a separate task so the module returns before WaitForChild yields.
-task.spawn(connectRemotes)
+-- Build InventorySyncPayload from dataService path reads.
+local function buildPayloadFromData(): InventorySyncPayload?
+	local inv = dsGet({ "inventory" })
+	local eq  = dsGet({ "equipment" })
+	local qu  = dsGet({ "quickUse" })
+	local cur = dsGet({ "currency" })
+	if type(inv) ~= "table" or type(eq) ~= "table" or type(qu) ~= "table" then return nil end
+	return {
+		inventory = inv,
+		equipment = eq,
+		quickUse  = qu,
+		currency  = type(cur) == "table" and cur or { gold = 0 },
+	}
+end
+
+local function refreshFromDataService()
+	local payload = buildPayloadFromData()
+	if payload then
+		HudLoadoutDataAdapter.receiveServerPayload(payload)
+	end
+	local presets = dsGet({ "abilityPresets" })
+	if type(presets) == "table" then
+		_abilityPresets = presets
+	end
+end
+
+-- Initialize dataService client and subscribe to data; no remotes for state.
+local function connectDataService()
+	local client = DataServiceClient
+	if type(client.init) == "function" then
+		client.init(localPlayer)
+	elseif type((client :: any).init) == "function" then
+		(client :: any):init(localPlayer)
+	end
+	local waitForData = client.waitForData or client.WaitForData or (client :: any).waitForData
+	if type(waitForData) == "function" then
+		waitForData(localPlayer)
+	end
+	refreshFromDataService()
+	local getChangedSignal = client.getChangedSignal or client.GetChangedSignal or (client :: any).getChangedSignal
+	if type(getChangedSignal) == "function" then
+		for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "abilityPresets" } }) do
+			local sig = getChangedSignal(localPlayer, path)
+			if sig and type(sig.Connect) == "function" then
+				sig:Connect(refreshFromDataService)
+			end
+		end
+	end
+end
+
+task.spawn(connectDataService)
 
 return HudLoadoutDataAdapter

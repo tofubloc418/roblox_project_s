@@ -246,16 +246,7 @@ end
 -- Call DataService client get (supports .get or :get).
 local function dsGet(path: { string }): any?
 	local client = DataServiceClient
-	if type(client.get) == "function" then
-		return client.get(localPlayer, path)
-	end
-	if type(client.Get) == "function" then
-		return client.Get(localPlayer, path)
-	end
-	if type((client :: any).get) == "function" then
-		return (client :: any):get(localPlayer, path)
-	end
-	return nil
+	return client:get(path)
 end
 
 -- Build InventorySyncPayload from dataService path reads.
@@ -287,23 +278,16 @@ end
 -- Initialize dataService client and subscribe to data; no remotes for state.
 local function connectDataService()
 	local client = DataServiceClient
-	if type(client.init) == "function" then
-		client.init(localPlayer)
-	elseif type((client :: any).init) == "function" then
-		(client :: any):init(localPlayer)
+	if not (client :: any).networker then
+		client:init()
 	end
-	local waitForData = client.waitForData or client.WaitForData or (client :: any).waitForData
-	if type(waitForData) == "function" then
-		waitForData(localPlayer)
-	end
+	client:waitForData()
 	refreshFromDataService()
-	local getChangedSignal = client.getChangedSignal or client.GetChangedSignal or (client :: any).getChangedSignal
-	if type(getChangedSignal) == "function" then
-		for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "abilityPresets" } }) do
-			local sig = getChangedSignal(localPlayer, path)
-			if sig and type(sig.Connect) == "function" then
-				sig:Connect(refreshFromDataService)
-			end
+
+	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "abilityPresets" } }) do
+		local sig = client:getChangedSignal(path)
+		if sig and type(sig.Connect) == "function" then
+			sig:Connect(refreshFromDataService)
 		end
 	end
 end

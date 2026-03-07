@@ -32,27 +32,34 @@ local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitF
 
 local DataService = DataServiceBootstrap.GetDataService()
 
--- Path-based read: get full PlayerData or nil.
 local function getPlayerData(player: Player): PlayerData?
 	local ds = DataService
+	if type(ds.hasProfile) == "function" and not ds:hasProfile(player) then
+		warn("[InventoryService] Player data not loaded yet for " .. player.Name .. ". Waiting...")
+		if type(ds.waitForData) == "function" then
+			ds:waitForData(player)
+		else
+			warn("[InventoryService] No waitForData available; data may not be loaded.")
+			return nil
+		end
+	end
 	if type(ds.get) == "function" then
-		return ds.get(player, {}) :: PlayerData?
+		return ds:get(player, {}) :: PlayerData?
 	end
 	if type(ds.Get) == "function" then
-		return ds.Get(player, {}) :: PlayerData?
+		return ds:Get(player, {}) :: PlayerData?
 	end
 	return nil
 end
 
--- Path-based write. Path is array of keys, e.g. {"inventory", "slots", 1}.
 local function setAtPath(player: Player, path: { string | number }, value: any)
 	local ds = DataService
 	if type(ds.set) == "function" then
-		ds.set(player, path, value)
+		ds:set(player, path, value)
 		return
 	end
 	if type(ds.Set) == "function" then
-		ds.Set(player, path, value)
+		ds:Set(player, path, value)
 		return
 	end
 	if type((ds :: any).set) == "function" then

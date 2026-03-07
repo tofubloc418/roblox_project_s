@@ -1,51 +1,34 @@
---[[
-	Initializer
-	Server entry point.  Starts all services in dependency order.
-
-	Boot order:
-	  1. DataServiceBootstrap – dataService server init (ProfileStore + template)
-	  2. InventoryService – creates ALL InventoryRemotes, wires request handlers
-	  3. AbilityDataService – wires preset request handler (uses remotes from step 2)
-	  4. StatsService    – per-player stat containers
-	  5. MeleeService    – melee attack handling
-	  6. MedService      – consumable healing (legacy; will be replaced by asset scripts)
-	  7. PlayerAdded handler – wait for player data (dataService), apply attributes (replication is automatic)
-]]
+-- Initializer
+-- Server entry point. Starts all services in dependency order.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players           = game:GetService("Players")
-
--- ── Shared modules ─────────────────────────────────────────────────────────────
+local RunService        = game:GetService("RunService")
 local RoundState   = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 
--- ── Data layer ────────────────────────────────────────────────────────────────
 local DATA_FOLDER = "Data"
 local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
 local DataServiceBootstrap = require(script.Parent:WaitForChild(DATA_FOLDER):WaitForChild(DATA_SERVICE_BOOTSTRAP_NAME))
 local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
 
--- ── Combat / weapons / meds ───────────────────────────────────────────────────
 local DamageService = require(script.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local MeleeService  = require(script.Parent:WaitForChild("Weapons"):WaitForChild("MeleeService"))
 local MedService    = require(script.Parent:WaitForChild("Med"):WaitForChild("MedService"))
-
--- ── Stats ─────────────────────────────────────────────────────────────────────
 local StatsService = require(script.Parent:WaitForChild("Stats"):WaitForChild("StatsService"))
 
-print("[Initializer] Starting...")
-
--- ── Global settings ───────────────────────────────────────────────────────────
+local isStudio = RunService:IsStudio()
+print(string.format("[Initializer] Starting... (Studio=%s)", tostring(isStudio)))
 local StarterPlayer = game:GetService("StarterPlayer")
 StarterPlayer:SetAttribute("ForceR15", true)
 StarterPlayer:SetAttribute("IgnoreCharacterAppearance", true)
 
--- Initialise round state seed.
+
 local roundState = RoundState.Current()
 roundState:Initialize()
 
--- Expose universal match start time.
+
 local function ensureMatchInfo()
 	local folder = ReplicatedStorage:FindFirstChild("MatchInfo") or (function()
 		local f = Instance.new("Folder")
@@ -63,26 +46,17 @@ local function ensureMatchInfo()
 end
 ensureMatchInfo()
 
--- ── Service boot ──────────────────────────────────────────────────────────────
+-- Service boot
 
--- 1. DataServiceBootstrap: dataService server init (ProfileStore + template).
 DataServiceBootstrap.Initialize()
-
--- 2. InventoryService: creates InventoryRemotes folder + all RemoteEvents,
---    wires server-side handlers for RequestMove, RequestEquip, etc.
 InventoryService.Initialize()
-
--- 3. AbilityDataService: wires RequestSetAbilityPreset handler.
---    (Folder + remotes must exist from InventoryService.Initialize above.)
 AbilityDataService.Initialize()
-
--- 4–6. Legacy / existing services.
 StatsService:Initialize()
 MeleeService:Initialize()
 MedService:Initialize()
 
--- ── Character config ──────────────────────────────────────────────────────────
--- Enforces R15 blocky rig and applies PlayerConfig scale on each character spawn.
+
+-- Character config
 local function applyCharacterConfig(character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
@@ -132,24 +106,24 @@ local function applyCharacterConfig(character: Model)
 	humanoid.Health     = maxHealth
 end
 
--- ── Player lifecycle ──────────────────────────────────────────────────────────
+-- Player lifecycle
+local DataServiceServer = DataServiceBootstrap.GetDataService()
+function DataServiceServer:onPlayerInit(player: Player, data: any)
+	player:SetAttribute("_DataLoaded", true)
+	print(string.format("[Initializer] Data loaded for: %s (UserId=%d)", player.Name, player.UserId))
 
-local function onPlayerAdded(player: Player)
-	-- Wait for dataService to load this player's profile (blocks until ready).
-	local data = DataServiceBootstrap.WaitForPlayerData(player)
-	-- Replication to client is automatic; no SyncToClient or SyncAbilityPresets.
-
-	if data then
-		-- Apply saved character attributes to the stats container.
-		local container = StatsService:GetContainer(player)
-		if container and data.character and data.character.attributes then
-			for attrName, value in pairs(data.character.attributes) do
-				container:SetAttribute(attrName :: any, value)
-			end
+	local container = StatsService:GetContainer(player)
+	if container and data.character and data.character.attributes then
+		for attrName, value in pairs(data.character.attributes) do
+			container:SetAttribute(attrName :: any, value)
 		end
 	end
+end
 
-	-- Stamina attributes for the existing sprint system.
+local function onPlayerAdded(player: Player)
+	print(string.format("[Initializer] Player joined: %s (UserId=%d)", player.Name, player.UserId))
+
+	-- Stamina defaults
 	if player:GetAttribute("MaxStamina") == nil then
 		player:SetAttribute("MaxStamina", PlayerConfig.baseMaxStamina or 100)
 	end
@@ -158,7 +132,6 @@ local function onPlayerAdded(player: Player)
 	end
 	player:SetAttribute("WantsSprint", false)
 
-	-- Apply character config each time the character spawns.
 	player.CharacterAdded:Connect(function(character)
 		applyCharacterConfig(character)
 	end)
@@ -167,14 +140,44 @@ end
 -- Handle players who join after the server is already running.
 Players.PlayerAdded:Connect(onPlayerAdded)
 
--- Handle players already present (Studio "Run" with a local player).
 for _, player in ipairs(Players:GetPlayers()) do
 	task.spawn(onPlayerAdded, player)
 end
 
 print("[Initializer] Initialization complete")
 
--- Export service refs for other server scripts (optional convenience).
+-- Test bridge for Studio command bar (crosses VM boundary)
+local testBridge = Instance.new("BindableFunction")
+testBridge.Name = "_TestBridge"
+testBridge.Parent = game:GetService("ServerScriptService")
+testBridge.OnInvoke = function(action: string, arg1: any, arg2: any, arg3: any): any
+	local ds = DataServiceBootstrap.GetDataService()
+	if action == "GiveItem" then
+		local player = Players:FindFirstChild(tostring(arg1))
+		if not player then return false, "Player not found" end
+		local item = InventoryService.AddItem(player, tostring(arg2 or "TestSword"), tonumber(arg3) or 1)
+		if item then
+			return true, item.iid
+		else
+			return false, "AddItem returned nil"
+		end
+	elseif action == "CheckData" then
+		local player = Players:FindFirstChild(tostring(arg1))
+		if not player then return nil, "Player not found" end
+		return ds:get(player, {})
+	elseif action == "ForceSave" then
+		local player = Players:FindFirstChild(tostring(arg1))
+		if not player then return false, "Player not found" end
+		if type(ds.forceSave) == "function" then
+			ds:forceSave(player)
+			return true, "Saved"
+		end
+		return false, "forceSave not available"
+	end
+	return nil, "Unknown action"
+end
+
+-- Export service refs for other server scripts.
 _G.Services = {
 	DataServiceBootstrap = DataServiceBootstrap,
 	InventoryService  = InventoryService,

@@ -2,7 +2,7 @@
 -- TestItems config module for testing the item and data systems
 -- These are "dummy" items that require no visual assets or ability scripts to load correctly
 
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent:WaitForChild("ItemEnums"))
 
 local TestItems = {
 	["TestSword"] = {

@@ -148,12 +148,19 @@ function ItemRegistry.GetRandomTemplate(filter: { [string]: any }?): any?
 end
 
 -- ── Sub-module auto-discovery ─────────────────────────────────────────────────
--- Require each item config sub-module here. They call ItemRegistry.Register() themselves.
+-- Require each item config sub-module here, we will register their exported templates.
 -- Add new sub-module requires here as item files are created.
---
--- Example (uncomment when file exists):
--- require(script.Parent.Weapons.Greatswords)
--- require(script.Parent.Weapons.Daggers)
--- require(script.Parent.Consumables.Healing)
+
+local function registerFile(moduleScript: Instance)
+	local itemsConfig = require(moduleScript :: ModuleScript) :: any
+	for _, template in pairs(itemsConfig) do
+		ItemRegistry.Register(template)
+	end
+end
+
+registerFile(script.Parent:WaitForChild("TestItems"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Greatswords"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Daggers"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("ThrustingSwords"))
 
 return ItemRegistry

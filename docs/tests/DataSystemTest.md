@@ -64,3 +64,13 @@ Inspects the DataService internal state to show exactly which players have succe
 require(game.ServerScriptService.Tests.DataSystemTest).ListLoadedData()
 ```
 
+---
+
+## 6. Show Player Stats
+Prints all custom attributes and `leaderstats` values associated with the player. Useful for verifying that stats and attributes have successfully replicated or been initialized.
+
+**Command:**
+```lua
+require(game.ServerScriptService.Tests.DataSystemTest).ShowStats("Player1")
+```
+*(If you are the only one in the game, you can just omit the arguments like so `require(game.ServerScriptService.Tests.DataSystemTest).ShowStats()` to default to yourself.)*

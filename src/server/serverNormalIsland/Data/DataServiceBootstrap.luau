@@ -31,13 +31,13 @@ function DataServiceBootstrap.Initialize()
 			DataServiceServer:init({
 				template = template,
 				profileStoreIndex = "PlayerData_v1",
-				-- profileStoreDataPrefix = "player_",
+				profileStoreDataPrefix = "PLAYER_",
 			})
 		elseif type(DataServiceServer.InitServer) == "function" then
 			DataServiceServer:InitServer({
 				template = template,
 				storeName = "PlayerData_v1",
-				keyFormat = "player_%s",
+				keyFormat = "PLAYER_%s",
 			})
 		else
 		error("[DataServiceBootstrap] No init or InitServer on DataService")

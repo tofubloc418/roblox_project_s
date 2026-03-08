@@ -147,7 +147,7 @@ export type CharacterData = {
 }
 
 -- ── Full player data schema ───────────────────────────────────────────────────
--- Stored as one DataStore key: "player_{userId}".
+-- Stored as one DataStore key: "PLAYER_{userId}".
 -- version is incremented when the schema changes; migrations run on load.
 export type PlayerData = {
 	version: number,

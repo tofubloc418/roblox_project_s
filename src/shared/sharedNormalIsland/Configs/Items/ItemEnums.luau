@@ -19,6 +19,7 @@ ItemEnums.Category = {
 	Weapon     = "Weapon",
 	Armor      = "Armor",
 	Backpack   = "Backpack",
+	Accessory  = "Accessory",
 	Consumable = "Consumable",
 	Material   = "Material",
 	Currency   = "Currency",
@@ -46,8 +47,9 @@ ItemEnums.Subcategory = {
 	Seal          = "Seal",
 	Bow           = "Bow",
 	Crossbow      = "Crossbow",
-	-- Weapons (unique: one-of-a-kind items that don't fit a class)
-	Unique        = "Unique",
+	ThrustingSword = "ThrustingSword",
+	Quarterstaff  = "Quarterstaff",
+	Unique        = "Unique", -- One-of-a-kind weapons that don't fit a class
 	-- Consumables
 	Healing       = "Healing",
 	Buff          = "Buff",
@@ -81,7 +83,6 @@ ItemEnums.WeaponTag = {
 	Dagger        = "Dagger",
 	StraightSword = "StraightSword",
 	Greatsword    = "Greatsword",
-	Katana        = "Katana",
 	CurvedSword   = "CurvedSword",
 	Axe           = "Axe",
 	Greataxe      = "Greataxe",
@@ -95,6 +96,8 @@ ItemEnums.WeaponTag = {
 	Seal          = "Seal",
 	Bow           = "Bow",
 	Crossbow      = "Crossbow",
+	ThrustingSword = "ThrustingSword",
+	Quarterstaff  = "Quarterstaff",
 }
 
 

@@ -141,4 +141,51 @@ function DataSystemTest.ForceSave(playerName: string?)
 	end
 end
 
+--[[
+	ShowStats(playerName)
+	Prints all attributes and stats (leaderstats) associated with the player.
+]]
+function DataSystemTest.ShowStats(playerName: string?)
+	local p = nil
+	if playerName and playerName ~= "" then
+		p = Players:FindFirstChild(playerName)
+	else
+		local players = Players:GetPlayers()
+		if #players > 0 then
+			p = players[1]
+		end
+	end
+	
+	if not p then
+		warn("[DataSystemTest] Player not found or no players in server.")
+		return
+	end
+	
+	print(string.format("[DataSystemTest] Stats and Attributes for %s:", p.Name))
+	
+	local attributes = p:GetAttributes()
+	local attrCount = 0
+	for _ in pairs(attributes) do attrCount += 1 end
+	
+	print(string.format("  --- Attributes (%d) ---", attrCount))
+	for k, v in pairs(attributes) do
+		print(string.format("    [%s] = %s", tostring(k), tostring(v)))
+	end
+	
+	local leaderstats = p:FindFirstChild("leaderstats")
+	if leaderstats then
+		local stats = leaderstats:GetChildren()
+		print(string.format("  --- leaderstats (%d) ---", #stats))
+		for _, stat in ipairs(stats) do
+			if stat:IsA("ValueBase") or stat:IsA("StringValue") or stat:IsA("IntValue") or stat:IsA("NumberValue") or stat:IsA("BoolValue") then
+				print(string.format("    [%s] = %s", stat.Name, tostring((stat :: any).Value)))
+			else
+				print(string.format("    [%s] = (folder/other)", stat.Name))
+			end
+		end
+	else
+		print("  --- No leaderstats found ---")
+	end
+end
+
 return DataSystemTest

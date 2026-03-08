@@ -16,7 +16,7 @@ This document specifies how player data is stored, serialized, and loaded. Since
 
 ## II. Player Data Schema
 
-All persistent data for a player is stored under a single DataStore key: `"player_{userId}"`.
+All persistent data for a player is stored under a single DataStore key: `"PLAYER_{userId}"`.
 
 ```
 PlayerData {
@@ -247,7 +247,7 @@ Persistence is provided by the **leifstout/dataservice** package, which uses **P
 
 | Store Name   | Key Pattern     | Contents           |
 |-------------|-----------------|--------------------|
-| `PlayerData_v1` | `"player_{userId}"` | Full `PlayerData` table |
+| `PlayerData_v1` | `"PLAYER_{userId}"` | Full `PlayerData` table |
 
 One store, one key per player. The default template is built from `DataManager.createDefaultData(0)` in the server **DataServiceBootstrap** module.
 

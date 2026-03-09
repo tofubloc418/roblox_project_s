@@ -2,20 +2,21 @@
 local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
 
 local Daggers = {
-	["IronDagger"] = {
-		templateId = "IronDagger",
-		displayName = "Iron Dagger",
+	["Knife"] = {
+		templateId = "Knife",
+		displayName = "Knife",
 		description = "A simple swift blade for close-quarters combat.",
 		category = ItemEnums.Category.Weapon,
 		subcategory = ItemEnums.Subcategory.Dagger,
 		rarity = ItemEnums.Rarity.Common,
+		weaponTag = ItemEnums.WeaponTag.Dagger,
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 50,
 		canDrop = true,
 		canTrade = true,
 		-- Weapon specific
-		baseAD = 40,
+		baseAD = 5,
 		baseMD = 0,
 		strengthScaling = 0.2,
 		dexterityScaling = 1.3,
@@ -25,7 +26,6 @@ local Daggers = {
 		strengthRequirement = 4,
 		dexterityRequirement = 10,
 		intelligenceRequirement = 0,
-		weaponTag = ItemEnums.WeaponTag.Dagger,
 	},
 }
 

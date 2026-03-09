@@ -11,6 +11,7 @@ local TestItems = {
 		description = "Used for testing data persistence and equipment logic.",
 		category = ItemEnums.Category.Weapon,
 		subcategory = ItemEnums.Subcategory.Greatsword,
+		weaponTag = ItemEnums.WeaponTag.Greatsword,
 		rarity = ItemEnums.Rarity.Common,
 		iconId = "rbxassetid://0", -- Empty or generic UI icon
 		stackMax = 1,
@@ -28,7 +29,6 @@ local TestItems = {
 		strengthRequirement = 10,
 		dexterityRequirement = 5,
 		intelligenceRequirement = 0,
-		weaponTag = ItemEnums.WeaponTag.Greatsword,
 	},
 	
 	["TestBandage"] = {

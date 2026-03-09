@@ -9,6 +9,7 @@ local Greatswords = {
 		category = ItemEnums.Category.Weapon,
 		subcategory = ItemEnums.Subcategory.Greatsword,
 		rarity = ItemEnums.Rarity.Common,
+		weaponTag = ItemEnums.WeaponTag.Greatsword,
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 150,
@@ -25,7 +26,6 @@ local Greatswords = {
 		strengthRequirement = 12,
 		dexterityRequirement = 8,
 		intelligenceRequirement = 0,
-		weaponTag = ItemEnums.WeaponTag.Greatsword,
 	},
 }
 

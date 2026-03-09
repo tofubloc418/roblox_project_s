@@ -9,6 +9,7 @@ local ThrustingSwords = {
 		category = ItemEnums.Category.Weapon,
 		subcategory = ItemEnums.Subcategory.ThrustingSword,
 		rarity = ItemEnums.Rarity.Common,
+		weaponTag = ItemEnums.WeaponTag.ThrustingSword,
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 120,
@@ -25,7 +26,6 @@ local ThrustingSwords = {
 		strengthRequirement = 6,
 		dexterityRequirement = 12,
 		intelligenceRequirement = 0,
-		weaponTag = ItemEnums.WeaponTag.ThrustingSword,
 	},
 }
 

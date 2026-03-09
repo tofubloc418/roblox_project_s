@@ -15,7 +15,7 @@ Unlike generic utility scripts (which live in `ReplicatedStorage/Modules`), item
 
 **Example Structure (`ReplicatedStorage/Items/`):**
 ```text
-src/shared/Items/ (Maps to ReplicatedStorage/Items/)
+src/shared/sharedNormalIsland/Items/ (Maps to ReplicatedStorage/Items/)
 ├── Weapons/
 │   ├── Dagger/
 │   │   ├── IronDagger/
@@ -77,7 +77,7 @@ Roblox heavily relies on asset IDs for Animations and Audio. You must decide whe
    Instead, store their IDs in your item configurations (`Configs/Items/`). Your codebase should create the `Animation` or `Sound` instance at runtime dynamically using the ID string.
    
 2. **Shared VFX/Particles (`ReplicatedStorage/SharedResources/`):**
-   If multiple weapons use the same spark particle, store a single instance of that ParticleEmitter in a shared directory (`src/shared/SharedResources/VFX/Sparks.rbxmx`). The item script can clone this standard emitter and attach it to the weapon's model at runtime.
+   If multiple weapons use the same spark particle, store a single instance of that ParticleEmitter in a shared directory (`src/shared/sharedNormalIsland/SharedResources/VFX/Sparks.rbxmx`). The item script can clone this standard emitter and attach it to the weapon's model at runtime.
 
 3. **Unique VFX (Stored within Item `.rbxmx`):**
    If a weapon has highly customized visual effects (e.g., a fiery aura that is perfectly sized and positioned to a specific sword mesh), those particle emitters and attachments should be saved natively inside the weapon's `BusterSword.rbxmx` model. The logic module (`BusterSwordLogic.luau`) can simply toggle `Particles.Enabled = true` when required.

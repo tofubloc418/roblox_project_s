@@ -31,16 +31,14 @@ ItemModifier {
 
 ### Modifier Tiers
 
-Tiers determine the value range a modifier can roll within. Higher tiers have better rolls and are rarer.
+Tiers determine the value range a modifier can roll within. Higher tiers have better rolls and are rarer. Each stat defines its own min/max per tier in the [Modifier Pool Table](./modifier-pool-table.md).
 
-| Tier | Roll Range Multiplier | Drop Weight | Color (UI) |
-|------|----------------------|-------------|------------|
-| **Minor** | 0.5×–0.75× of base range | 40% | Grey |
-| **Standard** | 0.75×–1.0× | 35% | White |
-| **Major** | 1.0×–1.25× | 20% | Blue |
-| **Prime** | 1.25×–1.5× | 5% | Gold |
-
-The actual numeric ranges are defined per stat in the modifier pool (see below). The tier multiplier scales those ranges.
+| Tier | Drop Weight | Color (UI) |
+|------|-------------|------------|
+| **Minor** | 40% | Grey |
+| **Standard** | 35% | White |
+| **Major** | 20% | Blue |
+| **Prime** | 5% | Gold |
 
 ---
 
@@ -58,43 +56,16 @@ ModifierPool {
 
 ModifierPoolEntry {
     statId        : DerivedStatId
-    operation     : ModifierOperation
-    baseMin       : number     -- Minimum value before tier scaling
-    baseMax       : number     -- Maximum value before tier scaling
-    weight        : number     -- Relative probability of this entry being selected
-    displayName   : string?    -- Optional affix name, e.g. "of Vitality"
+    operation     : ModifierOperation      -- One fixed operation per stat (Flat or %Add)
+    tiers         : { [ModifierTier]: { min: number, max: number } }  -- Direct roll range per tier
+    weight        : number                 -- Relative probability of this entry being selected
+    displayName   : string?                -- Optional affix name, e.g. "of Vitality"
 }
 ```
 
-### Example Pools
+### Complete Pool Reference
 
-```
-MeleeWeaponPool:
-    { statId = "CritChance",    op = "Flat",       baseMin = 0.02, baseMax = 0.08, weight = 10 }
-    { statId = "Armor",         op = "Flat",       baseMin = 5,    baseMax = 20,   weight = 8  }
-    { statId = "MoveSpeed",     op = "Flat",       baseMin = 1,    baseMax = 4,    weight = 6  }
-    { statId = "MaxHP",         op = "Flat",       baseMin = 10,   baseMax = 50,   weight = 8  }
-    { statId = "AbilityHaste",  op = "Flat",       baseMin = 0.02, baseMax = 0.08, weight = 5  }
-    { statId = "EnergyRegen",   op = "Flat",       baseMin = 1,    baseMax = 5,    weight = 5  }
-    { statId = "PhysicalResist",op = "Flat",       baseMin = 0.01, baseMax = 0.05, weight = 4  }
-    { statId = "LootBonus",     op = "PercentAdd", baseMin = 0.05, baseMax = 0.15, weight = 3  }
-
-ArmorPool:
-    { statId = "MaxHP",         op = "Flat",       baseMin = 15,   baseMax = 80,   weight = 10 }
-    { statId = "PhysicalResist",op = "Flat",       baseMin = 0.02, baseMax = 0.08, weight = 8  }
-    { statId = "MagicResist",   op = "Flat",       baseMin = 0.02, baseMax = 0.08, weight = 8  }
-    { statId = "Armor",         op = "Flat",       baseMin = 5,    baseMax = 30,   weight = 10 }
-    { statId = "MoveSpeed",     op = "Flat",       baseMin = 0.5,  baseMax = 3,    weight = 4  }
-    { statId = "EnergyRegen",   op = "Flat",       baseMin = 1,    baseMax = 5,    weight = 5  }
-    { statId = "MaxEnergy",     op = "Flat",       baseMin = 5,    baseMax = 25,   weight = 5  }
-
-BackpackPool:
-    { statId = "MaxHP",              op = "Flat",       baseMin = 10,   baseMax = 40,   weight = 8  }
-    { statId = "MoveSpeed",          op = "Flat",       baseMin = 0.5,  baseMax = 2,    weight = 6  }
-    { statId = "EnergyRegen",        op = "Flat",       baseMin = 1,    baseMax = 5,    weight = 7  }
-    { statId = "LootBonus",          op = "PercentAdd", baseMin = 0.05, baseMax = 0.20, weight = 5  }
-    { statId = "MaxEnergy",          op = "Flat",       baseMin = 5,    baseMax = 25,   weight = 6  }
-```
+See [Modifier Pool Table](./modifier-pool-table.md) for the full list of every possible modifier, organized by stat, tier, value range, and eligible equipment slot.
 
 ### Config File Organization
 
@@ -150,12 +121,11 @@ Prime:     5%
 
 ### Step 4: Roll Value
 
-Given the entry's `baseMin`/`baseMax` and the tier's multiplier range:
+Look up the selected entry's min/max for the rolled tier and pick a random value within that range:
 
 ```
-actualMin = baseMin * tierMultiplierLow
-actualMax = baseMax * tierMultiplierHigh
-value = Random(actualMin, actualMax)  -- uniform distribution within range
+range = entry.tiers[rolledTier]
+value = Random(range.min, range.max)  -- uniform distribution within range
 ```
 
 ### Step 5: Apply Island Scaling (optional)

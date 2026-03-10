@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StatsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Stats")
 local StatsTypes = require(StatsFolder:WaitForChild("StatsTypes"))
 local StatsConfig = require(StatsFolder:WaitForChild("StatsConfig"))
-local StatFormulas = require(StatsFolder:WaitForChild("StatFormulas"))
+local StatFormulas = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("StatFormulas"))
 
 type CoreAttributes = StatsTypes.CoreAttributes
 type CoreAttributeId = StatsTypes.CoreAttributeId

@@ -2,8 +2,9 @@
 -- Pure functions that compute derived stats from core attributes.
 -- Shared so both server and client can use them.
 
-local StatsTypes = require(script.Parent:WaitForChild("StatsTypes"))
-local StatsConfig = require(script.Parent:WaitForChild("StatsConfig"))
+local StatsFolder = script.Parent.Parent:WaitForChild("Configs"):WaitForChild("Stats")
+local StatsTypes = require(StatsFolder:WaitForChild("StatsTypes"))
+local StatsConfig = require(StatsFolder:WaitForChild("StatsConfig"))
 
 type CoreAttributes = StatsTypes.CoreAttributes
 type DerivedStats = StatsTypes.DerivedStats

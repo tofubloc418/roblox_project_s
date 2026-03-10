@@ -1,93 +1,187 @@
+--!strict
 --[[
-	DamageService (Minimal)
-	
-	Purpose: Provide a tiny, centralized entry-point to apply damage to registered
-	objects during loot system testing. No combat helpers (projectiles, explosions,
-	melee) are implemented here yet. Weapons will call ApplyDamage in the future.
-	
-	Scope: Registry + ApplyDamage only. No resistance math, no queries.
+	DamageService
+	Server-side entry-point for all damage calculations and application.
+
+	Reads live player stats from StatsService and weapon data from ItemRegistry,
+	builds typed parameter tables, and delegates the math to the pure-function
+	DamageCalc module.
+
+	PUBLIC API:
+	  CalculateDamage(attacker, weaponTemplateId, defender, options?)
+	      → DamageResult   (number-crunching only, no side-effects)
+
+	  CalculateAndApply(attacker, weaponTemplateId, defender, options?)
+	      → DamageResult   (calculates then deals damage to defender)
+
+	OPTIONS TABLE (all fields optional):
+	  ability: { adScaling: number, mdScaling: number }
+	      Override the ability scaling factors (defaults to 1.0 / 1.0 for basic attacks).
+	  defenseState: "None" | "Blocking" | "Parrying"
+	      Override the defender's defense posture (defaults to "None").
+	  defenderWeaponTemplateId: string
+	      templateId of the defender's equipped weapon (needed for block/parry power).
+	      If omitted, blockPower and parryMultiplier default to 0 / 1.
+	  critRollOverride: number
+	      Force a specific crit roll (0–1) instead of math.random(). Useful for tests.
 ]]
 
-local DamageService = {}
-DamageService.__index = DamageService
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-function DamageService.new()
-	local self = setmetatable({}, DamageService)
-	
-	-- Registry of damageable objects
-	self.DamageableRegistry = {}
-	
-	return self
-end
+-- ── Dependencies ─────────────────────────────────────────────────────────────
 
--- Register a damageable object
-function DamageService:RegisterDamageable(object: Instance, handler: (number, any) -> ())
-	if not object then
-		warn("Cannot register nil object as damageable")
-		return
-	end
-	
-	self.DamageableRegistry[object] = {
-		handler = handler,
-		lastDamageTime = 0,
+local CombatFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat")
+local DamageCalc      = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("DamageCalc"))
+local DamageCalcTypes = require(CombatFolder:WaitForChild("DamageCalcTypes"))
+
+local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
+local StatsService = require(script.Parent.Parent:WaitForChild("Stats"):WaitForChild("StatsService"))
+
+type WeaponParams   = DamageCalcTypes.WeaponParams
+type AttackerParams = DamageCalcTypes.AttackerParams
+type DefenderParams = DamageCalcTypes.DefenderParams
+type AbilityParams  = DamageCalcTypes.AbilityParams
+type DamageContext  = DamageCalcTypes.DamageContext
+type DamageResult   = DamageCalcTypes.DamageResult
+type DefenseState   = DamageCalcTypes.DefenseState
+
+-- ── Options type ─────────────────────────────────────────────────────────────
+
+export type DamageOptions = {
+	ability: AbilityParams?,
+	defenseState: DefenseState?,
+	defenderWeaponTemplateId: string?,
+	critRollOverride: number?,
+}
+
+-- ── Internal helpers ─────────────────────────────────────────────────────────
+
+-- Build a WeaponParams table from an ItemRegistry template.
+local function weaponParamsFromTemplate(template: any): WeaponParams
+	return {
+		baseAD              = template.baseAD or 0,
+		baseMD              = template.baseMD or 0,
+		strengthScaling     = template.strengthScaling or 0,
+		dexterityScaling    = template.dexterityScaling or 0,
+		intelligenceScaling = template.intelligenceScaling or 0,
+		blockPower          = template.blockPower or 0,
+		parryMultiplier     = template.parryMultiplier or 1,
 	}
-	
-	-- Clean up when object is destroyed
-	object.AncestryChanged:Connect(function()
-		if not object.Parent then
-			self.DamageableRegistry[object] = nil
+end
+
+-- Build an AttackerParams table from a player's live stats.
+local function buildAttackerParams(player: Player): AttackerParams
+	local container = StatsService:GetContainer(player)
+	assert(container, "[DamageService] Attacker has no StatContainer: " .. player.Name)
+
+	local attrs = container:GetAttributes()
+	return {
+		strength     = attrs.Strength,
+		dexterity    = attrs.Dexterity,
+		intelligence = attrs.Intelligence,
+		critChance   = container:GetDerivedStat("CritChance"),
+	}
+end
+
+-- Build a DefenderParams table from a player's live stats + optional weapon.
+local function buildDefenderParams(player: Player, options: DamageOptions?): DefenderParams
+	local container = StatsService:GetContainer(player)
+	assert(container, "[DamageService] Defender has no StatContainer: " .. player.Name)
+
+	local defenseState: DefenseState = "None"
+	local weaponParryMultiplier = 1
+
+	if options then
+		if options.defenseState then
+			defenseState = options.defenseState
 		end
-	end)
-end
-
--- Unregister a damageable object
-function DamageService:UnregisterDamageable(object: Instance)
-	self.DamageableRegistry[object] = nil
-end
-
--- Apply damage to an object
-function DamageService:ApplyDamage(target: Instance, amount: number, source: any?)
-	-- Check if it's a humanoid (direct damage)
-	if target:IsA("Humanoid") then
-		if amount <= 0 then return false end
-		target:TakeDamage(amount)
-		return true
-	end
-	
-	-- Check if it's a Model with a Humanoid (for backwards compatibility)
-	if target:IsA("Model") then
-		local humanoid = target:FindFirstChildOfClass("Humanoid")
-		if humanoid then
-			if amount <= 0 then return false end
-			humanoid:TakeDamage(amount)
-			return true
+		if options.defenderWeaponTemplateId then
+			local template = ItemRegistry.GetTemplate(options.defenderWeaponTemplateId)
+			if template then
+				weaponParryMultiplier = template.parryMultiplier or 1
+			end
 		end
 	end
-	
-	-- Check registry for custom damageable objects (like crates)
-	local registryEntry = self.DamageableRegistry[target]
-	if not registryEntry then
-		return false -- Target not damageable
-	end
-	
-	-- Validate amount
-	if amount <= 0 then return false end
-	
-	-- Call the damage handler
-	if registryEntry.handler then
-		registryEntry.handler(amount, source)
-		return true
-	end
-	
-	return false
+
+	return {
+		physicalResist        = container:GetDerivedStat("PhysicalResist"),
+		magicResist           = container:GetDerivedStat("MagicResist"),
+		armor                 = container:GetDerivedStat("Armor"),
+		defenseState          = defenseState,
+		weaponParryMultiplier = weaponParryMultiplier,
+	}
 end
 
--- Clear all registrations (for round reset)
-function DamageService:ClearRegistry()
-	self.DamageableRegistry = {}
+-- ── Public API ───────────────────────────────────────────────────────────────
+
+local DamageService = {}
+
+--[[
+	CalculateDamage(attacker, weaponTemplateId, defender, options?)
+	Runs the full 6-step damage pipeline using live player stats.
+	Returns a DamageResult with finalDamage, isCrit, and a full breakdown.
+	Does NOT apply damage — use CalculateAndApply for that.
+]]
+function DamageService.CalculateDamage(
+	attacker: Player,
+	weaponTemplateId: string,
+	defender: Player,
+	options: DamageOptions?
+): DamageResult
+	-- Resolve weapon template
+	local template = ItemRegistry.GetTemplate(weaponTemplateId)
+	assert(template, "[DamageService] Unknown weapon templateId: " .. weaponTemplateId)
+
+	local weaponParams   = weaponParamsFromTemplate(template)
+	local attackerParams = buildAttackerParams(attacker)
+	local defenderParams = buildDefenderParams(defender, options)
+
+	-- Ability scaling: use provided values or default to basic attack (1.0 / 1.0)
+	local abilityParams: AbilityParams = if options and options.ability
+		then options.ability
+		else { adScaling = 1.0, mdScaling = 1.0 }
+
+	-- Crit roll: use override or generate from math.random()
+	local critRoll: number = if options and options.critRollOverride
+		then options.critRollOverride
+		else math.random()
+
+	local context: DamageContext = {
+		attacker = attackerParams,
+		defender = defenderParams,
+		weapon   = weaponParams,
+		ability  = abilityParams,
+		critRoll = critRoll,
+	}
+
+	return DamageCalc.calculate(context)
 end
 
--- Create singleton instance
-local instance = DamageService.new()
+--[[
+	CalculateAndApply(attacker, weaponTemplateId, defender, options?)
+	Runs CalculateDamage, then applies the resulting damage to the defender's
+	Humanoid. Returns the DamageResult so callers can inspect the breakdown.
+]]
+function DamageService.CalculateAndApply(
+	attacker: Player,
+	weaponTemplateId: string,
+	defender: Player,
+	options: DamageOptions?
+): DamageResult
+	local result = DamageService.CalculateDamage(attacker, weaponTemplateId, defender, options)
 
-return instance
+	-- Apply to defender's character
+	if result.finalDamage > 0 then
+		local character = defender.Character
+		if character then
+			local humanoid = character:FindFirstChildOfClass("Humanoid")
+			if humanoid then
+				humanoid:TakeDamage(result.finalDamage)
+			end
+		end
+	end
+
+	return result
+end
+
+return DamageService

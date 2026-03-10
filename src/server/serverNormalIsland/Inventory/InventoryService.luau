@@ -1,493 +1,704 @@
-local Players = game:GetService("Players")
+--!strict
+-- InventoryService
+-- Server-side, data-only inventory management.
+--
+-- RESPONSIBILITIES:
+--   - Own ALL InventoryRemotes (creates them; AbilityDataService reuses the folder).
+--   - Handle client requests: RequestMove, RequestEquip, RequestUnequip,
+--     RequestDrop, RequestAssignQuick, RequestStashTransfer.
+--   - Provide server-callable APIs for container CRUD, equip/unequip, stash
+--     transfers, quick-use assignment, and full-state sync to client.
+--
+-- WHAT THIS MODULE DOES NOT DO:
+--   - No stat calculation or modifier application.
+--   - No ability activation or cooldown management.
+--   - No world-drop spawning (RequestDrop removes the item from data only).
+--   - No DataStore access; all persistence goes through dataService (path-based get/set/update).
+--
+-- CONTAINER MODEL:
+--   The four containers are: "inventory", "stash", "equipment", "quickuse".
+--   inventory / stash: numbered slots (1 … maxSlots), value = SerializedItem?.
+--   equipment: named slots (Backpack, Armor, Weapon1, Weapon2), value = SerializedItem?.
+--   quickuse: numbered slots (1 … QUICK_USE_MAX_SLOTS), value = instanceId string?
+--             (quick-use slots are references, not item copies).
+
+local _Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ItemDefinitions = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("LootSystem"):WaitForChild("ItemDefinitions"))
+-- Server-side dependencies.
+local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
+local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 
-type ItemStack = InventoryTypes.ItemStack
-type InventoryData = InventoryTypes.InventoryData
+local DataService = DataServiceBootstrap.GetDataService()
+
+local function getPlayerData(player: Player): PlayerData?
+	local ds = DataService
+	if type(ds.hasProfile) == "function" and not ds:hasProfile(player) then
+		warn("[InventoryService] Player data not loaded yet for " .. player.Name .. ". Waiting...")
+		if type(ds.waitForData) == "function" then
+			ds:waitForData(player)
+		else
+			warn("[InventoryService] No waitForData available; data may not be loaded.")
+			return nil
+		end
+	end
+	if type(ds.get) == "function" then
+		return ds:get(player, {}) :: PlayerData?
+	end
+	if type(ds.Get) == "function" then
+		return ds:Get(player, {}) :: PlayerData?
+	end
+	return nil
+end
+
+local function setAtPath(player: Player, path: { string | number }, value: any)
+	local ds = DataService
+	if type(ds.set) == "function" then
+		ds:set(player, path, value)
+		return
+	end
+	if type(ds.Set) == "function" then
+		ds:Set(player, path, value)
+		return
+	end
+	if type((ds :: any).set) == "function" then
+		(ds :: any):set(player, path, value)
+	end
+end
+
+type PlayerData         = InventoryTypes.PlayerData
+type SerializedItem     = InventoryTypes.SerializedItem
+type SerializedMod      = InventoryTypes.SerializedMod
+type StoredInventoryData = InventoryTypes.StoredInventoryData
+type StoredEquipmentData = InventoryTypes.StoredEquipmentData
+type StoredQuickUseData  = InventoryTypes.StoredQuickUseData
+type StashData          = InventoryTypes.StashData
+type CurrencyData       = InventoryTypes.CurrencyData
+type InventorySyncPayload = InventoryTypes.InventorySyncPayload
+type EquipmentSlotId    = InventoryTypes.EquipmentSlotId
+type ContainerId        = InventoryTypes.ContainerId
+
+-- ── Constants ─────────────────────────────────────────────────────────────────
+
+local QUICK_USE_MAX_SLOTS = 8
+
+-- Maps equipment slot → the item category allowed in that slot.
+-- If ItemRegistry has no template for an item (dev mode), validation is skipped.
+local SLOT_ALLOWED_CATEGORY: { [EquipmentSlotId]: string } = {
+	Backpack = "Backpack",
+	Armor    = "Armor",
+	Weapon1  = "Weapon",
+	Weapon2  = "Weapon",
+}
+
+local VALID_EQUIPMENT_SLOTS: { [EquipmentSlotId]: boolean } = {
+	Backpack = true, Armor = true, Weapon1 = true, Weapon2 = true,
+}
+
+-- ── Remote references (populated in Initialize) ───────────────────────────────
+
+local _syncFullState:       RemoteEvent
+local _syncCurrency:        RemoteEvent
+local _requestMove:         RemoteEvent
+local _requestEquip:        RemoteEvent
+local _requestUnequip:      RemoteEvent
+local _requestDrop:         RemoteEvent
+local _requestAssignQuick:  RemoteEvent
+local _requestStashTransfer: RemoteEvent
+
+-- ── Internal helpers ──────────────────────────────────────────────────────────
+
+local function generateInstanceId(templateId: string): string
+	return templateId
+		.. "_" .. tostring(os.time())
+		.. "_" .. string.format("%04d", math.random(0, 9999))
+end
+
+-- Find a SerializedItem in any container by its instanceId.
+-- Returns (containerId, slot) where slot is a number or EquipmentSlotId string.
+local function findItemById(
+	data: PlayerData,
+	instanceId: string
+): (ContainerId?, number | string?)
+
+	for slot, item in pairs(data.inventory.slots) do
+		if item and item.iid == instanceId then
+			return "inventory", slot
+		end
+	end
+
+	local eq = data.equipment
+	if eq.Backpack and eq.Backpack.iid == instanceId then return "equipment", "Backpack" end
+	if eq.Armor    and eq.Armor.iid    == instanceId then return "equipment", "Armor"    end
+	if eq.Weapon1  and eq.Weapon1.iid  == instanceId then return "equipment", "Weapon1"  end
+	if eq.Weapon2  and eq.Weapon2.iid  == instanceId then return "equipment", "Weapon2"  end
+
+	for slot, item in pairs(data.stash.slots) do
+		if item and item.iid == instanceId then
+			return "stash", slot
+		end
+	end
+
+	return nil, nil
+end
+
+-- Read a SerializedItem from any container at a given slot.
+local function getItemAt(
+	data: PlayerData,
+	containerId: ContainerId,
+	slot: number | string
+): SerializedItem?
+
+	if containerId == "inventory" then
+		return data.inventory.slots[slot :: number]
+	elseif containerId == "equipment" then
+		return (data.equipment :: any)[slot :: string]
+	elseif containerId == "stash" then
+		return data.stash.slots[slot :: number]
+	end
+	return nil
+end
+
+-- Write (or clear) a SerializedItem in any container at a given slot.
+local function setItemAt(
+	data: PlayerData,
+	containerId: ContainerId,
+	slot: number | string,
+	item: SerializedItem?
+)
+	if containerId == "inventory" then
+		data.inventory.slots[slot :: number] = item
+	elseif containerId == "equipment" then
+		(data.equipment :: any)[slot :: string] = item
+	elseif containerId == "stash" then
+		data.stash.slots[slot :: number] = item
+	end
+end
+
+-- Scan for the first empty numbered slot in the inventory.
+local function findFreeInventorySlot(data: PlayerData): number?
+	for i = 1, data.inventory.maxSlots do
+		if not data.inventory.slots[i] then
+			return i
+		end
+	end
+	return nil
+end
+
+-- Scan for the first empty numbered slot in the stash.
+local function findFreeStashSlot(data: PlayerData): number?
+	for i = 1, data.stash.maxSlots do
+		if not data.stash.slots[i] then
+			return i
+		end
+	end
+	return nil
+end
+
+-- Check whether an item may go into an equipment slot.
+-- Permissive if the template is not yet registered (development mode).
+local function canEquipInSlot(item: SerializedItem, slotId: EquipmentSlotId): boolean
+	local template = ItemRegistry.GetTemplate(item.tid)
+	if not template then
+		return true -- template not yet defined; allow during development
+	end
+	return template.category == SLOT_ALLOWED_CATEGORY[slotId]
+end
+
+-- Remove all quickuse references that point to an instanceId that no longer exists.
+local function _pruneOrphanedQuickUseRefs(data: PlayerData)
+	for slot, instanceId in pairs(data.quickUse.slots) do
+		if instanceId then
+			local container = findItemById(data, instanceId)
+			if not container then
+				data.quickUse.slots[slot] = nil
+			end
+		end
+	end
+end
+
+-- ── Public API ────────────────────────────────────────────────────────────────
 
 local InventoryService = {}
-InventoryService.__index = InventoryService
 
-local INVENTORY_SIZE = 16
+-- ─── Read accessors ───────────────────────────────────────────────────────────
 
--- Remote events
-local remotes = ReplicatedStorage:FindFirstChild("InventoryRemotes")
-if not remotes then
-	remotes = Instance.new("Folder")
-	remotes.Name = "InventoryRemotes"
-	remotes.Parent = ReplicatedStorage
+function InventoryService.GetInventory(player: Player): StoredInventoryData?
+	local data = getPlayerData(player)
+	return data and data.inventory or nil
 end
 
-local updateInventory = Instance.new("RemoteEvent")
-updateInventory.Name = "UpdateInventory"
-updateInventory.Parent = remotes
-
-local requestEquip = Instance.new("RemoteEvent")
-requestEquip.Name = "RequestEquip"
-requestEquip.Parent = remotes
-
-local requestSwap = Instance.new("RemoteEvent")
-requestSwap.Name = "RequestSwap"
-requestSwap.Parent = remotes
-
-local requestDrop = Instance.new("RemoteEvent")
-requestDrop.Name = "RequestDrop"
-requestDrop.Parent = remotes
-
-function InventoryService.new()
-	local self = setmetatable({}, InventoryService)
-	return self
+function InventoryService.GetEquipment(player: Player): StoredEquipmentData?
+	local data = getPlayerData(player)
+	return data and data.equipment or nil
 end
 
-function InventoryService:Initialize()
-	Players.PlayerAdded:Connect(function(player)
-		self:CreateInventory(player)
-	end)
-	
-	Players.PlayerRemoving:Connect(function(player)
-		self:CleanupInventory(player)
-	end)
-	
-	requestEquip.OnServerEvent:Connect(function(player, slotIndex)
-		self:EquipSlot(player, slotIndex)
-	end)
-	
-	requestSwap.OnServerEvent:Connect(function(player, fromSlot, toSlot)
-		self:SwapSlots(player, fromSlot, toSlot)
-	end)
-	
-	requestDrop.OnServerEvent:Connect(function(player, slotIndex)
-		self:DropItem(player, slotIndex)
-	end)
+function InventoryService.GetStash(player: Player): StashData?
+	local data = getPlayerData(player)
+	return data and data.stash or nil
 end
 
-function InventoryService:CreateInventory(player: Player)
-	-- The backpack is automatically created, we just need to sync the initial state
-	self:SyncInventory(player)
+function InventoryService.GetQuickUse(player: Player): StoredQuickUseData?
+	local data = getPlayerData(player)
+	return data and data.quickUse or nil
 end
 
-function InventoryService:CleanupInventory(player: Player)
-	-- Cleanup happens automatically when player leaves
-	-- Just unequip any equipped tool
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid:UnequipTools()
-	end
+function InventoryService.GetCurrency(player: Player): CurrencyData?
+	local data = getPlayerData(player)
+	return data and data.currency or nil
 end
 
-function InventoryService:GetInventory(player: Player): InventoryData?
-	-- Build inventory data from backpack
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then return nil end
-	
-	local inventory: InventoryData = {
-		slots = {},
-		equippedSlot = nil,
-	}
-	
-	-- Get tools from backpack and character
-	local character = player.Character
-	
-	-- Check backpack tools
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") then
-			local slotIndex = tool:GetAttribute("SlotIndex")
-			if slotIndex and slotIndex >= 1 and slotIndex <= INVENTORY_SIZE then
-				inventory.slots[slotIndex] = {
-					itemId = tool:GetAttribute("ItemId") or tool.Name,
-					count = tool:GetAttribute("CurrentStack") or 1,
-					maxStack = tool:GetAttribute("MaxStack") or 1,
-				}
-			end
-		end
-	end
-	
-	-- Check equipped tool
-	if character then
-		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") then
-				local slotIndex = tool:GetAttribute("SlotIndex")
-				if slotIndex and slotIndex >= 1 and slotIndex <= INVENTORY_SIZE then
-					inventory.slots[slotIndex] = {
-						itemId = tool:GetAttribute("ItemId") or tool.Name,
-						count = tool:GetAttribute("CurrentStack") or 1,
-						maxStack = tool:GetAttribute("MaxStack") or 1,
+-- ─── Item creation ────────────────────────────────────────────────────────────
+
+--[[
+	AddItem(player, templateId, count?, modifiers?)
+	Creates a new item instance in the player's inventory.
+	Respects template stackMax when defined (stacks existing items first).
+	Returns the SerializedItem on success, nil if inventory is full.
+	modifiers should be a list of SerializedMod if provided.
+]]
+function InventoryService.AddItem(
+	player: Player,
+	templateId: string,
+	count: number?,
+	modifiers: { SerializedMod }?
+): SerializedItem?
+
+	local data = getPlayerData(player)
+	if not data or not templateId or templateId == "" then return nil end
+
+	local template  = ItemRegistry.GetTemplate(templateId)
+	local stackMax  = (template and template.stackMax) or 1
+	local remaining = count or 1
+
+	-- Try to fill existing stacks first.
+	if stackMax > 1 and remaining > 0 then
+		for slot, existing in pairs(data.inventory.slots) do
+			if existing and existing.tid == templateId and not existing.mods then
+				local currentCount = existing.cnt or 1
+				local canAdd       = stackMax - currentCount
+				if canAdd > 0 then
+					local addAmount = math.min(canAdd, remaining)
+					existing = {
+						iid = existing.iid,
+						tid = existing.tid,
+						cnt = currentCount + addAmount,
+						lvl = existing.lvl,
+						dur = existing.dur,
+						mods = existing.mods,
+						cdat = existing.cdat,
 					}
-					inventory.equippedSlot = slotIndex
-				end
-			end
-		end
-	end
-	
-	return inventory
-end
-
-function InventoryService:SyncInventory(player: Player)
-	local inventory = self:GetInventory(player)
-	if inventory then
-		-- Create a clean copy with all slots properly indexed for serialization
-		local syncData = {
-			slots = {},
-			equippedSlot = inventory.equippedSlot
-		}
-		
-		-- Ensure all slots are present in the table (even if nil)
-		for i = 1, INVENTORY_SIZE do
-			syncData.slots[i] = inventory.slots[i] or false  -- Use false instead of nil for empty slots
-		end
-		
-		updateInventory:FireClient(player, syncData)
-	end
-end
-
-function InventoryService:AddItem(player: Player, itemId: string, amount: number): boolean
-	local backpack = player:FindFirstChild("Backpack")
-	if not backpack then return false end
-	
-	local itemData = ItemDefinitions.GetItem(itemId)
-	if not itemData then
-		warn(string.format("[InventoryService] Unknown item: %s", itemId))
-		return false
-	end
-	
-	local maxStack = itemData.stackMax or 1
-	local remaining = amount
-	local firstSlotWithItem = nil
-	
-	-- Get all tools (from backpack and character)
-	local allTools = {}
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") then
-			table.insert(allTools, tool)
-		end
-	end
-	local character = player.Character
-	if character then
-		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") then
-				table.insert(allTools, tool)
-			end
-		end
-	end
-	
-	-- First, try to fill existing stacks
-	for _, tool in ipairs(allTools) do
-		if remaining <= 0 then break end
-		
-		if tool:GetAttribute("ItemId") == itemId then
-			local currentStack = tool:GetAttribute("CurrentStack") or 1
-			local toolMaxStack = tool:GetAttribute("MaxStack") or maxStack
-			
-			if currentStack < toolMaxStack then
-				local space = toolMaxStack - currentStack
-				local toAdd = math.min(space, remaining)
-				
-				tool:SetAttribute("CurrentStack", currentStack + toAdd)
-				remaining = remaining - toAdd
-				
-				if not firstSlotWithItem then
-					firstSlotWithItem = tool:GetAttribute("SlotIndex")
-				end
-			end
-		end
-	end
-	
-	-- Then create new tools for remaining items
-	if remaining > 0 then
-		-- Find empty slots
-		local usedSlots = {}
-		for _, tool in ipairs(allTools) do
-			local slot = tool:GetAttribute("SlotIndex")
-			if slot then
-				usedSlots[slot] = true
-			end
-		end
-		
-		-- Create new tools in empty slots
-		for slot = 1, INVENTORY_SIZE do
-			if remaining <= 0 then break end
-			
-			if not usedSlots[slot] then
-				local stackCount = math.min(remaining, maxStack)
-				
-				-- Create the tool
-				local tool = self:CreateToolForItem(itemId, stackCount)
-				if tool then
-					tool:SetAttribute("SlotIndex", slot)
-					tool:SetAttribute("ItemId", itemId)
-					tool:SetAttribute("CurrentStack", stackCount)
-					tool:SetAttribute("MaxStack", maxStack)
-					
-				tool.Parent = backpack
-					remaining = remaining - stackCount
-					
-					if not firstSlotWithItem then
-						firstSlotWithItem = slot
+					remaining -= addAmount
+					setAtPath(player, { "inventory", "slots", slot }, existing)
+					if remaining <= 0 then
+						return existing
 					end
 				end
 			end
 		end
 	end
-	
-	-- Auto-equip if this is the first item and nothing is equipped
-	local currentInventory = self:GetInventory(player)
-	if firstSlotWithItem and currentInventory and not currentInventory.equippedSlot then
-		self:EquipSlot(player, firstSlotWithItem)
+
+	-- Place remaining into a new slot.
+	local freeSlot = findFreeInventorySlot(data)
+	if not freeSlot then
+		warn("[InventoryService] Inventory full for " .. player.Name)
+		return nil
+	end
+
+	local newItem: SerializedItem = {
+		iid  = generateInstanceId(templateId),
+		tid  = templateId,
+		cnt  = (remaining > 1 or stackMax > 1) and remaining or nil,
+		mods = (modifiers and #modifiers > 0) and modifiers or nil,
+	}
+
+	setAtPath(player, { "inventory", "slots", freeSlot }, newItem)
+	return newItem
+end
+
+-- ─── Item removal ─────────────────────────────────────────────────────────────
+
+--[[
+	RemoveItem(player, instanceId)
+	Removes an item from any container (inventory, equipment, or stash).
+	Also removes any quickuse reference pointing to this instance.
+	Returns true on success.
+]]
+function InventoryService.RemoveItem(player: Player, instanceId: string): boolean
+	local data = getPlayerData(player)
+	if not data then return false end
+
+	local containerId, slot = findItemById(data, instanceId)
+	if not containerId or slot == nil then return false end
+
+	if containerId == "inventory" then
+		setAtPath(player, { "inventory", "slots", slot :: number }, nil)
+	elseif containerId == "equipment" then
+		setAtPath(player, { "equipment", slot :: string }, nil)
+	elseif containerId == "stash" then
+		setAtPath(player, { "stash", "slots", slot :: number }, nil)
+	end
+
+	-- Clear dangling quickuse references.
+	for i, qiid in pairs(data.quickUse.slots) do
+		if qiid == instanceId then
+			setAtPath(player, { "quickUse", "slots", i }, nil)
+		end
+	end
+
+	return true
+end
+
+-- ─── Container movement ───────────────────────────────────────────────────────
+
+--[[
+	MoveItem(player, fromContainer, fromSlot, toContainer, toSlot)
+	Moves an item from one container/slot to another, swapping if the
+	destination is occupied.  Validates equipment slot categories.
+	Returns true on success.
+]]
+function InventoryService.MoveItem(
+	player: Player,
+	fromContainer: ContainerId,
+	fromSlot: number | string,
+	toContainer: ContainerId,
+	toSlot: number | string
+): boolean
+
+	local data = getPlayerData(player)
+	if not data then return false end
+
+	local item     = getItemAt(data, fromContainer, fromSlot)
+	if not item then return false end
+
+	local destItem = getItemAt(data, toContainer, toSlot)
+
+	-- Validate equipment slot compatibility for both directions.
+	if toContainer == "equipment" then
+		if type(toSlot) ~= "string" then
+			return false
+		end
+		local slotId: EquipmentSlotId = toSlot :: any
+		if not VALID_EQUIPMENT_SLOTS[slotId] then return false end
+		if not canEquipInSlot(item, slotId) then return false end
+	end
+	if fromContainer == "equipment" and destItem then
+		if type(fromSlot) ~= "string" then
+			return false
+		end
+		local slotId: EquipmentSlotId = fromSlot :: any
+		if not canEquipInSlot(destItem, slotId) then return false end
+	end
+
+	-- Perform swap via path-based set.
+	local function pathFor(container: ContainerId, s: number | string): { string | number }
+		if container == "inventory" then return { "inventory", "slots", s :: number } end
+		if container == "equipment" then return { "equipment", s :: string } end
+		if container == "stash" then return { "stash", "slots", s :: number } end
+		return {}
+	end
+	setAtPath(player, pathFor(fromContainer, fromSlot), destItem)
+	setAtPath(player, pathFor(toContainer, toSlot), item)
+
+	return true
+end
+
+-- ─── Equip / Unequip ──────────────────────────────────────────────────────────
+
+--[[
+	EquipItem(player, instanceId, slotId)
+	Moves an item from inventory/stash into an equipment slot.
+	If the slot is already occupied, the old item swaps to the source location
+	(or a free inventory slot if the source was stash/equip).
+	Returns true on success.
+]]
+function InventoryService.EquipItem(
+	player: Player,
+	instanceId: string,
+	slotId: EquipmentSlotId
+): boolean
+
+	local data = getPlayerData(player)
+	if not data then return false end
+	if not VALID_EQUIPMENT_SLOTS[slotId] then return false end
+
+	local fromContainer, fromSlot = findItemById(data, instanceId)
+	if not fromContainer or fromSlot == nil then return false end
+
+	-- Already in the correct slot.
+	if fromContainer == "equipment" and fromSlot == slotId then return true end
+
+	local item = getItemAt(data, fromContainer :: ContainerId, fromSlot)
+	if not item then return false end
+
+	if not canEquipInSlot(item, slotId) then return false end
+
+	local existing: SerializedItem? = (data.equipment :: any)[slotId]
+
+	if existing then
+		if fromContainer == "inventory" then
+			setAtPath(player, { "inventory", "slots", fromSlot :: number }, existing)
+		else
+			local freeSlot = findFreeInventorySlot(data)
+			if not freeSlot then return false end
+			setAtPath(player, { "inventory", "slots", freeSlot }, existing)
+			if fromContainer == "stash" then
+				setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+			else
+				setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+			end
+		end
 	else
-		self:SyncInventory(player)
+		if fromContainer == "inventory" then
+			setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+		elseif fromContainer == "stash" then
+			setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+		end
 	end
-	
-	return remaining == 0
+
+	setAtPath(player, { "equipment", slotId }, item)
+
+	return true
 end
 
-function InventoryService:EquipSlot(player: Player, slotIndex: number)
-	local backpack = player:FindFirstChild("Backpack")
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not backpack or not humanoid then return end
-	
-	-- Validate slot
-	if slotIndex < 1 or slotIndex > INVENTORY_SIZE then return end
-	
-	-- Check if this slot is already equipped
-	local currentlyEquipped = nil
-	for _, tool in ipairs(character:GetChildren()) do
-		if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-			currentlyEquipped = tool
-			break
-		end
-	end
-	
-	-- If clicking the already equipped slot, unequip
-	if currentlyEquipped then
-		humanoid:UnequipTools()
-		self:SyncInventory(player)
-		return
-	end
-	
-	-- Unequip current tool
-	humanoid:UnequipTools()
-	
-	-- Find and equip the tool in this slot
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-			humanoid:EquipTool(tool)
-			break
-		end
-	end
-	
-	self:SyncInventory(player)
+--[[
+	UnequipItem(player, slotId)
+	Moves the item in an equipment slot back to a free inventory slot.
+	Returns true on success.
+]]
+function InventoryService.UnequipItem(player: Player, slotId: EquipmentSlotId): boolean
+	local data = getPlayerData(player)
+	if not data then return false end
+
+	local item: SerializedItem? = (data.equipment :: any)[slotId]
+	if not item then return false end
+
+	local freeSlot = findFreeInventorySlot(data)
+	if not freeSlot then return false end
+
+	setAtPath(player, { "inventory", "slots", freeSlot }, item)
+	setAtPath(player, { "equipment", slotId }, nil)
+
+	return true
 end
 
-function InventoryService:UnequipCurrent(player: Player)
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		humanoid:UnequipTools()
-	end
-	
-	self:SyncInventory(player)
+-- ─── Quick-use management ─────────────────────────────────────────────────────
+
+--[[
+	AssignQuickUse(player, instanceId, quickSlot)
+	Assigns an existing item (by instanceId) to a quick-use slot (1–8).
+	The item must still be somewhere in inventory or stash.
+]]
+function InventoryService.AssignQuickUse(
+	player: Player,
+	instanceId: string,
+	quickSlot: number
+): boolean
+
+	local data = getPlayerData(player)
+	if not data then return false end
+	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
+
+	local containerId = findItemById(data, instanceId)
+	if not containerId then return false end
+
+	setAtPath(player, { "quickUse", "slots", quickSlot }, instanceId)
+	return true
 end
 
-function InventoryService:SwapSlots(player: Player, fromSlot: number, toSlot: number)
-	local backpack = player:FindFirstChild("Backpack")
-	local character = player.Character
-	if not backpack then return end
-	
-	-- Validate slots
-	if fromSlot < 1 or fromSlot > INVENTORY_SIZE then return end
-	if toSlot < 1 or toSlot > INVENTORY_SIZE then return end
-	if fromSlot == toSlot then return end
-	
-	-- Find tools in the slots
-	local fromTool = nil
-	local toTool = nil
-	
-	-- Check backpack
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") then
-			local slot = tool:GetAttribute("SlotIndex")
-			if slot == fromSlot then
-				fromTool = tool
-			elseif slot == toSlot then
-				toTool = tool
-			end
-		end
-	end
-	
-	-- Check character (for equipped tools)
-	if character then
-		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") then
-				local slot = tool:GetAttribute("SlotIndex")
-				if slot == fromSlot then
-					fromTool = tool
-				elseif slot == toSlot then
-					toTool = tool
-				end
-			end
-		end
-	end
-	
-	-- Swap the slot indices
-	if fromTool then
-		fromTool:SetAttribute("SlotIndex", toSlot)
-	end
-	if toTool then
-		toTool:SetAttribute("SlotIndex", fromSlot)
-	end
-	
-	self:SyncInventory(player)
+--[[
+	ClearQuickUse(player, quickSlot)
+	Empties a quick-use reference slot.
+]]
+function InventoryService.ClearQuickUse(player: Player, quickSlot: number): boolean
+	local data = getPlayerData(player)
+	if not data then return false end
+	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
+
+	setAtPath(player, { "quickUse", "slots", quickSlot }, nil)
+	return true
 end
 
-function InventoryService:CreateToolForItem(itemId: string, stackCount: number): Tool?
-	local itemData = ItemDefinitions.GetItem(itemId)
-	if not itemData then return nil end
-	
-	-- Try to find prefab
-	local lootFolder = ReplicatedStorage:FindFirstChild("Loot")
-	if not lootFolder then return nil end
-	
-	local categoryFolder = lootFolder:FindFirstChild(itemData.category)
-	if not categoryFolder then return nil end
-	
-	local prefab = nil
-	for _, descendant in ipairs(categoryFolder:GetDescendants()) do
-		if (descendant:IsA("Tool") or descendant:IsA("Model")) and descendant.Name == itemId then
-			prefab = descendant
-			break
-		end
+-- ─── Stash transfers ──────────────────────────────────────────────────────────
+
+--[[
+	TransferToStash(player, inventorySlot, stashSlot)
+	Moves an item from an inventory slot to a stash slot.
+	If stashSlot is occupied or invalid (0), finds the first free stash slot.
+]]
+function InventoryService.TransferToStash(
+	player: Player,
+	inventorySlot: number,
+	stashSlot: number
+): boolean
+
+	local data = getPlayerData(player)
+	if not data then return false end
+
+	local item = data.inventory.slots[inventorySlot]
+	if not item then return false end
+
+	local targetSlot = stashSlot
+	if targetSlot < 1 or targetSlot > data.stash.maxSlots or data.stash.slots[targetSlot] then
+		targetSlot = findFreeStashSlot(data) or 0
+		if targetSlot == 0 then return false end
 	end
-	
-	if not prefab then
-		-- Create a basic tool
-		local tool = Instance.new("Tool")
-		tool.Name = itemData.displayName or itemId
-		tool.RequiresHandle = true
-		
-		local handle = Instance.new("Part")
-		handle.Name = "Handle"
-		handle.Size = Vector3.new(1, 1, 2)
-		handle.CanCollide = false
-		handle.Parent = tool
-		
-		return tool
-	end
-	
-	local tool: Tool
-	if prefab:IsA("Tool") then
-		tool = prefab:Clone()
-	else
-		-- Convert model to tool
-		tool = Instance.new("Tool")
-		tool.Name = itemData.displayName or itemId
-		tool.RequiresHandle = true
-		
-		local clone = prefab:Clone()
-		for _, child in ipairs(clone:GetChildren()) do
-			child.Parent = tool
-			if child:IsA("BasePart") and child.Name == "Handle" then
-				-- Good, already has handle
-			elseif child:IsA("BasePart") and not tool:FindFirstChild("Handle") then
-				child.Name = "Handle"
-			end
-		end
-		clone:Destroy()
-	end
-	
-	return tool
+
+	setAtPath(player, { "stash", "slots", targetSlot }, item)
+	setAtPath(player, { "inventory", "slots", inventorySlot }, nil)
+
+	return true
 end
 
-function InventoryService:RemoveItem(player: Player, slotIndex: number)
-	local backpack = player:FindFirstChild("Backpack")
-	local character = player.Character
-	if not backpack then return end
-	
-	-- Find and remove the tool
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-			tool:Destroy()
-			self:SyncInventory(player)
-			return
-		end
+--[[
+	TransferFromStash(player, stashSlot, inventorySlot)
+	Moves an item from a stash slot to an inventory slot.
+	If inventorySlot is occupied or invalid (0), finds the first free inventory slot.
+]]
+function InventoryService.TransferFromStash(
+	player: Player,
+	stashSlot: number,
+	inventorySlot: number
+): boolean
+
+	local data = getPlayerData(player)
+	if not data then return false end
+
+	local item = data.stash.slots[stashSlot]
+	if not item then return false end
+
+	local targetSlot = inventorySlot
+	if targetSlot < 1 or targetSlot > data.inventory.maxSlots or data.inventory.slots[targetSlot] then
+		targetSlot = findFreeInventorySlot(data) or 0
+		if targetSlot == 0 then return false end
 	end
-	
-	-- Check character for equipped tool
-	if character then
-		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-				tool:Destroy()
-				self:SyncInventory(player)
-				return
-			end
-		end
-	end
+
+	setAtPath(player, { "inventory", "slots", targetSlot }, item)
+	setAtPath(player, { "stash", "slots", stashSlot }, nil)
+
+	return true
 end
 
-function InventoryService:DropItem(player: Player, slotIndex: number)
-	local backpack = player:FindFirstChild("Backpack")
-	local character = player.Character
-	if not backpack or not character then return end
-	
-	-- Validate slot
-	if slotIndex < 1 or slotIndex > INVENTORY_SIZE then return end
-	
-	-- Find the tool to drop
-	local toolToDrop = nil
-	
-	-- Check backpack
-	for _, tool in ipairs(backpack:GetChildren()) do
-		if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-			toolToDrop = tool
-			break
-		end
+-- ─── Sync ─────────────────────────────────────────────────────────────────────
+
+--[[
+	SyncToClient(player)
+	No-op. Replication to the client is automatic via dataService when the server
+	calls set/update. Kept for API compatibility; do not call.
+]]
+function InventoryService.SyncToClient(_player: Player) end
+
+-- ─── Initialization ───────────────────────────────────────────────────────────
+
+--[[
+	Initialize()
+	Creates all InventoryRemotes (used by this service AND AbilityDataService),
+	wires up client request handlers, and registers a PlayerAdded hook so data
+	is synced to the client after loading.
+
+	Must be called after DataServiceBootstrap.Initialize().
+]]
+function InventoryService.Initialize()
+
+	-- ── Remote creation ──────────────────────────────────────────────────────
+	local remoteFolder = ReplicatedStorage:FindFirstChild("InventoryRemotes")
+	if not remoteFolder then
+		remoteFolder = Instance.new("Folder")
+		remoteFolder.Name = "InventoryRemotes"
+		remoteFolder.Parent = ReplicatedStorage
 	end
-	
-	-- Check character for equipped tool
-	if not toolToDrop and character then
-		for _, tool in ipairs(character:GetChildren()) do
-			if tool:IsA("Tool") and tool:GetAttribute("SlotIndex") == slotIndex then
-				-- Unequip first
-				local humanoid = character:FindFirstChildOfClass("Humanoid")
-				if humanoid then
-					humanoid:UnequipTools()
-				end
-				toolToDrop = tool
-				break
-			end
+
+	local function ensureRemote(name: string): RemoteEvent
+		local existing = remoteFolder:FindFirstChild(name)
+		if existing and existing:IsA("RemoteEvent") then
+			return existing :: RemoteEvent
 		end
+		-- Remove stale non-RemoteEvent with the same name (e.g. placeholder from old code).
+		if existing then existing:Destroy() end
+		local remote = Instance.new("RemoteEvent")
+		remote.Name   = name
+		remote.Parent = remoteFolder
+		return remote
 	end
-	
-	if not toolToDrop then return end
-	
-	-- Get drop position
-	local hrp = character:FindFirstChild("HumanoidRootPart")
-	if not hrp then return end
-	
-	local dropPosition = hrp.Position + hrp.CFrame.LookVector * 3
-	local dropImpulse = hrp.CFrame.LookVector * 10 + Vector3.new(0, 5, 0)
-	
-	-- Get the DropFactory
-	local DropFactory = require(script.Parent.Parent:WaitForChild("LootSystem"):WaitForChild("DropFactory"))
-	
-	-- Drop the item using the existing tool
-	local itemId = toolToDrop:GetAttribute("ItemId") or toolToDrop.Name
-	local stackCount = toolToDrop:GetAttribute("CurrentStack") or 1
-	
-	-- Parent to workspace temporarily to prevent destruction
-	toolToDrop.Parent = workspace
-	
-	-- Spawn the drop using the existing tool
-	DropFactory:SpawnDrop(itemId, stackCount, dropPosition, dropImpulse, toolToDrop)
-	
-	-- Sync inventory
-	self:SyncInventory(player)
+
+	-- Inventory remotes
+	_syncFullState        = ensureRemote("SyncFullState")
+	_syncCurrency         = ensureRemote("SyncCurrency")
+	_requestMove          = ensureRemote("RequestMove")
+	_requestEquip         = ensureRemote("RequestEquip")
+	_requestUnequip       = ensureRemote("RequestUnequip")
+	_requestDrop          = ensureRemote("RequestDrop")
+	_requestAssignQuick   = ensureRemote("RequestAssignQuick")
+	_requestStashTransfer = ensureRemote("RequestStashTransfer")
+
+	-- Shared slot-update (granular, for future optimisation; created but not fired yet).
+	ensureRemote("SyncSlotUpdate")
+
+	-- Ability preset remotes (folder is shared; AbilityDataService sets up handlers).
+	ensureRemote("RequestSetAbilityPreset")
+	ensureRemote("SyncAbilityPresets")
+
+	-- Stubbed runtime-behavior remotes (wired in a future milestone).
+	ensureRemote("RequestAbility")
+	ensureRemote("AbilityActivated")
+	ensureRemote("AbilityCooldownSync")
+	ensureRemote("RequestUseConsumable")
+	ensureRemote("ConsumableActivated")
+
+	-- ── Request handlers ─────────────────────────────────────────────────────
+
+	-- RequestMove: { fromContainer, fromSlot, toContainer, toSlot }
+	_requestMove.OnServerEvent:Connect(function(
+		player: Player,
+		fromContainer: any,
+		fromSlot: any,
+		toContainer: any,
+		toSlot: any
+	)
+		if type(fromContainer) ~= "string" or type(toContainer) ~= "string" then return end
+		if type(fromSlot) ~= "number" and type(fromSlot) ~= "string" then return end
+		if type(toSlot)   ~= "number" and type(toSlot)   ~= "string" then return end
+		local fromId: ContainerId = fromContainer :: any
+		local toId: ContainerId = toContainer :: any
+		InventoryService.MoveItem(player, fromId, fromSlot, toId, toSlot)
+	end)
+
+	-- RequestEquip: instanceId, slotId
+	_requestEquip.OnServerEvent:Connect(function(player: Player, instanceId: any, slotId: any)
+		if type(instanceId) ~= "string" or type(slotId) ~= "string" then return end
+		InventoryService.EquipItem(player, instanceId, slotId :: EquipmentSlotId)
+	end)
+
+	-- RequestUnequip: slotId
+	_requestUnequip.OnServerEvent:Connect(function(player: Player, slotId: any)
+		if type(slotId) ~= "string" then return end
+		InventoryService.UnequipItem(player, slotId :: EquipmentSlotId)
+	end)
+
+	-- RequestDrop: instanceId
+	-- Data layer only: removes from data. World-drop behavior is a future task.
+	_requestDrop.OnServerEvent:Connect(function(player: Player, instanceId: any)
+		if type(instanceId) ~= "string" then return end
+		InventoryService.RemoveItem(player, instanceId)
+	end)
+
+	-- RequestAssignQuick: instanceId, quickSlot
+	_requestAssignQuick.OnServerEvent:Connect(function(player: Player, instanceId: any, quickSlot: any)
+		if type(instanceId) ~= "string" or type(quickSlot) ~= "number" then return end
+		InventoryService.AssignQuickUse(player, instanceId, quickSlot)
+	end)
+
+	-- RequestStashTransfer: { direction, fromSlot, toSlot }
+	-- direction = "toStash" | "fromStash"
+	_requestStashTransfer.OnServerEvent:Connect(function(player: Player, direction: any, fromSlot: any, toSlot: any)
+		if type(direction) ~= "string" or type(fromSlot) ~= "number" or type(toSlot) ~= "number" then return end
+		if direction == "toStash" then
+			InventoryService.TransferToStash(player, fromSlot, toSlot)
+		elseif direction == "fromStash" then
+			InventoryService.TransferFromStash(player, fromSlot, toSlot)
+		end
+	end)
 end
 
--- Create singleton
-local instance = InventoryService.new()
-instance.INVENTORY_SIZE = INVENTORY_SIZE
-return instance
+return InventoryService

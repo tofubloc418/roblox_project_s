@@ -21,7 +21,6 @@ export type DerivedStatId =
 	| "MaxMana"
 	| "MaxEnergy"
 	| "CritChance"
-	| "CritDamageMultiplier"
 	| "MoveSpeed"
 	| "WalkSpeed"
 	| "RunSpeed"
@@ -49,7 +48,6 @@ export type DerivedStats = {
 	MaxMana: number,
 	MaxEnergy: number,
 	CritChance: number,
-	CritDamageMultiplier: number,
 	MoveSpeed: number,
 	WalkSpeed: number,
 	RunSpeed: number,

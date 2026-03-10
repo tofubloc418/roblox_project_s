@@ -19,7 +19,7 @@ ThemeConfig.Padding = {
 	HeaderToContent = 8,
 
 	-- Equipment panel
-	BackpackShieldGap = 16,
+	BackpackArmorGap = 16,
 	CardRowGap = 32,
 
 	-- Grid slots
@@ -46,7 +46,7 @@ ThemeConfig.Font = {
 	SectionHeaderSize = 24,
 	SectionHeaderHeight = 48,
 
-	-- Slot/card labels (e.g. "Backpack", "Shield", "Weapon 1"). Height scale of label area (0.2 = 20% of slot height)
+	-- Slot/card labels (e.g. "Backpack", "Armor", "Weapon 1"). Height scale of label area (0.2 = 20% of slot height)
 	SlotLabelHeightScale = 0.2,
 }
 

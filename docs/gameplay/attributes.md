@@ -11,7 +11,7 @@ Each character has six core attributes that form the foundation of their power a
 | **Endurance** | Energy pool | Fuels physical/non-mage abilities |
 | **Strength** | Heavy equipment requirement | Scales AD for heavy weapons; increases HP and block negation |
 | **Dexterity** | Nimble equipment requirement | Scales AD for nimble weapons; reduces fall damage and increases speed |
-| **Luck** | RNG modifier | Increases crit chance, crit damage, and rare loot drop rates |
+| **Luck** | RNG modifier | Increases crit chance and rare loot drop rates |
 
 ## Stat Scaling
 

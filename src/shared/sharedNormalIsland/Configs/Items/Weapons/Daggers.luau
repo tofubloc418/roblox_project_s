@@ -26,6 +26,24 @@ local Daggers = {
 		strengthRequirement = 4,
 		dexterityRequirement = 10,
 		intelligenceRequirement = 0,
+
+		-- Hitbox and Animation Stats
+		idleAnimationId    = "rbxassetid://0",
+		equipAnimationId   = "rbxassetid://0",
+		unequipAnimationId = "rbxassetid://0",
+		attackSequence = {
+			{ animationId = "rbxassetid://120794561550510", hitDuration = 0.2 },
+			{ animationId = "rbxassetid://96019133363181", hitDuration = 0.2 },
+		},
+		blockAnimationId = "rbxassetid://0",
+
+		swingSoundId = "rbxassetid://0",
+		hitSoundId   = "rbxassetid://0",
+		castType = "Raycast",
+		castSize = nil,
+		castRadius = nil,
+
+		reach = 8,
 	},
 }
 

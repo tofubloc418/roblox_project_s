@@ -72,8 +72,13 @@ local function applyCharacterConfig(character: Model)
 				dc.Head      = 0; dc.Torso      = 0
 				dc.LeftArm   = 0; dc.RightArm   = 0
 				dc.LeftLeg   = 0; dc.RightLeg   = 0
-				dc.HeadScale = 1; dc.HeightScale = 1; dc.WidthScale  = 1
-				dc.BodyTypeScale = 1; dc.DepthScale = 1; dc.ProportionScale = 1
+				-- Force default blocky R15 proportions
+				dc.HeadScale      = 1
+				dc.HeightScale    = 1
+				dc.WidthScale     = 1
+				dc.DepthScale     = 1
+				dc.BodyTypeScale  = 0
+				dc.ProportionScale = 0
 				pcall(function() humanoid:ApplyDescription(dc) end)
 
 				local scale = PlayerConfig.scale

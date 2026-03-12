@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
 
 local Daggers = {
 	["Knife"] = {
@@ -26,6 +26,28 @@ local Daggers = {
 		strengthRequirement = 4,
 		dexterityRequirement = 10,
 		intelligenceRequirement = 0,
+
+		-- Hitbox and Animation Stats
+		idleAnimationId    = "rbxassetid://0",
+		equipAnimationId   = "rbxassetid://0",
+		unequipAnimationId = "rbxassetid://0",
+		attackSequence = {
+			{ animationId = "rbxassetid://120794561550510", hitDuration = 0.2 },
+			{ animationId = "rbxassetid://96019133363181", hitDuration = 0.2 },
+		},
+		blockAnimationId = "rbxassetid://0",
+
+		swingSoundId = "rbxassetid://0",
+		hitSoundId   = "rbxassetid://0",
+		castType = "Raycast",
+		castSize = nil,
+		castRadius = nil,
+
+		reach = 8,
+
+		-- C0/C1 Offset Method (WeaponRigging): Position (studs) + Orientation (use math.rad for degrees from Studio)
+		gripC0 = CFrame.new(0, 0, 0), -- offset from RightHand (palm)
+		gripC1 = CFrame.new(0, -1.18, 0.065) * CFrame.Angles(math.rad(84.646), math.rad(-92.516), math.rad(-92.505)),
 	},
 }
 

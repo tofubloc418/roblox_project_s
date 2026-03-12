@@ -29,8 +29,9 @@ local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
-local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
-local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local React = require(Packages:WaitForChild("React")) :: any
+local ReactRoblox = require(Packages:WaitForChild("ReactRoblox")) :: any
 
 local HudLoadoutDataAdapter = require(script.Parent:WaitForChild("HudLoadoutDataAdapter"))
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))

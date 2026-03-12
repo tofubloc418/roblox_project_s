@@ -4,31 +4,13 @@
 	=============
 	Root React component for the in-game HUD equipment section.
 
-	Overall layout (bottom-right anchor, grows upward):
-
-	  ┌─────────────────────────────────────────────┐
-	  │                         FLASHLIGHT  | F |   │  ← HudActionRow
-	  ├──────────┬──────────┬────────────────────── ┤
-	  │          │          │  ┌─────────────────┐  │
-	  │          │          │  │ [1]  KETTLE     │  │  ← weapon 1 bar
-	  │          │          │  ├─────────────────┤  │
-	  │          │          │  │                 │  │
-	  │  [Q]     │  [3]     │  │   weapon icon   │  │  ← weapon 1 visual (only if expanded)
-	  │          │          │  │                 │  │
-	  │ quickuse │  fists   │  ├─────────────────┤  │
-	  │  icon    │  icon    │  │ [2]  FERRO      │  │  ← weapon 2 bar only (when inactive)
-	  │          │          │  └─────────────────┘  │
-	  └──────────┴──────────┴────────────────────── ┘
-	  ← col 1 → ← col 2 → ←───── col 3 ──────────→
-	  (16pt gap between columns; all bottom-aligned)
-
 	Props flow: controller reads from DataAdapter → passes HudLoadoutState
 	down to this component → distributes to sub-components. No sub-component
 	calls the adapter directly.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
+local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
 
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))

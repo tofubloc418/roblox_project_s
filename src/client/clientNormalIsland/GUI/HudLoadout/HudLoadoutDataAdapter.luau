@@ -15,14 +15,13 @@
 	  and re-render via subscribe(). React components are purely presentational.
 ]]
 
-local Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudLoadoutTypes  = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 
-local DataService = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("DataService"))
+local Packages = ReplicatedStorage:WaitForChild("Packages")
+local DataService = require(Packages:WaitForChild("DataService")) :: any
 local DataServiceClient = DataService.client
-local localPlayer = Players.LocalPlayer
 
 type HudLoadoutState    = HudLoadoutTypes.HudLoadoutState
 type HudActiveSlot      = HudLoadoutTypes.HudActiveSlot

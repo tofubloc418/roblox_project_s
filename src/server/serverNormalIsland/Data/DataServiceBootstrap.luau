@@ -6,16 +6,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService        = game:GetService("RunService")
 
-local DATA_MANAGER_MODULE_NAME = "DataManager"
-local DataManager = require((script.Parent :: Instance):WaitForChild(DATA_MANAGER_MODULE_NAME)) :: any
+local DataManager = require((script.Parent :: Instance):WaitForChild("DataManager")) :: any
 
 local function getDefaultTemplate(): any
 	return DataManager.createDefaultData(0)
 end
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
-local DATA_SERVICE_MODULE_NAME = "DataService"
-local DataServicePackage = require(Packages:WaitForChild(DATA_SERVICE_MODULE_NAME)) :: any
+local DataServicePackage = require(Packages:WaitForChild("DataService")) :: any
 local DataServiceServer = DataServicePackage.server :: any
 
 export type Path = { string }

@@ -162,5 +162,6 @@ registerFile(script.Parent:WaitForChild("TestItems"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Greatswords"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Daggers"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("ThrustingSwords"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Fists"))
 
 return ItemRegistry

@@ -26,6 +26,24 @@ local ThrustingSwords = {
 		strengthRequirement = 6,
 		dexterityRequirement = 12,
 		intelligenceRequirement = 0,
+
+		-- Hitbox and Animation Stats
+		idleAnimationId    = "rbxassetid://0",
+		equipAnimationId   = "rbxassetid://0",
+		unequipAnimationId = "rbxassetid://0",
+		attackSequence = {
+			{ animationId = "rbxassetid://0", hitDuration = 0.2 },
+			{ animationId = "rbxassetid://0", hitDuration = 0.2 },
+		},
+		blockAnimationId = "rbxassetid://0",
+
+		swingSoundId = "rbxassetid://0",
+		hitSoundId   = "rbxassetid://0",
+		castType = "Raycast",
+		castSize = nil,
+		castRadius = nil,
+
+		reach = 0,
 	},
 }
 

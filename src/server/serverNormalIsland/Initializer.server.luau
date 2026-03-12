@@ -14,8 +14,7 @@ local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitFo
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
 
 local DamageService = require(script.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
-local MeleeService  = require(script.Parent:WaitForChild("Weapons"):WaitForChild("MeleeService"))
-local MedService    = require(script.Parent:WaitForChild("Med"):WaitForChild("MedService"))
+local WeaponService = require(script.Parent:WaitForChild("Weapons"):WaitForChild("WeaponService"))
 local StatsService = require(script.Parent:WaitForChild("Stats"):WaitForChild("StatsService"))
 
 local isStudio = RunService:IsStudio()
@@ -52,8 +51,7 @@ DataServiceBootstrap.Initialize()
 InventoryService.Initialize()
 AbilityDataService.Initialize()
 StatsService:Initialize()
-MeleeService:Initialize()
-MedService:Initialize()
+WeaponService:Initialize()
 
 
 -- Character config
@@ -74,8 +72,13 @@ local function applyCharacterConfig(character: Model)
 				dc.Head      = 0; dc.Torso      = 0
 				dc.LeftArm   = 0; dc.RightArm   = 0
 				dc.LeftLeg   = 0; dc.RightLeg   = 0
-				dc.HeadScale = 1; dc.HeightScale = 1; dc.WidthScale  = 1
-				dc.BodyTypeScale = 1; dc.DepthScale = 1; dc.ProportionScale = 1
+				-- Force default blocky R15 proportions
+				dc.HeadScale      = 1
+				dc.HeightScale    = 1
+				dc.WidthScale     = 1
+				dc.DepthScale     = 1
+				dc.BodyTypeScale  = 0
+				dc.ProportionScale = 0
 				pcall(function() humanoid:ApplyDescription(dc) end)
 
 				local scale = PlayerConfig.scale
@@ -145,37 +148,6 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 print("[Initializer] Initialization complete")
-
--- Test bridge for Studio command bar (crosses VM boundary)
-local testBridge = Instance.new("BindableFunction")
-testBridge.Name = "_TestBridge"
-testBridge.Parent = game:GetService("ServerScriptService")
-testBridge.OnInvoke = function(action: string, arg1: any, arg2: any, arg3: any): any
-	local ds = DataServiceBootstrap.GetDataService()
-	if action == "GiveItem" then
-		local player = Players:FindFirstChild(tostring(arg1))
-		if not player then return false, "Player not found" end
-		local item = InventoryService.AddItem(player, tostring(arg2 or "TestSword"), tonumber(arg3) or 1)
-		if item then
-			return true, item.iid
-		else
-			return false, "AddItem returned nil"
-		end
-	elseif action == "CheckData" then
-		local player = Players:FindFirstChild(tostring(arg1))
-		if not player then return nil, "Player not found" end
-		return ds:get(player, {})
-	elseif action == "ForceSave" then
-		local player = Players:FindFirstChild(tostring(arg1))
-		if not player then return false, "Player not found" end
-		if type(ds.forceSave) == "function" then
-			ds:forceSave(player)
-			return true, "Saved"
-		end
-		return false, "forceSave not available"
-	end
-	return nil, "Unknown action"
-end
 
 -- Export service refs for other server scripts.
 _G.Services = {

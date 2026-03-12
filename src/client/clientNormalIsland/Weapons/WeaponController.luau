@@ -69,6 +69,8 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	equipped: boolean,
 	-- Connections to clean up
 	_connections: { RBXScriptConnection },
+	-- C0/C1 grip (Motor6D); nil for Fists / no Handle
+	_gripMotor: Motor6D?,
 }, WeaponController))
 
 --[[
@@ -120,6 +122,7 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.equipped = false
 
 	self._connections = {}
+	self._gripMotor = nil
 
 	return self :: any
 end
@@ -176,6 +179,22 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 	if handle then
 		self.swingSound = createSoundOnPart(handle, stats.swingSoundId)
 		self.hitSound = createSoundOnPart(handle, stats.hitSoundId)
+	end
+
+	-- C0/C1 grip: Motor6D RightHand -> Handle (WeaponRigging)
+	if handle and self.weaponModel ~= self.character then
+		local rightHand = self.character:FindFirstChild("RightHand")
+		if rightHand and rightHand:IsA("BasePart") then
+			self.weaponModel.Parent = self.character
+			local motor = Instance.new("Motor6D")
+			motor.Name = "RightGrip"
+			motor.Part0 = rightHand
+			motor.Part1 = handle
+			motor.C0 = if stats.gripC0 then stats.gripC0 else CFrame.new(0, 0, 0)
+			motor.C1 = if stats.gripC1 then stats.gripC1 else CFrame.new(0, 0, 0)
+			motor.Parent = handle
+			self._gripMotor = motor
+		end
 	end
 
 	-- ShapecastHitbox setup --------------------------------------------------
@@ -318,6 +337,11 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 		conn:Disconnect()
 	end
 	table.clear(self._connections)
+
+	if self._gripMotor then
+		self._gripMotor:Destroy()
+		self._gripMotor = nil
+	end
 
 	-- Destroy runtime sounds
 	if self.swingSound then self.swingSound:Destroy(); self.swingSound = nil end

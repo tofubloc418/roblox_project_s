@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
 
 local Daggers = {
 	["Knife"] = {
@@ -44,6 +44,10 @@ local Daggers = {
 		castRadius = nil,
 
 		reach = 8,
+
+		-- C0/C1 Offset Method (WeaponRigging): Position (studs) + Orientation (use math.rad for degrees from Studio)
+		gripC0 = CFrame.new(0, 0, 0), -- offset from RightHand (palm)
+		gripC1 = CFrame.new(0, -1.18, 0.065) * CFrame.Angles(math.rad(84.646), math.rad(-92.516), math.rad(-92.505)),
 	},
 }
 

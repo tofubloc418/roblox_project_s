@@ -7,6 +7,7 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
 type ItemStack = InventoryTypes.ItemStack
 type EquipmentSlotId = InventoryTypes.EquipmentSlotId
@@ -17,6 +18,7 @@ export type EquipmentSlotProps = {
 	item: ItemStack?,
 	layoutOrder: number?,
 	size: UDim2?,
+	dragEnabled: boolean?,
 	onClick: () -> (),
 }
 
@@ -29,6 +31,7 @@ local F = ThemeConfig.Font
 local function EquipmentSlot(props: EquipmentSlotProps)
 	local item = props.item
 	local imageId = ""
+	local stackText = ""
 	-- Show label only when slot is empty; hide when item is equipped
 	local displayText = if item then "" else props.label
 
@@ -37,9 +40,34 @@ local function EquipmentSlot(props: EquipmentSlotProps)
 		if icon then
 			imageId = icon
 		end
+		stackText = tostring(item.count)
 	end
 
 	local size = props.size or DEFAULT_SLOT_SIZE
+	local slotRef = React.useRef(nil :: ImageButton?)
+
+	local function handleMouseButton1Down()
+		if not props.dragEnabled or not item then
+			return
+		end
+
+		DragDropManager.prepareDrag({
+			container = "equipment",
+			slotId = props.slotId,
+		}, {
+			imageId = imageId,
+			labelText = displayText,
+			stackText = stackText,
+		})
+	end
+
+	local function handleActivated()
+		if DragDropManager.consumeActivatedSuppression() then
+			return
+		end
+
+		props.onClick()
+	end
 
 	return React.createElement("ImageButton", {
 		Name = "EquipmentSlot_" .. props.slotId,
@@ -51,7 +79,9 @@ local function EquipmentSlot(props: EquipmentSlotProps)
 		Image = imageId,
 		ImageTransparency = imageId == "" and 1 or 0,
 		ZIndex = LayoutConfig.ZIndex.Content,
-		[React.Event.Activated] = props.onClick,
+		ref = slotRef,
+		[React.Event.MouseButton1Down] = handleMouseButton1Down,
+		[React.Event.Activated] = handleActivated,
 	}, {
 		Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 		Stroke = React.createElement("UIStroke", {
@@ -70,6 +100,20 @@ local function EquipmentSlot(props: EquipmentSlotProps)
 			Text = displayText,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,
+			ZIndex = LayoutConfig.ZIndex.Content,
+		}),
+		Stack = React.createElement("TextLabel", {
+			Name = "Stack",
+			Size = UDim2.fromScale(LayoutConfig.SlotLabel.StackCorner.WidthScale, LayoutConfig.SlotLabel.StackCorner.HeightScale),
+			Position = LayoutConfig.SlotLabel.StackCorner.Position,
+			AnchorPoint = LayoutConfig.SlotLabel.StackCorner.AnchorPoint,
+			BackgroundTransparency = 1,
+			TextScaled = true,
+			TextColor3 = C.Text.Secondary,
+			Font = F.FamilySecondary,
+			TextXAlignment = Enum.TextXAlignment.Right,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			Text = stackText,
 			ZIndex = LayoutConfig.ZIndex.Content,
 		}),
 	})

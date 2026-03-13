@@ -1,5 +1,5 @@
 --!strict
--- Single quick-use slot (visual placeholder; not connected to radial selector yet)
+-- Single quick-use slot: icon, stack label, and drag-drop target registration.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -27,6 +27,7 @@ local function QuickUseSlot(props: QuickUseSlotProps)
 	local imageId = ""
 	local displayText = ""
 	local stackText = ""
+	local slotRef = React.useRef(nil :: ImageButton?)
 
 	if stack then
 		local icon, displayName = ItemIconResolver.getIconForItem(stack.itemId)
@@ -35,12 +36,11 @@ local function QuickUseSlot(props: QuickUseSlotProps)
 		else
 			displayText = displayName or ""
 		end
-		if stack.maxStack > 1 then
-			stackText = tostring(stack.count)
-		end
+		stackText = tostring(stack.count)
 	end
 
 	local slotSize = props.size or DEFAULT_SLOT_SIZE
+
 	return React.createElement("ImageButton", {
 		Name = "QuickUseSlot_" .. tostring(props.index),
 		Size = UDim2.fromOffset(slotSize, slotSize),
@@ -51,6 +51,7 @@ local function QuickUseSlot(props: QuickUseSlotProps)
 		ImageTransparency = imageId == "" and 1 or 0,
 		LayoutOrder = props.index,
 		ZIndex = LayoutConfig.ZIndex.Content,
+		ref = slotRef,
 		[React.Event.Activated] = props.onClick,
 	}, {
 		Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
@@ -70,13 +71,15 @@ local function QuickUseSlot(props: QuickUseSlotProps)
 			ZIndex = LayoutConfig.ZIndex.Content,
 		}),
 		Stack = React.createElement("TextLabel", {
-			Size = UDim2.fromScale(LayoutConfig.SlotLabel.QuickUse.StackWidthScale, LayoutConfig.SlotLabel.QuickUse.LabelHeightScale),
-			Position = UDim2.fromScale(LayoutConfig.SlotLabel.QuickUse.StackXPos, LayoutConfig.SlotLabel.QuickUse.StackYPos),
+			Size = UDim2.fromScale(LayoutConfig.SlotLabel.StackCorner.WidthScale, LayoutConfig.SlotLabel.StackCorner.HeightScale),
+			Position = LayoutConfig.SlotLabel.StackCorner.Position,
+			AnchorPoint = LayoutConfig.SlotLabel.StackCorner.AnchorPoint,
 			BackgroundTransparency = 1,
 			TextScaled = true,
 			TextColor3 = C.Text.Secondary,
 			Font = F.FamilySecondary,
 			TextXAlignment = Enum.TextXAlignment.Right,
+			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = stackText,
 			ZIndex = LayoutConfig.ZIndex.Content,
 		}),

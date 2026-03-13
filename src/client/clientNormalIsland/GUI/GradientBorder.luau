@@ -24,6 +24,8 @@ export type GradientBorderProps = {
 	layoutOrder: number?,
 	-- Content children (the slot element)
 	children: { [string]: any }?,
+	-- When set, this ref is assigned the root Frame (same area that receives hover for gradient). Use for drop-target hit-testing so it matches gradient highlight.
+	containerRef: { current: GuiObject? }?,
 	-- Event passthrough
 	onMouseEnter: (() -> ())?,
 	onMouseLeave: (() -> ())?,
@@ -54,6 +56,20 @@ local function GradientBorder(props: GradientBorderProps)
 	local gradientRef = React.useRef(nil :: Instance?)
 	local rotationRef = React.useRef(0)
 	local speedRef = React.useRef(ANIMATION_SPEED * (1 + (math.random() - 0.5) * RANDOM_SPEED_VARIANCE))
+
+	-- Forward root Frame ref so drop-target hit-test uses the same area as gradient hover
+	local function setContainerRef(inst: Instance?)
+		if props.containerRef then
+			props.containerRef.current = (inst and inst:IsA("GuiObject") and inst :: GuiObject) or nil
+		end
+	end
+	React.useEffect(function()
+		return function()
+			if props.containerRef then
+				props.containerRef.current = nil
+			end
+		end
+	end, { props.containerRef } :: { any })
 
 	local fitWithin = props.fitWithin or false
 	local containerSize: UDim2
@@ -144,6 +160,7 @@ local function GradientBorder(props: GradientBorderProps)
 		Size = containerSize,
 		BackgroundTransparency = 1,
 		LayoutOrder = props.layoutOrder,
+		ref = setContainerRef,
 	}, {
 		GradientLayer = React.createElement("Frame", {
 			Name = "GradientLayer",

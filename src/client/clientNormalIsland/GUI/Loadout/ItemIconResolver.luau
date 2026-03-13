@@ -1,17 +1,34 @@
 --!strict
---[[
-	TEMPORARY PLACEHOLDER: ItemIconResolver
-	======================================
-	The old item system was deprecated. This stub returns nil for all icons
-	so the Loadout and HUD Loadout UI can run without errors. When the new
-	item system is implemented, replace this with a resolver that reads
-	iconId from ItemRegistry.GetTemplate(templateId).
-]]
+-- ItemIconResolver
+-- Resolves an itemId to a UI-ready icon imageId and display name using ItemRegistry.
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
+
 local ItemIconResolver = {}
 
+-- Returns (imageId, displayName) for a given itemId.
+-- imageId may be nil if the template has no usable icon, in which case callers
+-- should fall back to showing the displayName as text.
 function ItemIconResolver.getIconForItem(itemId: string): (string?, string?)
-	-- Returns (imageId, displayName). Placeholder: no icons, use itemId as display name.
-	return nil, itemId
+	-- Look up the item template from the shared ItemRegistry.
+	local template = ItemRegistry.GetTemplate(itemId)
+	if not template then
+		-- Unknown itemId; show the raw id as a last-resort label.
+		return nil, itemId
+	end
+
+	local displayName = template.displayName or template.templateId or itemId
+	local iconId = template.iconId
+
+	-- Treat missing / placeholder ids as "no icon".
+	if iconId == nil or iconId == "" or iconId == "rbxassetid://0" then
+		return nil, displayName
+	end
+
+	return iconId, displayName
 end
 
 return ItemIconResolver
+

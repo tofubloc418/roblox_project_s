@@ -7,6 +7,7 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local InventorySlot = require(script.Parent:WaitForChild("InventorySlot"))
 type InventoryData = InventoryTypes.InventoryData
 type ItemStack = InventoryTypes.ItemStack
@@ -17,6 +18,7 @@ export type InventoryPanelProps = {
 	cols: number,
 	columnWidth: number?,
 	gridRef: { current: Frame? }?,
+	dragEnabled: boolean?,
 	onDragStart: (index: number) -> (),
 	onMouseEnter: (index: number) -> (),
 	onMouseLeave: (index: number) -> (),
@@ -42,6 +44,12 @@ local function InventoryPanel(props: InventoryPanelProps)
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
 	local innerSlotSize = slotSize - 2 * borderWidth
 
+	-- One ref per slot: same GuiObject as gradient border container (also used for drag-hover tracking).
+	local slotContainerRefs: { [number]: any } = {}
+	for i = 1, slotCount do
+		slotContainerRefs[i] = React.useRef(nil :: GuiObject?)
+	end
+
 	local slots: { [string]: any } = {}
 	for i = 1, slotCount do
 		local raw = inventoryData.slots[i]
@@ -50,11 +58,20 @@ local function InventoryPanel(props: InventoryPanelProps)
 		slots["Slot" .. i] = React.createElement(GradientBorder, {
 			size = innerSlotSize,
 			layoutOrder = i,
+			containerRef = slotContainerRefs[i],
 			onMouseEnter = function()
 				props.onMouseEnter(i)
+				DragDropManager.notifyHoverEnter({
+					container = "inventory",
+					index = i,
+				})
 			end,
 			onMouseLeave = function()
 				props.onMouseLeave(i)
+				DragDropManager.notifyHoverLeave({
+					container = "inventory",
+					index = i,
+				})
 			end,
 			onMouseButton1Down = function()
 				props.onDragStart(i)
@@ -65,6 +82,7 @@ local function InventoryPanel(props: InventoryPanelProps)
 				stack = stack,
 				active = isActive,
 				size = innerSlotSize,
+				dragEnabled = props.dragEnabled,
 				onDragStart = function()
 					props.onDragStart(i)
 				end,

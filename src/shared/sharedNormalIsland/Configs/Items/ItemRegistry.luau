@@ -47,9 +47,24 @@ end
 
 -- ── Lookup API ────────────────────────────────────────────────────────────────
 
+-- Resolve a possibly case-mismatched templateId to the canonical registered key, or nil.
+local function resolveKey(templateId: string): string?
+	if not templateId or templateId == "" then return nil end
+	if _templates[templateId] then return templateId end
+	local lower = string.lower(templateId)
+	for key, _ in pairs(_templates) do
+		if string.lower(key) == lower then
+			return key
+		end
+	end
+	return nil
+end
+
 -- Returns the template for the given templateId, or nil if not registered.
+-- Lookup is case-insensitive (e.g. "knife" and "Knife" both resolve to the same template).
 function ItemRegistry.GetTemplate(templateId: string): any?
-	return _templates[templateId]
+	local key = resolveKey(templateId)
+	return key and _templates[key] or nil
 end
 
 -- Returns all templates whose category matches the given string.
@@ -96,8 +111,9 @@ function ItemRegistry.GetAll(): { [string]: any }
 end
 
 -- Returns true if a template is registered for the given templateId.
+-- Check is case-insensitive.
 function ItemRegistry.TemplateExists(templateId: string): boolean
-	return _templates[templateId] ~= nil
+	return resolveKey(templateId) ~= nil
 end
 
 -- Filtered random pick. filter fields (all optional):

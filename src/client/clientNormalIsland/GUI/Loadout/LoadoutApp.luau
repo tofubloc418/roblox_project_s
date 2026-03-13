@@ -19,7 +19,10 @@ export type LoadoutAppProps = {
 	cols: number,
 	viewportSize: Vector2?,
 	inventoryGridRef: { current: Frame? }?,
+	dragEnabled: boolean?,
 	onDragStart: (index: number) -> (),
+	onEquipmentDragStart: (slotId: EquipmentSlotId) -> (),
+	onQuickUseDragStart: (index: number) -> (),
 	onEquipmentClick: (slotId: EquipmentSlotId) -> (),
 	onAbilityClick: (weaponIndex: number, abilityIndex: number) -> (),
 	onQuickUseClick: (index: number) -> (),
@@ -50,7 +53,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local inventoryWidth = math.floor(availableForColumns * L.ColumnRatioInv / COLUMN_RATIO_TOTAL)
 	local quickUseWidth = math.floor(availableForColumns * L.ColumnRatioQuick / COLUMN_RATIO_TOTAL)
 
-	-- Inventory slot size (square) for EquipmentPanel backpack/armor height
+	-- Inventory slot size (square); same size used for backpack and quick slots so they match
 	local inventorySlotSize = math.floor((inventoryWidth - (cols - 1) * P.InventorySlot) / cols)
 
 	return React.createElement("Frame", {
@@ -127,6 +130,8 @@ local function LoadoutApp(props: LoadoutAppProps)
 					weapons = loadoutData.weapons,
 					columnWidth = equipmentWidth,
 					inventorySlotSize = inventorySlotSize,
+					dragEnabled = props.dragEnabled,
+					onEquipmentDragStart = props.onEquipmentDragStart,
 					onEquipmentClick = props.onEquipmentClick,
 					onAbilityClick = props.onAbilityClick,
 				}),
@@ -156,6 +161,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 					cols = props.cols,
 					columnWidth = inventoryWidth,
 					gridRef = props.inventoryGridRef,
+					dragEnabled = props.dragEnabled,
 					onDragStart = props.onDragStart,
 					onMouseEnter = props.onMouseEnter,
 					onMouseLeave = props.onMouseLeave,
@@ -182,7 +188,10 @@ local function LoadoutApp(props: LoadoutAppProps)
 				}),
 				Panel = React.createElement(QuickUsePanel, {
 					quickUseData = loadoutData.quickUse,
+					slotSize = inventorySlotSize,
 					columnWidth = quickUseWidth,
+					dragEnabled = props.dragEnabled,
+					onDragStart = props.onQuickUseDragStart,
 					onSlotClick = props.onQuickUseClick,
 				}),
 			}),

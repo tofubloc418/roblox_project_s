@@ -19,8 +19,8 @@
 --   The four containers are: "inventory", "stash", "equipment", "quickuse".
 --   inventory / stash: numbered slots (1 … maxSlots), value = SerializedItem?.
 --   equipment: named slots (Backpack, Armor, Weapon1, Weapon2), value = SerializedItem?.
---   quickuse: numbered slots (1 … QUICK_USE_MAX_SLOTS), value = instanceId string?
---             (quick-use slots are references, not item copies).
+--   quickuse: numbered slots (1 … QUICK_USE_MAX_SLOTS), value = SerializedItem?.
+--             Same as inventory; only Consumable category may be placed in quickuse.
 
 local _Players          = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -28,7 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Server-side dependencies.
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes")) :: any
 
 local DataService = DataServiceBootstrap.GetDataService()
 
@@ -96,6 +96,8 @@ local VALID_EQUIPMENT_SLOTS: { [EquipmentSlotId]: boolean } = {
 	Backpack = true, Armor = true, Weapon1 = true, Weapon2 = true,
 }
 
+local QUICK_USE_ALLOWED_CATEGORY = "Consumable"
+
 -- ── Remote references (populated in Initialize) ───────────────────────────────
 
 local _syncFullState:       RemoteEvent
@@ -105,6 +107,7 @@ local _requestEquip:        RemoteEvent
 local _requestUnequip:      RemoteEvent
 local _requestDrop:         RemoteEvent
 local _requestAssignQuick:  RemoteEvent
+local _requestClearQuick:   RemoteEvent
 local _requestStashTransfer: RemoteEvent
 
 -- ── Internal helpers ──────────────────────────────────────────────────────────
@@ -140,10 +143,16 @@ local function findItemById(
 		end
 	end
 
+	for slot, item in pairs(data.quickUse.slots) do
+		if type(item) == "table" and item.iid == instanceId then
+			return "quickuse", slot
+		end
+	end
+
 	return nil, nil
 end
 
--- Read a SerializedItem from any container at a given slot.
+-- Read item at container/slot. Accepts number or string keys (JSON stores slot keys as strings).
 local function getItemAt(
 	data: PlayerData,
 	containerId: ContainerId,
@@ -151,11 +160,19 @@ local function getItemAt(
 ): SerializedItem?
 
 	if containerId == "inventory" then
-		return data.inventory.slots[slot :: number]
+		local raw = InventoryTypes.getSlotItem(data.inventory.slots, tonumber(slot) or 0)
+		return type(raw) == "table" and raw.iid and raw.tid and (raw :: SerializedItem) or nil
 	elseif containerId == "equipment" then
 		return (data.equipment :: any)[slot :: string]
 	elseif containerId == "stash" then
-		return data.stash.slots[slot :: number]
+		local raw = InventoryTypes.getSlotItem(data.stash.slots, tonumber(slot) or 0)
+		return type(raw) == "table" and raw.iid and raw.tid and (raw :: SerializedItem) or nil
+	elseif containerId == "quickuse" then
+		local raw = InventoryTypes.getSlotItem(data.quickUse.slots, tonumber(slot) or 0)
+		if type(raw) == "table" and raw.iid and raw.tid then
+			return raw :: SerializedItem
+		end
+		return nil
 	end
 	return nil
 end
@@ -173,13 +190,15 @@ local function setItemAt(
 		(data.equipment :: any)[slot :: string] = item
 	elseif containerId == "stash" then
 		data.stash.slots[slot :: number] = item
+	elseif containerId == "quickuse" then
+		data.quickUse.slots[slot :: number] = item
 	end
 end
 
 -- Scan for the first empty numbered slot in the inventory.
 local function findFreeInventorySlot(data: PlayerData): number?
 	for i = 1, data.inventory.maxSlots do
-		if not data.inventory.slots[i] then
+		if not InventoryTypes.getSlotItem(data.inventory.slots, i) then
 			return i
 		end
 	end
@@ -189,7 +208,7 @@ end
 -- Scan for the first empty numbered slot in the stash.
 local function findFreeStashSlot(data: PlayerData): number?
 	for i = 1, data.stash.maxSlots do
-		if not data.stash.slots[i] then
+		if not InventoryTypes.getSlotItem(data.stash.slots, i) then
 			return i
 		end
 	end
@@ -206,16 +225,22 @@ local function canEquipInSlot(item: SerializedItem, slotId: EquipmentSlotId): bo
 	return template.category == SLOT_ALLOWED_CATEGORY[slotId]
 end
 
--- Remove all quickuse references that point to an instanceId that no longer exists.
-local function _pruneOrphanedQuickUseRefs(data: PlayerData)
-	for slot, instanceId in pairs(data.quickUse.slots) do
-		if instanceId then
-			local container = findItemById(data, instanceId)
-			if not container then
-				data.quickUse.slots[slot] = nil
-			end
+local function canAssignToQuickUse(item: SerializedItem): boolean
+	local template = ItemRegistry.GetTemplate(item.tid)
+	if not template then
+		return false
+	end
+
+	return template.category == QUICK_USE_ALLOWED_CATEGORY
+end
+
+local function findFreeQuickUseSlot(data: PlayerData): number?
+	for i = 1, QUICK_USE_MAX_SLOTS do
+		if not getItemAt(data, "quickuse", i) then
+			return i
 		end
 	end
+	return nil
 end
 
 -- ── Public API ────────────────────────────────────────────────────────────────
@@ -290,7 +315,7 @@ function InventoryService.AddItem(
 						cdat = existing.cdat,
 					}
 					remaining -= addAmount
-					setAtPath(player, { "inventory", "slots", slot }, existing)
+					setAtPath(player, { "inventory", "slots", tostring(slot) }, existing)
 					if remaining <= 0 then
 						return existing
 					end
@@ -313,7 +338,7 @@ function InventoryService.AddItem(
 		mods = (modifiers and #modifiers > 0) and modifiers or nil,
 	}
 
-	setAtPath(player, { "inventory", "slots", freeSlot }, newItem)
+	setAtPath(player, { "inventory", "slots", tostring(freeSlot) }, newItem)
 	return newItem
 end
 
@@ -333,18 +358,13 @@ function InventoryService.RemoveItem(player: Player, instanceId: string): boolea
 	if not containerId or slot == nil then return false end
 
 	if containerId == "inventory" then
-		setAtPath(player, { "inventory", "slots", slot :: number }, nil)
+		setAtPath(player, { "inventory", "slots", tostring(slot) }, nil)
 	elseif containerId == "equipment" then
 		setAtPath(player, { "equipment", slot :: string }, nil)
 	elseif containerId == "stash" then
-		setAtPath(player, { "stash", "slots", slot :: number }, nil)
-	end
-
-	-- Clear dangling quickuse references.
-	for i, qiid in pairs(data.quickUse.slots) do
-		if qiid == instanceId then
-			setAtPath(player, { "quickUse", "slots", i }, nil)
-		end
+		setAtPath(player, { "stash", "slots", tostring(slot) }, nil)
+	elseif containerId == "quickuse" then
+		setAtPath(player, { "quickUse", "slots", tostring(slot) }, nil)
 	end
 
 	return true
@@ -374,6 +394,25 @@ function InventoryService.MoveItem(
 
 	local destItem = getItemAt(data, toContainer, toSlot)
 
+	if toContainer == "quickuse" then
+		local slotNum = toSlot :: number
+		if type(slotNum) ~= "number" or slotNum < 1 or slotNum > QUICK_USE_MAX_SLOTS then
+			return false
+		end
+		if not canAssignToQuickUse(item) then return false end
+	end
+	if fromContainer == "quickuse" then
+		local slotNum = fromSlot :: number
+		if type(slotNum) ~= "number" or slotNum < 1 or slotNum > QUICK_USE_MAX_SLOTS then
+			return false
+		end
+		if destItem and toContainer == "equipment" then
+			if type(toSlot) ~= "string" then return false end
+			local slotId: EquipmentSlotId = toSlot :: any
+			if not canEquipInSlot(destItem, slotId) then return false end
+		end
+	end
+
 	-- Validate equipment slot compatibility for both directions.
 	if toContainer == "equipment" then
 		if type(toSlot) ~= "string" then
@@ -391,11 +430,12 @@ function InventoryService.MoveItem(
 		if not canEquipInSlot(destItem, slotId) then return false end
 	end
 
-	-- Perform swap via path-based set.
+	-- Use string keys for numbered slots so JSON/DataStore stores them consistently (like quickUse).
 	local function pathFor(container: ContainerId, s: number | string): { string | number }
-		if container == "inventory" then return { "inventory", "slots", s :: number } end
+		if container == "inventory" then return { "inventory", "slots", tostring(s) } end
 		if container == "equipment" then return { "equipment", s :: string } end
-		if container == "stash" then return { "stash", "slots", s :: number } end
+		if container == "stash" then return { "stash", "slots", tostring(s) } end
+		if container == "quickuse" then return { "quickUse", "slots", tostring(s) } end
 		return {}
 	end
 	setAtPath(player, pathFor(fromContainer, fromSlot), destItem)
@@ -438,22 +478,22 @@ function InventoryService.EquipItem(
 
 	if existing then
 		if fromContainer == "inventory" then
-			setAtPath(player, { "inventory", "slots", fromSlot :: number }, existing)
+			setAtPath(player, { "inventory", "slots", tostring(fromSlot) }, existing)
 		else
 			local freeSlot = findFreeInventorySlot(data)
 			if not freeSlot then return false end
-			setAtPath(player, { "inventory", "slots", freeSlot }, existing)
+			setAtPath(player, { "inventory", "slots", tostring(freeSlot) }, existing)
 			if fromContainer == "stash" then
-				setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+				setAtPath(player, { "stash", "slots", tostring(fromSlot) }, nil)
 			else
-				setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+				setAtPath(player, { "inventory", "slots", tostring(fromSlot) }, nil)
 			end
 		end
 	else
 		if fromContainer == "inventory" then
-			setAtPath(player, { "inventory", "slots", fromSlot :: number }, nil)
+			setAtPath(player, { "inventory", "slots", tostring(fromSlot) }, nil)
 		elseif fromContainer == "stash" then
-			setAtPath(player, { "stash", "slots", fromSlot :: number }, nil)
+			setAtPath(player, { "stash", "slots", tostring(fromSlot) }, nil)
 		end
 	end
 
@@ -477,7 +517,7 @@ function InventoryService.UnequipItem(player: Player, slotId: EquipmentSlotId): 
 	local freeSlot = findFreeInventorySlot(data)
 	if not freeSlot then return false end
 
-	setAtPath(player, { "inventory", "slots", freeSlot }, item)
+	setAtPath(player, { "inventory", "slots", tostring(freeSlot) }, item)
 	setAtPath(player, { "equipment", slotId }, nil)
 
 	return true
@@ -485,11 +525,7 @@ end
 
 -- ─── Quick-use management ─────────────────────────────────────────────────────
 
---[[
-	AssignQuickUse(player, instanceId, quickSlot)
-	Assigns an existing item (by instanceId) to a quick-use slot (1–8).
-	The item must still be somewhere in inventory or stash.
-]]
+-- Moves item (by instanceId) into quick slot; Consumable only. Backward-compat for legacy client.
 function InventoryService.AssignQuickUse(
 	player: Player,
 	instanceId: string,
@@ -500,24 +536,25 @@ function InventoryService.AssignQuickUse(
 	if not data then return false end
 	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
 
-	local containerId = findItemById(data, instanceId)
-	if not containerId then return false end
+	local fromContainer, fromSlot = findItemById(data, instanceId)
+	if not fromContainer or fromSlot == nil then return false end
 
-	setAtPath(player, { "quickUse", "slots", quickSlot }, instanceId)
-	return true
+	return InventoryService.MoveItem(player, fromContainer :: ContainerId, fromSlot, "quickuse", quickSlot)
 end
 
---[[
-	ClearQuickUse(player, quickSlot)
-	Empties a quick-use reference slot.
-]]
+-- Moves quick-slot item to first free inventory slot.
 function InventoryService.ClearQuickUse(player: Player, quickSlot: number): boolean
 	local data = getPlayerData(player)
 	if not data then return false end
 	if quickSlot < 1 or quickSlot > QUICK_USE_MAX_SLOTS then return false end
 
-	setAtPath(player, { "quickUse", "slots", quickSlot }, nil)
-	return true
+	local item = getItemAt(data, "quickuse", quickSlot)
+	if not item then return true end
+
+	local freeSlot = findFreeInventorySlot(data)
+	if not freeSlot then return false end
+
+	return InventoryService.MoveItem(player, "quickuse", quickSlot, "inventory", freeSlot)
 end
 
 -- ─── Stash transfers ──────────────────────────────────────────────────────────
@@ -536,17 +573,17 @@ function InventoryService.TransferToStash(
 	local data = getPlayerData(player)
 	if not data then return false end
 
-	local item = data.inventory.slots[inventorySlot]
+	local item = InventoryTypes.getSlotItem(data.inventory.slots, inventorySlot)
 	if not item then return false end
 
 	local targetSlot = stashSlot
-	if targetSlot < 1 or targetSlot > data.stash.maxSlots or data.stash.slots[targetSlot] then
+	if targetSlot < 1 or targetSlot > data.stash.maxSlots or InventoryTypes.getSlotItem(data.stash.slots, targetSlot) then
 		targetSlot = findFreeStashSlot(data) or 0
 		if targetSlot == 0 then return false end
 	end
 
-	setAtPath(player, { "stash", "slots", targetSlot }, item)
-	setAtPath(player, { "inventory", "slots", inventorySlot }, nil)
+	setAtPath(player, { "stash", "slots", tostring(targetSlot) }, item)
+	setAtPath(player, { "inventory", "slots", tostring(inventorySlot) }, nil)
 
 	return true
 end
@@ -565,17 +602,17 @@ function InventoryService.TransferFromStash(
 	local data = getPlayerData(player)
 	if not data then return false end
 
-	local item = data.stash.slots[stashSlot]
+	local item = InventoryTypes.getSlotItem(data.stash.slots, stashSlot)
 	if not item then return false end
 
 	local targetSlot = inventorySlot
-	if targetSlot < 1 or targetSlot > data.inventory.maxSlots or data.inventory.slots[targetSlot] then
+	if targetSlot < 1 or targetSlot > data.inventory.maxSlots or InventoryTypes.getSlotItem(data.inventory.slots, targetSlot) then
 		targetSlot = findFreeInventorySlot(data) or 0
 		if targetSlot == 0 then return false end
 	end
 
-	setAtPath(player, { "inventory", "slots", targetSlot }, item)
-	setAtPath(player, { "stash", "slots", stashSlot }, nil)
+	setAtPath(player, { "inventory", "slots", tostring(targetSlot) }, item)
+	setAtPath(player, { "stash", "slots", tostring(stashSlot) }, nil)
 
 	return true
 end
@@ -630,6 +667,7 @@ function InventoryService.Initialize()
 	_requestUnequip       = ensureRemote("RequestUnequip")
 	_requestDrop          = ensureRemote("RequestDrop")
 	_requestAssignQuick   = ensureRemote("RequestAssignQuick")
+	_requestClearQuick    = ensureRemote("RequestClearQuick")
 	_requestStashTransfer = ensureRemote("RequestStashTransfer")
 
 	-- Shared slot-update (granular, for future optimisation; created but not fired yet).
@@ -687,6 +725,12 @@ function InventoryService.Initialize()
 	_requestAssignQuick.OnServerEvent:Connect(function(player: Player, instanceId: any, quickSlot: any)
 		if type(instanceId) ~= "string" or type(quickSlot) ~= "number" then return end
 		InventoryService.AssignQuickUse(player, instanceId, quickSlot)
+	end)
+
+	-- RequestClearQuick: quickSlot
+	_requestClearQuick.OnServerEvent:Connect(function(player: Player, quickSlot: any)
+		if type(quickSlot) ~= "number" then return end
+		InventoryService.ClearQuickUse(player, quickSlot)
 	end)
 
 	-- RequestStashTransfer: { direction, fromSlot, toSlot }

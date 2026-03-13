@@ -7,10 +7,12 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
 local AbilitySlot = require(script.Parent:WaitForChild("AbilitySlot"))
 type WeaponData = InventoryTypes.WeaponData
+type EquipmentSlotId = InventoryTypes.EquipmentSlotId
 
 export type WeaponCardProps = {
 	weaponIndex: number,
@@ -18,6 +20,8 @@ export type WeaponCardProps = {
 	slotLabel: string,
 	panelWidth: number?,
 	layoutOrder: number?,
+	dragEnabled: boolean?,
+	onWeaponClick: () -> (),
 	onAbilityClick: (index: number) -> (),
 }
 
@@ -35,6 +39,9 @@ local function WeaponCard(props: WeaponCardProps)
 	-- Show label only when slot is empty; hide when weapon is equipped
 	local displayText = if weapon then "" else props.slotLabel
 	local panelWidth = props.panelWidth or 250
+	local slotId: EquipmentSlotId = if props.weaponIndex == 1 then "Weapon1" else "Weapon2"
+	-- Use GradientBorder container so hover and drop targeting share the same region.
+	local weaponSlotContainerRef = React.useRef(nil :: GuiObject?)
 
 	-- Outer card: height:width = 6:9
 	local outerCardHeight = math.floor(panelWidth * L.OuterCardHeightRatio)
@@ -47,6 +54,29 @@ local function WeaponCard(props: WeaponCardProps)
 		if icon then
 			imageId = icon
 		end
+	end
+
+	local function handleMouseButton1Down()
+		if not props.dragEnabled or not weapon then
+			return
+		end
+
+		DragDropManager.prepareDrag({
+			container = "equipment",
+			slotId = slotId,
+		}, {
+			imageId = imageId,
+			labelText = displayText,
+			stackText = "",
+		})
+	end
+
+	local function handleActivated()
+		if DragDropManager.consumeActivatedSuppression() then
+			return
+		end
+
+		props.onWeaponClick()
 	end
 
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
@@ -108,6 +138,21 @@ local function WeaponCard(props: WeaponCardProps)
 				fitWithin = true,
 				layoutOrder = 1,
 				cornerRadius = R.SlotSmall,
+				containerRef = weaponSlotContainerRef,
+				onMouseEnter = function()
+					DragDropManager.notifyHoverEnter({
+						container = "equipment",
+						slotId = slotId,
+					})
+				end,
+				onMouseLeave = function()
+					DragDropManager.notifyHoverLeave({
+						container = "equipment",
+						slotId = slotId,
+					})
+				end,
+				onMouseButton1Down = handleMouseButton1Down,
+				onActivated = handleActivated,
 			}, {
 			Slot = React.createElement("ImageButton", {
 					Name = "WeaponSlot",
@@ -118,6 +163,8 @@ local function WeaponCard(props: WeaponCardProps)
 				Image = imageId,
 				ImageTransparency = imageId == "" and 1 or 0,
 				ZIndex = LayoutConfig.ZIndex.Content,
+				[React.Event.MouseButton1Down] = handleMouseButton1Down,
+				[React.Event.Activated] = handleActivated,
 			}, {
 				Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.SlotSmall) }),
 				Stroke = React.createElement("UIStroke", {

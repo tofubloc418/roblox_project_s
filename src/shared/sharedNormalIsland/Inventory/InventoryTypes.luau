@@ -110,9 +110,8 @@ export type StoredEquipmentData = {
 	Weapon2: SerializedItem?,
 }
 
--- quickUse.slots stores instanceId references (not copies of items).
 export type StoredQuickUseData = {
-	slots: { [number]: string? }, -- slot index → instanceId (or nil = empty)
+	slots: { [number]: SerializedItem? },
 	currentSlotIndex: number?,
 }
 
@@ -173,4 +172,14 @@ export type InventorySyncPayload = {
 	currency: CurrencyData,
 }
 
-return {}
+-- ── Slot read helper (DataStore/JSON may use string keys for numbered slots) ───
+-- Use this when reading inventory.slots, stash.slots, quickUse.slots so both
+-- number and string keys (e.g. "2", "5") are recognized after JSON round-trip.
+local function getSlotItem(slots: { [string | number]: any }?, slot: number): any?
+	if not slots then return nil end
+	return slots[slot] or slots[tostring(slot)]
+end
+
+return {
+	getSlotItem = getSlotItem,
+}

@@ -32,8 +32,8 @@ local Daggers = {
 		equipAnimationId   = "rbxassetid://0",
 		unequipAnimationId = "rbxassetid://0",
 		attackSequence = {
-			{ animationId = "rbxassetid://120794561550510", hitDuration = 0.5, comboTimeLimit = 1 },
-			{ animationId = "rbxassetid://96019133363181", hitDuration = 1, comboTimeLimit = 3 },
+			{ animationId = "rbxassetid://120794561550510", hitDuration = 12/60, comboTimeLimit = 30/60 },
+			{ animationId = "rbxassetid://96019133363181", hitDuration = 12/60, comboTimeLimit = 30/60 },
 		},
 		blockAnimationId = "rbxassetid://0",
 

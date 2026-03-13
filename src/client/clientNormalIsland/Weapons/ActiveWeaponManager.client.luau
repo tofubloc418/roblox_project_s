@@ -19,6 +19,7 @@ local Weapons = Items:WaitForChild("Weapons")
 local FistsLogic = require(Weapons:WaitForChild("Fists"):WaitForChild("Fists"):WaitForChild("Logic")) :: any
 
 local currentActiveSlot = nil
+local currentEquippedTemplateId = nil :: string?
 local currentWeaponLogic = nil :: any
 local currentWeaponModel = nil :: Model?
 
@@ -58,9 +59,30 @@ local function equipWeaponByTemplateId(templateId: string)
 	LogicModule.Equip(clone, localPlayer, WeaponController)
 end
 
+local function getDesiredTemplateIdForState(state: any): string?
+	if state.activeSlot == "Fists" then
+		return "Fists"
+	end
+
+	if state.activeSlot == "Weapon1" then
+		return state.weapon1 and state.weapon1.itemId or nil
+	end
+
+	if state.activeSlot == "Weapon2" then
+		return state.weapon2 and state.weapon2.itemId or nil
+	end
+
+	return nil
+end
+
 local function onSlotChanged(state: any)
-	if state.activeSlot == currentActiveSlot then return end
+	local desiredTemplateId = getDesiredTemplateIdForState(state)
+	if state.activeSlot == currentActiveSlot and desiredTemplateId == currentEquippedTemplateId then
+		return
+	end
+
 	currentActiveSlot = state.activeSlot
+	currentEquippedTemplateId = desiredTemplateId
 
 	unequipCurrent()
 
@@ -71,10 +93,8 @@ local function onSlotChanged(state: any)
 			currentWeaponLogic = FistsLogic
 			currentWeaponModel = character
 		end
-	elseif currentActiveSlot == "Weapon1" and state.weapon1 then
-		equipWeaponByTemplateId(state.weapon1.itemId)
-	elseif currentActiveSlot == "Weapon2" and state.weapon2 then
-		equipWeaponByTemplateId(state.weapon2.itemId)
+	elseif desiredTemplateId then
+		equipWeaponByTemplateId(desiredTemplateId)
 	end
 end
 
@@ -86,10 +106,10 @@ localPlayer.CharacterAdded:Connect(function(character)
 		currentWeaponLogic = FistsLogic
 		currentWeaponModel = character
 	elseif currentActiveSlot == "Weapon1" or currentActiveSlot == "Weapon2" then
-		local weaponInfo = if currentActiveSlot == "Weapon1" then (HudLoadoutDataAdapter.getState()).weapon1 else (HudLoadoutDataAdapter.getState()).weapon2
-		if weaponInfo then
+		local desiredTemplateId = getDesiredTemplateIdForState(HudLoadoutDataAdapter.getState())
+		if desiredTemplateId then
 			currentWeaponModel = nil
-			equipWeaponByTemplateId(weaponInfo.itemId)
+			equipWeaponByTemplateId(desiredTemplateId)
 		end
 	end
 end)

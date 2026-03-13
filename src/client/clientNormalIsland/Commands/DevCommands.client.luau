@@ -8,6 +8,7 @@
 --   /give <templateId> [count]   -- add an item to your inventory
 --   /items [filter]              -- list all registered item IDs
 --   /data [playerName]           -- print raw player data
+--   /invreport [playerName]      -- detailed inventory report by container
 --   /save [playerName]           -- force-save player data
 --   /stats [playerName]          -- print player attributes & leaderstats
 --   /players                     -- list players in server
@@ -103,6 +104,7 @@ registerCommand("help", function(_args)
 		"  /items [filter]      List all registered items",
 		"── Data ──",
 		"  /data [player]       Print raw player data",
+		"  /invreport [player]  Detailed inventory report (loadout/backpack/quick/stash)",
 		"  /save [player]       Force-save player data",
 		"── Player ──",
 		"  /stats [player]      Attributes & leaderstats",
@@ -219,9 +221,14 @@ registerCommand("data", function(args)
 	devCommandRemote:FireServer("data", args)
 end)
 
+-- /invreport [playerName]
+registerCommand("invreport", function(args)
+	devCommandRemote:FireServer("invreport", args)
+end)
+
 -- /save [playerName]
 registerCommand("save", function(args)
 	devCommandRemote:FireServer("save", args)
 end)
 
-print("[DevCommands] Chat commands registered. Type /give, /items, /data, /save, /stats, /players, /loaded, /hitbox")
+print("[DevCommands] Chat commands registered. Type /give, /items, /data, /invreport, /save, /stats, /players, /loaded, /hitbox")

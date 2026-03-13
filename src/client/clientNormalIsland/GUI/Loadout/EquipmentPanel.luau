@@ -7,6 +7,7 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local EquipmentSlot = require(script.Parent:WaitForChild("EquipmentSlot"))
 local WeaponCard = require(script.Parent:WaitForChild("WeaponCard"))
 type EquipmentData = InventoryTypes.EquipmentData
@@ -18,6 +19,8 @@ export type EquipmentPanelProps = {
 	weapons: { [number]: WeaponData? }?,
 	columnWidth: number?,
 	inventorySlotSize: number?,
+	dragEnabled: boolean?,
+	onEquipmentDragStart: (slotId: EquipmentSlotId) -> (),
 	onEquipmentClick: (slotId: EquipmentSlotId) -> (),
 	onAbilityClick: (weaponIndex: number, abilityIndex: number) -> (),
 }
@@ -31,6 +34,9 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 	local weapons = props.weapons or {}
 	local columnWidth = props.columnWidth or 250
 	local inventorySlotSize = props.inventorySlotSize or 64
+
+	local backpackContainerRef = React.useRef(nil :: GuiObject?)
+	local armorContainerRef = React.useRef(nil :: GuiObject?)
 
 	return React.createElement("Frame", {
 		Name = "EquipmentPanel",
@@ -82,6 +88,22 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 1,
+				containerRef = backpackContainerRef,
+				onMouseEnter = function()
+					DragDropManager.notifyHoverEnter({
+						container = "equipment",
+						slotId = "Backpack",
+					})
+				end,
+				onMouseLeave = function()
+					DragDropManager.notifyHoverLeave({
+						container = "equipment",
+						slotId = "Backpack",
+					})
+				end,
+				onMouseButton1Down = function()
+					props.onEquipmentDragStart("Backpack")
+				end,
 				onActivated = function()
 					props.onEquipmentClick("Backpack")
 				end,
@@ -92,6 +114,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 					item = equipment["Backpack" :: EquipmentSlotId],
 					layoutOrder = 1,
 					size = UDim2.new(1, 0, 1, 0),
+					dragEnabled = props.dragEnabled,
 					onClick = function()
 						props.onEquipmentClick("Backpack")
 					end,
@@ -101,6 +124,22 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 2,
+				containerRef = armorContainerRef,
+				onMouseEnter = function()
+					DragDropManager.notifyHoverEnter({
+						container = "equipment",
+						slotId = "Armor",
+					})
+				end,
+				onMouseLeave = function()
+					DragDropManager.notifyHoverLeave({
+						container = "equipment",
+						slotId = "Armor",
+					})
+				end,
+				onMouseButton1Down = function()
+					props.onEquipmentDragStart("Armor")
+				end,
 				onActivated = function()
 					props.onEquipmentClick("Armor")
 				end,
@@ -111,6 +150,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 					item = equipment["Armor" :: EquipmentSlotId],
 					layoutOrder = 2,
 					size = UDim2.new(1, 0, 1, 0),
+					dragEnabled = props.dragEnabled,
 					onClick = function()
 						props.onEquipmentClick("Armor")
 					end,
@@ -123,6 +163,10 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			slotLabel = "Weapon 1",
 			panelWidth = columnWidth,
 			layoutOrder = 2,
+			dragEnabled = props.dragEnabled,
+			onWeaponClick = function()
+				props.onEquipmentClick("Weapon1")
+			end,
 			onAbilityClick = function(i)
 				props.onAbilityClick(1, i)
 			end,
@@ -133,6 +177,10 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			slotLabel = "Weapon 2",
 			panelWidth = columnWidth,
 			layoutOrder = 3,
+			dragEnabled = props.dragEnabled,
+			onWeaponClick = function()
+				props.onEquipmentClick("Weapon2")
+			end,
 			onAbilityClick = function(i)
 				props.onAbilityClick(2, i)
 			end,

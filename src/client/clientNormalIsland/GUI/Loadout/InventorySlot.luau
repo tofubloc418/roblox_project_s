@@ -7,6 +7,7 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
 type ItemStack = InventoryTypes.ItemStack
 
@@ -15,6 +16,7 @@ export type InventorySlotProps = {
 	stack: ItemStack?,
 	active: boolean,
 	size: number?,
+	dragEnabled: boolean?,
 	onDragStart: () -> (),
 	onMouseEnter: (() -> ())?,
 	onMouseLeave: (() -> ())?,
@@ -40,14 +42,29 @@ local function InventorySlot(props: InventorySlotProps)
 		else
 			displayText = displayName or ""
 		end
-		if stack.maxStack > 1 then
-			stackText = string.format("%d/%d", stack.count, stack.maxStack)
-		end
+		stackText = tostring(stack.count)
 	end
 
 	local strokeThickness = active and C.Stroke.ActiveThickness or C.Stroke.Thickness
 	local strokeColor = active and C.Stroke.Active or C.Stroke.Default
 	local slotSize = props.size or DEFAULT_SLOT_SIZE
+	local slotRef = React.useRef(nil :: ImageButton?)
+
+	local function handleMouseButton1Down()
+		props.onDragStart()
+		if not props.dragEnabled or not stack then
+			return
+		end
+
+		DragDropManager.prepareDrag({
+			container = "inventory",
+			index = props.index,
+		}, {
+			imageId = imageId,
+			labelText = displayText,
+			stackText = stackText,
+		})
+	end
 
 	return React.createElement("ImageButton", {
 		Name = "Slot_" .. tostring(props.index),
@@ -59,7 +76,8 @@ local function InventorySlot(props: InventorySlotProps)
 		ImageTransparency = imageId == "" and 1 or 0,
 		LayoutOrder = props.index,
 		ZIndex = LayoutConfig.ZIndex.Content,
-		[React.Event.MouseButton1Down] = props.onDragStart,
+		ref = slotRef,
+		[React.Event.MouseButton1Down] = handleMouseButton1Down,
 		[React.Event.MouseEnter] = props.onMouseEnter or function() end,
 		[React.Event.MouseLeave] = props.onMouseLeave or function() end,
 	}, {
@@ -82,13 +100,15 @@ local function InventorySlot(props: InventorySlotProps)
 		}),
 		Stack = React.createElement("TextLabel", {
 			Name = "Stack",
-			Size = UDim2.fromScale(LayoutConfig.SlotLabel.Inventory.StackWidthScale, LayoutConfig.SlotLabel.Inventory.LabelHeightScale),
-			Position = UDim2.fromScale(LayoutConfig.SlotLabel.Inventory.StackXPos, LayoutConfig.SlotLabel.Inventory.StackYPos),
+			Size = UDim2.fromScale(LayoutConfig.SlotLabel.StackCorner.WidthScale, LayoutConfig.SlotLabel.StackCorner.HeightScale),
+			Position = LayoutConfig.SlotLabel.StackCorner.Position,
+			AnchorPoint = LayoutConfig.SlotLabel.StackCorner.AnchorPoint,
 			BackgroundTransparency = 1,
 			TextScaled = true,
 			TextColor3 = C.Text.Secondary,
 			Font = F.FamilySecondary,
 			TextXAlignment = Enum.TextXAlignment.Right,
+			TextYAlignment = Enum.TextYAlignment.Top,
 			Text = stackText,
 			ZIndex = LayoutConfig.ZIndex.Content,
 		}),

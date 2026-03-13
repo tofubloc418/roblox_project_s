@@ -59,24 +59,12 @@ local function toItemStack(item: SerializedItem): ItemStack
 	return { itemId = item.tid, count = item.cnt or 1, maxStack = 1 }
 end
 
--- Build quickUseItems from a SyncFullState payload.
--- Quick-use slots store instanceId references; we search inventory.slots for the item.
 local function buildQuickUseItems(payload: InventorySyncPayload): { [number]: ItemStack? }
 	local result: { [number]: ItemStack? } = {}
-	for slot, instanceId in pairs(payload.quickUse.slots) do
-		if instanceId then
-			local found = false
-			for _, item in pairs(payload.inventory.slots) do
-				if item and item.iid == instanceId then
-					result[slot] = toItemStack(item)
-					found        = true
-					break
-				end
-			end
-			if not found then
-				-- Item may be in stash (not included in payload); use instanceId as fallback label.
-				result[slot] = { itemId = instanceId, count = 1, maxStack = 1 }
-			end
+	for slot = 1, 8 do
+		local raw = (InventoryTypes :: any).getSlotItem(payload.quickUse.slots, slot)
+		if type(raw) == "table" and raw.tid then
+			result[slot] = toItemStack(raw :: SerializedItem)
 		end
 	end
 	return result

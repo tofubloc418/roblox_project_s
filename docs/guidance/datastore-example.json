@@ -1,0 +1,78 @@
+{
+  "Data": {
+    "abilityPresets": [],
+    "character": {
+      "attributePoints": 0,
+      "attributes": {
+        "Dexterity": 10,
+        "Endurance": 10,
+        "Intelligence": 10,
+        "Luck": 10,
+        "Strength": 10,
+        "Vitality": 10
+      },
+      "experience": 0,
+      "level": 1
+    },
+    "currency": {
+      "gold": 0
+    },
+    "equipment": {
+      "Weapon1": {
+        "iid": "Knife_1773371248_9895",
+        "tid": "Knife"
+      }
+    },
+    "inventory": {
+      "maxSlots": 16,
+      "slots": [
+        {
+          "iid": "Knife_1773371479_6545",
+          "tid": "Knife"
+        }
+      ]
+    },
+    "lastSaved": 1773008876,
+    "quickUse": {
+      "slots": {
+        "2": {
+          "cnt": 10,
+          "iid": "TestBandage_1773375946_9564",
+          "tid": "TestBandage"
+        },
+        "3": {
+          "cnt": 22,
+          "iid": "TestBandage_1773371425_1945",
+          "tid": "TestBandage"
+        }
+      }
+    },
+    "sessionId": "",
+    "settings": [],
+    "stash": {
+      "maxSlots": 100,
+      "slots": []
+    },
+    "version": 1
+  },
+  "GlobalUpdates": [
+    0,
+    []
+  ],
+  "MetaData": {
+    "ActiveSession": [
+      127318922081351,
+      "",
+      "250ec25c-a5b4-44e0-8ccf-66d1447fa9e7"
+    ],
+    "LastUpdate": 1773376081,
+    "MetaTags": [],
+    "ProfileCreateTime": 1773008877,
+    "SessionLoadCount": 38
+  },
+  "RobloxMetaData": [],
+  "UserIds": [
+    343883848
+  ],
+  "WasOverwritten": false
+}

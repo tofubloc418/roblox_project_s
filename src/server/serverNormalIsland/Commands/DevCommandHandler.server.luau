@@ -15,6 +15,7 @@ if not RunService:IsStudio() then return end
 
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local InventoryService     = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
+local InventoryTypes       = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes")) :: any
 local ItemRegistry         = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 
 -- ── Remote setup ──────────────────────────────────────────────────────────────
@@ -91,14 +92,16 @@ devCommandRemote.OnServerEvent:Connect(function(sender: Player, command: any, ar
 			return
 		end
 
-		if not ItemRegistry.TemplateExists(templateId) then
+		local template = ItemRegistry.GetTemplate(templateId)
+		if not template then
 			replyErr(sender, string.format("'%s' is not a registered item. Use /items to browse.", templateId))
 			return
 		end
 
-		local item = InventoryService.AddItem(sender, templateId, count)
+		local canonicalId = template.templateId
+		local item = InventoryService.AddItem(sender, canonicalId, count)
 		if item then
-			replyOk(sender, string.format("[Dev] Gave %d × %s  (iid: %s)", count, templateId, item.iid))
+			replyOk(sender, string.format("[Dev] Gave %d × %s  (iid: %s)", count, canonicalId, item.iid))
 		else
 			replyErr(sender, "AddItem returned nil — inventory may be full.")
 		end
@@ -165,6 +168,87 @@ devCommandRemote.OnServerEvent:Connect(function(sender: Player, command: any, ar
 		else
 			replyErr(sender, string.format("No data found for '%s'.", target.Name))
 		end
+
+	-- ── /invreport [playerName] ─────────────────────────────────────────────
+	-- Reads from the server DataService (DataStore-backed profile), not from client or UI.
+	elseif command == "invreport" then
+		local target = resolveTarget(sender, args)
+		if not target then return end
+
+		local ds = DataServiceBootstrap.GetDataService()
+		local data = (type(ds.get) == "function" and ds:get(target, {})) or (type(ds.Get) == "function" and ds:Get(target, {})) or nil
+		if type(data) ~= "table" then
+			replyErr(sender, string.format("No data found for '%s'.", target.Name))
+			return
+		end
+
+		local inventory = type(data.inventory) == "table" and data.inventory or nil
+		local equipment = type(data.equipment) == "table" and data.equipment or nil
+		local quickUse  = type(data.quickUse)  == "table" and data.quickUse  or nil
+		local stash     = type(data.stash)     == "table" and data.stash     or nil
+
+		if not inventory and not equipment and not quickUse and not stash then
+			replyErr(sender, string.format("No inventory data found for '%s'.", target.Name))
+			return
+		end
+
+		local function formatItemLine(prefix: string, slotLabel: string, item: any): string
+			if not item or type(item) ~= "table" then
+				return string.format("%s %s: (empty)", prefix, slotLabel)
+			end
+			local tid = tostring(item.tid)
+			local cnt = tonumber(item.cnt) or 1
+			return string.format("%s %s: %s x%d", prefix, slotLabel, tid, cnt)
+		end
+
+		local lines: { string } = {}
+		table.insert(lines, string.format("[Dev] Inventory report for '%s':", target.Name))
+
+		-- Equipment / loadout
+		table.insert(lines, "  [LOADOUT / EQUIPMENT]")
+		if equipment then
+			table.insert(lines, formatItemLine("    ", "Backpack", equipment.Backpack))
+			table.insert(lines, formatItemLine("    ", "Armor",    equipment.Armor))
+			table.insert(lines, formatItemLine("    ", "Weapon1",  equipment.Weapon1))
+			table.insert(lines, formatItemLine("    ", "Weapon2",  equipment.Weapon2))
+		else
+			table.insert(lines, "    (no equipment data)")
+		end
+
+		-- Inventory (backpack grid). Use getSlotItem so string keys from DataStore are read.
+		table.insert(lines, "  [BACKPACK]")
+		if inventory and type(inventory.slots) == "table" then
+			for slot = 1, inventory.maxSlots or 0 do
+				local item = InventoryTypes.getSlotItem(inventory.slots, slot)
+				table.insert(lines, formatItemLine("    ", "Slot " .. tostring(slot), item))
+			end
+		else
+			table.insert(lines, "    (no backpack data)")
+		end
+
+		-- Quick slots
+		table.insert(lines, "  [QUICK SLOTS]")
+		if quickUse and type(quickUse.slots) == "table" then
+			for slot = 1, 8 do
+				local item = InventoryTypes.getSlotItem(quickUse.slots, slot)
+				table.insert(lines, formatItemLine("    ", "Slot " .. tostring(slot), item))
+			end
+		else
+			table.insert(lines, "    (no quick slot data)")
+		end
+
+		-- Stash
+		table.insert(lines, "  [STASH]")
+		if stash and type(stash.slots) == "table" then
+			for slot = 1, stash.maxSlots or 0 do
+				local item = InventoryTypes.getSlotItem(stash.slots, slot)
+				table.insert(lines, formatItemLine("    ", "Slot " .. tostring(slot), item))
+			end
+		else
+			table.insert(lines, "    (no stash data)")
+		end
+
+		reply(sender, lines, false)
 
 	-- ── /save [playerName] ──────────────────────────────────────────────────
 	elseif command == "save" then

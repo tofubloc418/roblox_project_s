@@ -80,6 +80,13 @@ LayoutConfig.SlotLabel = {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position    = UDim2.fromScale(0.5, 0.5),
 	},
+	-- Stack count in top-right corner (Inventory, Equipment, QuickUse)
+	StackCorner = {
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(0.98, 0.04),
+		WidthScale = 0.45,
+		HeightScale = 0.28,
+	},
 }
 
 --[[

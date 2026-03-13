@@ -1,5 +1,5 @@
 --!strict
--- Right panel: quick-use slots (visual placeholders; not connected to radial selector yet)
+-- Quick-use panel: grid of consumable slots with drag-drop (full-cell drop target).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -8,18 +8,21 @@ local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitF
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
+local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local QuickUseSlot = require(script.Parent:WaitForChild("QuickUseSlot"))
 type QuickUseData = InventoryTypes.QuickUseData
 
 export type QuickUsePanelProps = {
 	quickUseData: QuickUseData?,
+	-- When set with columnWidth, quick slots match backpack: same slot size and padding; column count is derived from width.
+	slotSize: number?,
 	columnWidth: number?,
+	dragEnabled: boolean?,
+	onDragStart: (index: number) -> (),
 	onSlotClick: (index: number) -> (),
 }
 
 local QUICK_USE_SLOT_COUNT = LayoutConfig.QuickUse.SlotCount
-local QUICK_COLS = LayoutConfig.QuickUse.Cols
-local QUICK_ROWS = LayoutConfig.QuickUse.Rows
 
 local P = ThemeConfig.Padding
 local F = ThemeConfig.Font
@@ -28,15 +31,36 @@ local C = ThemeConfig.Colors
 local function QuickUsePanel(props: QuickUsePanelProps)
 	local quickUseData = props.quickUseData or { slots = {} }
 	local slots = quickUseData.slots or {}
-	local columnWidth = props.columnWidth or 250
-
-	-- Compute slot size from column width: cols * slotSize + (cols-1) * padding = columnWidth
-	local slotSize = math.floor((columnWidth - (QUICK_COLS - 1) * P.QuickUseSlot) / QUICK_COLS)
+	-- Use same slot size and padding as backpack when slotSize + columnWidth are provided; else fallback to fixed layout
+	local useBackpackSizing = props.slotSize ~= nil and props.columnWidth ~= nil
+	local slotSize: number
+	local cellPadding: number
+	local quickCols: number
+	local quickRows: number
+	if useBackpackSizing and props.slotSize and props.columnWidth then
+		slotSize = props.slotSize
+		cellPadding = P.InventorySlot
+		-- Derive column count from width (same formula as inventory): width = cols*slotSize + (cols-1)*padding
+		quickCols = math.max(1, math.floor((props.columnWidth + cellPadding) / (slotSize + cellPadding)))
+		quickRows = math.ceil(QUICK_USE_SLOT_COUNT / quickCols)
+	else
+		cellPadding = P.QuickUseSlot
+		quickCols = LayoutConfig.QuickUse.Cols
+		quickRows = LayoutConfig.QuickUse.Rows
+		local columnWidth = props.columnWidth or 250
+		slotSize = math.floor((columnWidth - (quickCols - 1) * P.QuickUseSlot) / quickCols)
+	end
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
 	local innerSlotSize = slotSize - 2 * borderWidth
-	local gridWidth = QUICK_COLS * slotSize + (QUICK_COLS - 1) * P.QuickUseSlot
-	local gridHeight = QUICK_ROWS * slotSize + (QUICK_ROWS - 1) * P.QuickUseSlot
+	local gridWidth = quickCols * slotSize + (quickCols - 1) * cellPadding
+	local gridHeight = quickRows * slotSize + (quickRows - 1) * cellPadding
 	local panelHeight = F.SectionHeaderHeight + P.HeaderToContent + gridHeight
+
+	-- One ref per slot: GradientBorder container (same area as gradient hover).
+	local slotContainerRefs: { [number]: any } = {}
+	for i = 1, QUICK_USE_SLOT_COUNT do
+		slotContainerRefs[i] = React.useRef(nil :: GuiObject?)
+	end
 
 	local slotElements: { [string]: any } = {}
 	for i = 1, QUICK_USE_SLOT_COUNT do
@@ -44,9 +68,26 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 		if stack == false then
 			stack = nil
 		end
+		-- GradientBorder as grid child so drop target = same Frame that gets gradient hover.
 		slotElements["Slot" .. i] = React.createElement(GradientBorder, {
 			size = innerSlotSize,
 			layoutOrder = i,
+			containerRef = slotContainerRefs[i],
+			onMouseEnter = function()
+				DragDropManager.notifyHoverEnter({
+					container = "quickuse",
+					index = i,
+				})
+			end,
+			onMouseLeave = function()
+				DragDropManager.notifyHoverLeave({
+					container = "quickuse",
+					index = i,
+				})
+			end,
+			onMouseButton1Down = function()
+				props.onDragStart(i)
+			end,
 			onActivated = function()
 				props.onSlotClick(i)
 			end,
@@ -86,16 +127,15 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 		}),
 		SlotsGrid = React.createElement("Frame", {
 			Name = "SlotsGrid",
-			-- Explicit width so UIGridLayout wraps at 3 columns
 			Size = UDim2.fromOffset(gridWidth, gridHeight),
 			BackgroundTransparency = 1,
 			LayoutOrder = 1,
 		}, {
 		SlotsLayout = React.createElement("UIGridLayout", {
 			CellSize = UDim2.fromOffset(slotSize, slotSize),
-			CellPadding = UDim2.fromOffset(P.QuickUseSlot, P.QuickUseSlot),
+			CellPadding = UDim2.fromOffset(cellPadding, cellPadding),
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			FillDirectionMaxCells = QUICK_COLS,
+			FillDirectionMaxCells = quickCols,
 		}),
 			Slot1 = slotElements["Slot1"],
 			Slot2 = slotElements["Slot2"],
@@ -103,6 +143,8 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 			Slot4 = slotElements["Slot4"],
 			Slot5 = slotElements["Slot5"],
 			Slot6 = slotElements["Slot6"],
+			Slot7 = slotElements["Slot7"],
+			Slot8 = slotElements["Slot8"],
 		}),
 	})
 end

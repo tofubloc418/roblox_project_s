@@ -65,6 +65,7 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	-- State
 	sequenceIndex: number,
 	nextAttackTime: number,
+	comboExpireTime: number,
 	attacking: boolean,
 	equipped: boolean,
 	-- Connections to clean up
@@ -118,6 +119,7 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	-- State
 	self.sequenceIndex = 1
 	self.nextAttackTime = 0
+	self.comboExpireTime = 0
 	self.attacking = false
 	self.equipped = false
 
@@ -182,17 +184,20 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 	end
 
 	-- C0/C1 grip: Motor6D RightHand -> Handle (WeaponRigging)
-	if handle and self.weaponModel ~= self.character then
+	if handle and handle:IsA("BasePart") and self.weaponModel ~= self.character then
 		local rightHand = self.character:FindFirstChild("RightHand")
 		if rightHand and rightHand:IsA("BasePart") then
+			local rightHandPart = rightHand :: BasePart
+			local handlePart = handle :: BasePart
+
 			self.weaponModel.Parent = self.character
 			local motor = Instance.new("Motor6D")
 			motor.Name = "RightGrip"
-			motor.Part0 = rightHand
-			motor.Part1 = handle
+			motor.Part0 = rightHandPart
+			motor.Part1 = handlePart
 			motor.C0 = if stats.gripC0 then stats.gripC0 else CFrame.new(0, 0, 0)
 			motor.C1 = if stats.gripC1 then stats.gripC1 else CFrame.new(0, 0, 0)
-			motor.Parent = handle
+			motor.Parent = handlePart
 			self._gripMotor = motor
 		end
 	end
@@ -251,12 +256,28 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	local now = tick()
 	if now < self.nextAttackTime then return end
 
-	-- Determine current attack in the sequence
-	local attackIndex = self.sequenceIndex
-	local attackEntry = self.stats.attackSequence and self.stats.attackSequence[attackIndex]
+	local sequence = self.stats.attackSequence or {}
+	local sequenceLength = #sequence
+	if sequenceLength == 0 then return end
+
+	local attackIndex
+	if self.sequenceIndex >= 1 and self.sequenceIndex <= sequenceLength and now <= self.comboExpireTime then
+		local nextIndex = self.sequenceIndex + 1
+		if nextIndex > sequenceLength then
+			nextIndex = 1
+		end
+		attackIndex = nextIndex
+	else
+		attackIndex = 1
+	end
+
+	local attackEntry = sequence[attackIndex]
 	if not attackEntry then return end
 
+	self.sequenceIndex = attackIndex
+
 	self.nextAttackTime = now + attackEntry.hitDuration
+	self.comboExpireTime = now + (attackEntry.comboTimeLimit or attackEntry.hitDuration)
 
 	-- Play animation
 	local track = self.attackTracks[attackIndex]
@@ -268,9 +289,6 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	if self.swingSound then
 		self.swingSound:Play()
 	end
-
-	-- Advance combo index (wrap around)
-	self.sequenceIndex = if attackIndex >= #(self.stats.attackSequence or {}) then 1 else attackIndex + 1
 
 	-- Activate hitbox for the duration specified in this attack entry
 	if self.hitbox then

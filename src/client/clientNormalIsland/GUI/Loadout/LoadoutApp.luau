@@ -30,6 +30,8 @@ export type LoadoutAppProps = {
 	onMouseLeave: (index: number) -> (),
 }
 
+local REFERENCE_SHORT_EDGE = 1080
+
 local P = ThemeConfig.Padding
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
@@ -43,10 +45,26 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local _rows = props.rows
 	local cols = props.cols
 
+	-- Scale factor from viewport (reference = 1080 short edge); clamp to avoid extreme sizes
+	local scale = math.clamp(math.min(viewportSize.X, viewportSize.Y) / REFERENCE_SHORT_EDGE, 0.5, 2)
+
+	-- Scaled padding and font for this screen
+	local scaledP = {
+		OuterFrameHorizontal = math.floor(P.OuterFrameHorizontal * scale),
+		OuterFrameVertical = math.floor(P.OuterFrameVertical * scale),
+		TitleToContent = math.floor(P.TitleToContent * scale),
+		ColumnGap = math.floor(P.ColumnGap * scale),
+		InventorySlot = math.floor(P.InventorySlot * scale),
+	}
+	local scaledF = {
+		TitleHeight = math.floor(F.TitleHeight * scale),
+		TitleSize = math.floor(F.TitleSize * scale),
+	}
+
 	-- Outer frame content width (after UIPadding)
-	local contentWidth = viewportSize.X * L.WidthScale - P.OuterFrameHorizontal * 2
+	local contentWidth = viewportSize.X * L.WidthScale - scaledP.OuterFrameHorizontal * 2
 	-- Only padding between the 3 columns (2 gaps); left/right come from outer frame's UIPadding
-	local totalColumnPadding = P.ColumnGap * 2
+	local totalColumnPadding = scaledP.ColumnGap * 2
 	local availableForColumns = contentWidth - totalColumnPadding
 
 	local equipmentWidth = math.floor(availableForColumns * L.ColumnRatioEquip / COLUMN_RATIO_TOTAL)
@@ -54,7 +72,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local quickUseWidth = math.floor(availableForColumns * L.ColumnRatioQuick / COLUMN_RATIO_TOTAL)
 
 	-- Inventory slot size (square); same size used for backpack and quick slots so they match
-	local inventorySlotSize = math.floor((inventoryWidth - (cols - 1) * P.InventorySlot) / cols)
+	local inventorySlotSize = math.floor((inventoryWidth - (cols - 1) * scaledP.InventorySlot) / cols)
 
 	return React.createElement("Frame", {
 		Name = "LoadoutApp",
@@ -72,36 +90,36 @@ local function LoadoutApp(props: LoadoutAppProps)
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.MainFrame) }),
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, P.TitleToContent),
-				PaddingBottom = UDim.new(0, P.OuterFrameVertical),
-				PaddingLeft = UDim.new(0, P.OuterFrameHorizontal),
-				PaddingRight = UDim.new(0, P.OuterFrameHorizontal),
+				PaddingTop = UDim.new(0, scaledP.TitleToContent),
+				PaddingBottom = UDim.new(0, scaledP.OuterFrameVertical),
+				PaddingLeft = UDim.new(0, scaledP.OuterFrameHorizontal),
+				PaddingRight = UDim.new(0, scaledP.OuterFrameHorizontal),
 			}),
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, P.TitleToContent),
+				Padding = UDim.new(0, scaledP.TitleToContent),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			Header = React.createElement("TextLabel", {
 				Name = "Header",
-				Size = UDim2.new(1, 0, 0, F.TitleHeight),
+				Size = UDim2.new(1, 0, 0, scaledF.TitleHeight),
 				BackgroundTransparency = 1,
 				Text = "LOADOUT",
 				TextColor3 = C.Text.Primary,
 				Font = F.Family,
-				TextSize = F.TitleSize,
+				TextSize = scaledF.TitleSize,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				LayoutOrder = 1,
 			}),
 			PanelsRow = React.createElement("Frame", {
 				Name = "PanelsRow",
-				Size = UDim2.new(1, 0, 1, -(F.TitleHeight + P.TitleToContent)),
+				Size = UDim2.new(1, 0, 1, -(scaledF.TitleHeight + scaledP.TitleToContent)),
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
 			}, {
 				Layout = React.createElement("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, P.ColumnGap),
+					Padding = UDim.new(0, scaledP.ColumnGap),
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					VerticalAlignment = Enum.VerticalAlignment.Top,
 					HorizontalAlignment = Enum.HorizontalAlignment.Left,
@@ -130,6 +148,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 					weapons = loadoutData.weapons,
 					columnWidth = equipmentWidth,
 					inventorySlotSize = inventorySlotSize,
+					scale = scale,
 					dragEnabled = props.dragEnabled,
 					onEquipmentDragStart = props.onEquipmentDragStart,
 					onEquipmentClick = props.onEquipmentClick,
@@ -160,6 +179,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 					rows = props.rows,
 					cols = props.cols,
 					columnWidth = inventoryWidth,
+					scale = scale,
 					gridRef = props.inventoryGridRef,
 					dragEnabled = props.dragEnabled,
 					onDragStart = props.onDragStart,
@@ -190,6 +210,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 					quickUseData = loadoutData.quickUse,
 					slotSize = inventorySlotSize,
 					columnWidth = quickUseWidth,
+					scale = scale,
 					dragEnabled = props.dragEnabled,
 					onDragStart = props.onQuickUseDragStart,
 					onSlotClick = props.onQuickUseClick,

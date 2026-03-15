@@ -17,6 +17,7 @@ export type InventoryPanelProps = {
 	rows: number,
 	cols: number,
 	columnWidth: number?,
+	scale: number?,
 	gridRef: { current: Frame? }?,
 	dragEnabled: boolean?,
 	onDragStart: (index: number) -> (),
@@ -32,14 +33,20 @@ local function InventoryPanel(props: InventoryPanelProps)
 	local rows = props.rows
 	local cols = props.cols
 	local columnWidth = props.columnWidth or 400
+	local scale = props.scale or 1
 	local inventoryData = props.inventoryData
 	local slotCount = rows * cols
 
+	local scaledInventorySlot = math.floor(P.InventorySlot * scale)
+	local scaledHeaderHeight = math.floor(F.SectionHeaderHeight * scale)
+	local scaledHeaderSize = math.floor(F.SectionHeaderSize * scale)
+	local scaledHeaderToContent = math.floor(P.HeaderToContent * scale)
+
 	-- Compute slot size from column width: cols * slotSize + (cols-1) * padding = columnWidth
-	local slotSize = math.floor((columnWidth - (cols - 1) * P.InventorySlot) / cols)
-	local gridWidth = cols * slotSize + (cols - 1) * P.InventorySlot
-	local gridHeight = rows * slotSize + (rows - 1) * P.InventorySlot
-	local panelHeight = F.SectionHeaderHeight + P.HeaderToContent + gridHeight
+	local slotSize = math.floor((columnWidth - (cols - 1) * scaledInventorySlot) / cols)
+	local gridWidth = cols * slotSize + (cols - 1) * scaledInventorySlot
+	local gridHeight = rows * slotSize + (rows - 1) * scaledInventorySlot
+	local panelHeight = scaledHeaderHeight + scaledHeaderToContent + gridHeight
 
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
 	local innerSlotSize = slotSize - 2 * borderWidth
@@ -104,17 +111,17 @@ local function InventoryPanel(props: InventoryPanelProps)
 	}, {
 		Layout = React.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, P.HeaderToContent),
+			Padding = UDim.new(0, scaledHeaderToContent),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		Header = React.createElement("TextLabel", {
 			Name = "Header",
-			Size = UDim2.fromOffset(gridWidth, F.SectionHeaderHeight),
+			Size = UDim2.fromOffset(gridWidth, scaledHeaderHeight),
 			BackgroundTransparency = 1,
 			Text = "BACKPACK",
 			TextColor3 = C.Text.Primary,
 			Font = F.Family,
-			TextSize = F.SectionHeaderSize,
+			TextSize = scaledHeaderSize,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			LayoutOrder = 0,
 		}),
@@ -128,7 +135,7 @@ local function InventoryPanel(props: InventoryPanelProps)
 		}, {
 			GridLayout = React.createElement("UIGridLayout", {
 				CellSize = UDim2.fromOffset(slotSize, slotSize),
-				CellPadding = UDim2.fromOffset(P.InventorySlot, P.InventorySlot),
+				CellPadding = UDim2.fromOffset(scaledInventorySlot, scaledInventorySlot),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				FillDirectionMaxCells = cols,
 			}),

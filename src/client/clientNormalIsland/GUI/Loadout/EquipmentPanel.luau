@@ -19,6 +19,7 @@ export type EquipmentPanelProps = {
 	weapons: { [number]: WeaponData? }?,
 	columnWidth: number?,
 	inventorySlotSize: number?,
+	scale: number?,
 	dragEnabled: boolean?,
 	onEquipmentDragStart: (slotId: EquipmentSlotId) -> (),
 	onEquipmentClick: (slotId: EquipmentSlotId) -> (),
@@ -34,6 +35,13 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 	local weapons = props.weapons or {}
 	local columnWidth = props.columnWidth or 250
 	local inventorySlotSize = props.inventorySlotSize or 64
+	local scale = props.scale or 1
+
+	local scaledHeaderHeight = math.floor(F.SectionHeaderHeight * scale)
+	local scaledHeaderSize = math.floor(F.SectionHeaderSize * scale)
+	local scaledHeaderToContent = math.floor(P.HeaderToContent * scale)
+	local scaledCardRowGap = math.floor(P.CardRowGap * scale)
+	local scaledBackpackArmorGap = math.floor(P.BackpackArmorGap * scale)
 
 	local backpackContainerRef = React.useRef(nil :: GuiObject?)
 	local armorContainerRef = React.useRef(nil :: GuiObject?)
@@ -47,17 +55,17 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 	}, {
 		Layout = React.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, P.HeaderToContent),
+			Padding = UDim.new(0, scaledHeaderToContent),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		Header = React.createElement("TextLabel", {
 			Name = "Header",
-			Size = UDim2.new(1, 0, 0, F.SectionHeaderHeight),
+			Size = UDim2.new(1, 0, 0, scaledHeaderHeight),
 			BackgroundTransparency = 1,
 			Text = "EQUIPMENT",
 			TextColor3 = C.Text.Primary,
 			Font = F.Family,
-			TextSize = F.SectionHeaderSize,
+			TextSize = scaledHeaderSize,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			LayoutOrder = 1,
 		}),
@@ -70,7 +78,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 		}, {
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, P.CardRowGap),
+				Padding = UDim.new(0, scaledCardRowGap),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			TopRow = React.createElement("Frame", {
@@ -81,11 +89,11 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			}, {
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Horizontal,
-				Padding = UDim.new(0, P.BackpackArmorGap),
+				Padding = UDim.new(0, scaledBackpackArmorGap),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			Backpack = React.createElement(GradientBorder, {
-				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
+				size = UDim2.new(0.5, -scaledBackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 1,
 				containerRef = backpackContainerRef,
@@ -121,7 +129,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 				}),
 			}),
 			Armor = React.createElement(GradientBorder, {
-				size = UDim2.new(0.5, -P.BackpackArmorGap / 2, 1, 0),
+				size = UDim2.new(0.5, -scaledBackpackArmorGap / 2, 1, 0),
 				fitWithin = true,
 				layoutOrder = 2,
 				containerRef = armorContainerRef,
@@ -162,6 +170,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			weapon = weapons[1],
 			slotLabel = "Weapon 1",
 			panelWidth = columnWidth,
+			scale = scale,
 			layoutOrder = 2,
 			dragEnabled = props.dragEnabled,
 			onWeaponClick = function()
@@ -176,6 +185,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			weapon = weapons[2],
 			slotLabel = "Weapon 2",
 			panelWidth = columnWidth,
+			scale = scale,
 			layoutOrder = 3,
 			dragEnabled = props.dragEnabled,
 			onWeaponClick = function()

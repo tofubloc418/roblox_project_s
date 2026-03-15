@@ -19,6 +19,7 @@ export type WeaponCardProps = {
 	weapon: WeaponData?,
 	slotLabel: string,
 	panelWidth: number?,
+	scale: number?,
 	layoutOrder: number?,
 	dragEnabled: boolean?,
 	onWeaponClick: () -> (),
@@ -39,15 +40,20 @@ local function WeaponCard(props: WeaponCardProps)
 	-- Show label only when slot is empty; hide when weapon is equipped
 	local displayText = if weapon then "" else props.slotLabel
 	local panelWidth = props.panelWidth or 250
+	local scale = props.scale or 1
 	local slotId: EquipmentSlotId = if props.weaponIndex == 1 then "Weapon1" else "Weapon2"
 	-- Use GradientBorder container so hover and drop targeting share the same region.
 	local weaponSlotContainerRef = React.useRef(nil :: GuiObject?)
 
+	local scaledCard = math.floor(P.Card * scale)
+	local abilitySlotSize = math.floor(L.AbilitySlotSize * scale)
+	local scaledAbilityGap = math.floor(P.AbilitySlot * scale)
+
 	-- Outer card: height:width = 6:9
 	local outerCardHeight = math.floor(panelWidth * L.OuterCardHeightRatio)
 	-- Inner card (weapon visual) fills remaining space after abilities row and padding
-	local contentHeight = outerCardHeight - P.Card * 2
-	local weaponSlotHeight = math.max(0, contentHeight - P.Card - L.AbilitySlotSize)
+	local contentHeight = outerCardHeight - scaledCard * 2
+	local weaponSlotHeight = math.max(0, contentHeight - scaledCard - abilitySlotSize)
 
 	if weapon then
 		local icon = ItemIconResolver.getIconForItem(weapon.itemId)
@@ -80,7 +86,7 @@ local function WeaponCard(props: WeaponCardProps)
 	end
 
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
-	local innerAbilitySize = L.AbilitySlotSize - 2 * borderWidth
+	local innerAbilitySize = abilitySlotSize - 2 * borderWidth
 
 	local abilitySlots: { [string | number]: any } = {}
 	for i = 1, ABILITY_COUNT do
@@ -123,14 +129,14 @@ local function WeaponCard(props: WeaponCardProps)
 			BackgroundTransparency = 1,
 		}, {
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, P.Card),
-				PaddingBottom = UDim.new(0, P.Card),
-				PaddingLeft = UDim.new(0, P.Card),
-				PaddingRight = UDim.new(0, P.Card),
+				PaddingTop = UDim.new(0, scaledCard),
+				PaddingBottom = UDim.new(0, scaledCard),
+				PaddingLeft = UDim.new(0, scaledCard),
+				PaddingRight = UDim.new(0, scaledCard),
 			}),
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, P.Card),
+				Padding = UDim.new(0, scaledCard),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 			WeaponSlot = React.createElement(GradientBorder, {
@@ -189,13 +195,13 @@ local function WeaponCard(props: WeaponCardProps)
 			}),
 			AbilitiesRow = React.createElement("Frame", {
 				Name = "AbilitiesRow",
-				Size = UDim2.new(1, 0, 0, L.AbilitySlotSize),
+				Size = UDim2.new(1, 0, 0, abilitySlotSize),
 				BackgroundTransparency = 1,
 				LayoutOrder = 2,
 			}, {
 				Layout = React.createElement("UIListLayout", {
 					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, P.AbilitySlot),
+					Padding = UDim.new(0, scaledAbilityGap),
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					VerticalAlignment = Enum.VerticalAlignment.Center,
 					HorizontalAlignment = Enum.HorizontalAlignment.Center,

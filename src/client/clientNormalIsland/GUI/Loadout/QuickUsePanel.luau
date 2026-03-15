@@ -17,6 +17,7 @@ export type QuickUsePanelProps = {
 	-- When set with columnWidth, quick slots match backpack: same slot size and padding; column count is derived from width.
 	slotSize: number?,
 	columnWidth: number?,
+	scale: number?,
 	dragEnabled: boolean?,
 	onDragStart: (index: number) -> (),
 	onSlotClick: (index: number) -> (),
@@ -31,6 +32,12 @@ local C = ThemeConfig.Colors
 local function QuickUsePanel(props: QuickUsePanelProps)
 	local quickUseData = props.quickUseData or { slots = {} }
 	local slots = quickUseData.slots or {}
+	local scale = props.scale or 1
+
+	local scaledHeaderHeight = math.floor(F.SectionHeaderHeight * scale)
+	local scaledHeaderSize = math.floor(F.SectionHeaderSize * scale)
+	local scaledHeaderToContent = math.floor(P.HeaderToContent * scale)
+
 	-- Use same slot size and padding as backpack when slotSize + columnWidth are provided; else fallback to fixed layout
 	local useBackpackSizing = props.slotSize ~= nil and props.columnWidth ~= nil
 	local slotSize: number
@@ -39,22 +46,22 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 	local quickRows: number
 	if useBackpackSizing and props.slotSize and props.columnWidth then
 		slotSize = props.slotSize
-		cellPadding = P.InventorySlot
+		cellPadding = math.floor(P.InventorySlot * scale)
 		-- Derive column count from width (same formula as inventory): width = cols*slotSize + (cols-1)*padding
 		quickCols = math.max(1, math.floor((props.columnWidth + cellPadding) / (slotSize + cellPadding)))
 		quickRows = math.ceil(QUICK_USE_SLOT_COUNT / quickCols)
 	else
-		cellPadding = P.QuickUseSlot
+		cellPadding = math.floor(P.QuickUseSlot * scale)
 		quickCols = LayoutConfig.QuickUse.Cols
 		quickRows = LayoutConfig.QuickUse.Rows
 		local columnWidth = props.columnWidth or 250
-		slotSize = math.floor((columnWidth - (quickCols - 1) * P.QuickUseSlot) / quickCols)
+		slotSize = math.floor((columnWidth - (quickCols - 1) * cellPadding) / quickCols)
 	end
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
 	local innerSlotSize = slotSize - 2 * borderWidth
 	local gridWidth = quickCols * slotSize + (quickCols - 1) * cellPadding
 	local gridHeight = quickRows * slotSize + (quickRows - 1) * cellPadding
-	local panelHeight = F.SectionHeaderHeight + P.HeaderToContent + gridHeight
+	local panelHeight = scaledHeaderHeight + scaledHeaderToContent + gridHeight
 
 	-- One ref per slot: GradientBorder container (same area as gradient hover).
 	local slotContainerRefs: { [number]: any } = {}
@@ -111,17 +118,17 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 	}, {
 		Layout = React.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Vertical,
-			Padding = UDim.new(0, P.HeaderToContent),
+			Padding = UDim.new(0, scaledHeaderToContent),
 			SortOrder = Enum.SortOrder.LayoutOrder,
 		}),
 		Header = React.createElement("TextLabel", {
 			Name = "Header",
-			Size = UDim2.fromOffset(gridWidth, F.SectionHeaderHeight),
+			Size = UDim2.fromOffset(gridWidth, scaledHeaderHeight),
 			BackgroundTransparency = 1,
 			Text = "QUICK USE",
 			TextColor3 = C.Text.Primary,
 			Font = F.Family,
-			TextSize = F.SectionHeaderSize,
+			TextSize = scaledHeaderSize,
 			TextXAlignment = Enum.TextXAlignment.Left,
 			LayoutOrder = 0,
 		}),

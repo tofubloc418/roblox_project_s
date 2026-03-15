@@ -9,6 +9,9 @@
       "$ignoreUnknownInstances": true,
       "Packages": {
         "$path": "Packages"
+      },
+      "Cmdr": {
+        "$path": "Cmdr/Cmdr"
       }
     },
     "ServerScriptService": {

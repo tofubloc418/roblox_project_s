@@ -28,7 +28,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Server-side dependencies.
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes")) :: any
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 
 local DataService = DataServiceBootstrap.GetDataService()
 
@@ -178,7 +178,7 @@ local function getItemAt(
 end
 
 -- Write (or clear) a SerializedItem in any container at a given slot.
-local function setItemAt(
+local function _setItemAt(
 	data: PlayerData,
 	containerId: ContainerId,
 	slot: number | string,
@@ -234,7 +234,7 @@ local function canAssignToQuickUse(item: SerializedItem): boolean
 	return template.category == QUICK_USE_ALLOWED_CATEGORY
 end
 
-local function findFreeQuickUseSlot(data: PlayerData): number?
+local function _findFreeQuickUseSlot(data: PlayerData): number?
 	for i = 1, QUICK_USE_MAX_SLOTS do
 		if not getItemAt(data, "quickuse", i) then
 			return i
@@ -279,8 +279,8 @@ end
 --[[
 	AddItem(player, templateId, count?, modifiers?)
 	Creates a new item instance in the player's inventory.
-	Respects template stackMax when defined (stacks existing items first).
-	Returns the SerializedItem on success, nil if inventory is full.
+	Respects template stackMax when defined (stacks existing items first; new slots capped at stackMax).
+	Returns (SerializedItem?, number): first item created/updated and total count actually added; (nil, 0) if inventory full and none added.
 	modifiers should be a list of SerializedMod if provided.
 ]]
 function InventoryService.AddItem(
@@ -288,14 +288,15 @@ function InventoryService.AddItem(
 	templateId: string,
 	count: number?,
 	modifiers: { SerializedMod }?
-): SerializedItem?
+): (SerializedItem?, number)
 
 	local data = getPlayerData(player)
-	if not data or not templateId or templateId == "" then return nil end
+	if not data or not templateId or templateId == "" then return nil, 0 end
 
 	local template  = ItemRegistry.GetTemplate(templateId)
 	local stackMax  = (template and template.stackMax) or 1
 	local remaining = count or 1
+	local requested = remaining
 
 	-- Try to fill existing stacks first.
 	if stackMax > 1 and remaining > 0 then
@@ -317,29 +318,41 @@ function InventoryService.AddItem(
 					remaining -= addAmount
 					setAtPath(player, { "inventory", "slots", tostring(slot) }, existing)
 					if remaining <= 0 then
-						return existing
+						return existing, requested
 					end
 				end
 			end
 		end
 	end
 
-	-- Place remaining into a new slot.
-	local freeSlot = findFreeInventorySlot(data)
-	if not freeSlot then
-		warn("[InventoryService] Inventory full for " .. player.Name)
-		return nil
+	-- Place remaining into new slots, each capped at stackMax.
+	local firstCreated: SerializedItem? = nil
+	local totalAdded = requested - remaining
+	while remaining > 0 do
+		data = getPlayerData(player)
+		if not data then return firstCreated, totalAdded end
+		local freeSlot = findFreeInventorySlot(data)
+		if not freeSlot then
+			if not firstCreated then
+				warn("[InventoryService] Inventory full for " .. player.Name)
+			end
+			return firstCreated, totalAdded
+		end
+		local amount = math.min(remaining, stackMax)
+		remaining -= amount
+		totalAdded += amount
+		local newItem: SerializedItem = {
+			iid  = generateInstanceId(templateId),
+			tid  = templateId,
+			cnt  = (amount > 1 or stackMax > 1) and amount or nil,
+			mods = (modifiers and #modifiers > 0) and modifiers or nil,
+		}
+		setAtPath(player, { "inventory", "slots", tostring(freeSlot) }, newItem)
+		if not firstCreated then
+			firstCreated = newItem
+		end
 	end
-
-	local newItem: SerializedItem = {
-		iid  = generateInstanceId(templateId),
-		tid  = templateId,
-		cnt  = (remaining > 1 or stackMax > 1) and remaining or nil,
-		mods = (modifiers and #modifiers > 0) and modifiers or nil,
-	}
-
-	setAtPath(player, { "inventory", "slots", tostring(freeSlot) }, newItem)
-	return newItem
+	return firstCreated, totalAdded
 end
 
 -- ─── Item removal ─────────────────────────────────────────────────────────────
@@ -368,6 +381,25 @@ function InventoryService.RemoveItem(player: Player, instanceId: string): boolea
 	end
 
 	return true
+end
+
+--[[
+	RemoveItemAt(player, containerId, slot)
+	Removes the item at the given container and slot (if any).
+	containerId: "inventory" | "equipment" | "quickuse" | "stash"
+	slot: number for inventory/quickuse/stash; "Backpack" | "Armor" | "Weapon1" | "Weapon2" for equipment.
+	Returns true if an item was removed, false if slot empty or invalid.
+]]
+function InventoryService.RemoveItemAt(
+	player: Player,
+	containerId: ContainerId,
+	slot: number | string
+): boolean
+	local data = getPlayerData(player)
+	if not data then return false end
+	local item = getItemAt(data, containerId, slot)
+	if not item then return false end
+	return InventoryService.RemoveItem(player, item.iid)
 end
 
 -- ─── Container movement ───────────────────────────────────────────────────────

@@ -46,8 +46,8 @@ local function QuickUsePanel(props: QuickUsePanelProps)
 	local quickRows: number
 	if useBackpackSizing and props.slotSize and props.columnWidth then
 		slotSize = props.slotSize
-		cellPadding = math.floor(P.InventorySlot * scale)
-		-- Derive column count from width (same formula as inventory): width = cols*slotSize + (cols-1)*padding
+		cellPadding = math.floor(P.BackpackSlot * scale)
+		-- Derive column count from width (same formula as backpack): width = cols*slotSize + (cols-1)*padding
 		quickCols = math.max(1, math.floor((props.columnWidth + cellPadding) / (slotSize + cellPadding)))
 		quickRows = math.ceil(QUICK_USE_SLOT_COUNT / quickCols)
 	else

@@ -10,7 +10,7 @@ ThemeConfig.Padding = {
 	-- Main frame (Loadout container)
 	OuterFrameHorizontal = 48,
 	OuterFrameVertical = 8,
-	ColumnGap = 64,
+	ColumnGap = 32,
 
 	-- Title header to content gap
 	TitleToContent = 12,
@@ -22,8 +22,8 @@ ThemeConfig.Padding = {
 	BackpackArmorGap = 16,
 	CardRowGap = 32,
 
-	-- Grid slots
-	InventorySlot = 8,
+	-- Grid slots (BackpackSlot used for backpack grid gap; QuickUsePanel uses it when matching backpack sizing)
+	BackpackSlot = 8,
 	QuickUseSlot = 6,
 
 	-- Cards
@@ -130,7 +130,7 @@ ThemeConfig.Colors.ScrollBar = {
 ]]
 ThemeConfig.DebugColumnColors = {
 	Equipment = Color3.fromRGB(255, 80, 80),
-	Inventory = Color3.fromRGB(80, 255, 80),
+	Backpack = Color3.fromRGB(80, 255, 80),
 	QuickUse = Color3.fromRGB(80, 80, 255),
 	Transparency = 1, -- 1 = invisible
 }
@@ -141,10 +141,14 @@ ThemeConfig.DebugColumnColors = {
 ThemeConfig.Loadout = {
 	WidthScale = 0.70,
 	ColumnRatioEquip = 3,
-	ColumnRatioInv = 4,
+	ColumnRatioBackpack = 4,
 	ColumnRatioQuick = 3,
 	AbilitySlotSize = 48,
 	OuterCardHeightRatio = 6 / 9, -- height:width
+	-- Reference short edge for scale factor (scale = min(X,Y) / ReferenceShortEdge)
+	ReferenceShortEdge = 1080,
+	-- Min scale for ability slots so they don't shrink too fast when only viewport height is reduced
+	AbilitySlotMinScale = 0.65,
 }
 
 --[[

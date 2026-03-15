@@ -45,7 +45,7 @@ LayoutConfig.ZIndex = {
 	parent panel always computes and passes an explicit size.
 ]]
 LayoutConfig.DefaultSlotSize = {
-	Inventory = 72,
+	Backpack  = 72,
 	Equipment = 64,
 	Ability   = 36,
 	QuickUse  = 56,
@@ -57,8 +57,8 @@ LayoutConfig.DefaultSlotSize = {
 	XPos / YPos refer to the Position property's Scale components.
 ]]
 LayoutConfig.SlotLabel = {
-	-- Inventory slot: item name in the bottom strip, stack count top-right
-	Inventory = {
+	-- Backpack slot: item name in the bottom strip, stack count top-right
+	Backpack = {
 		LabelHeightScale = 0.25,
 		LabelXPos        = 0,
 		LabelYPos        = 0.75,

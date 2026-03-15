@@ -11,7 +11,7 @@
 --   writes are small. Template data is NEVER stored; only templateId.
 --
 -- UI LAYER  (legacy types: ItemStack, InventoryData, EquipmentData, etc.)
---   Consumed by all existing React components (InventoryPanel, EquipmentPanel,
+--   Consumed by all existing React components (BackpackPanel, EquipmentPanel,
 --   HudLoadout, etc.). These stay unchanged so the UI keeps working.
 --   The controllers convert server payloads into UI-layer types.
 --
@@ -28,7 +28,7 @@ export type ItemStack = {
 	maxStack: number,
 }
 
--- Inventory grid state consumed by InventoryPanel.
+-- Backpack grid state consumed by BackpackPanel.
 export type InventoryData = {
 	slots: { [number]: ItemStack? },
 	equippedSlot: number?,
@@ -49,7 +49,7 @@ export type WeaponData = { itemId: string, abilities: { [number]: AbilitySlotDat
 
 -- Full state bundle passed from LoadoutController to LoadoutApp.
 export type LoadoutData = {
-	inventory: InventoryData,
+	backpack: InventoryData,
 	equipment: EquipmentData?,
 	weapons: { [number]: WeaponData? }?,
 	quickUse: QuickUseData?,

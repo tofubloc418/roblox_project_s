@@ -8,7 +8,7 @@ local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitF
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local EquipmentPanel = require(script.Parent:WaitForChild("EquipmentPanel"))
-local InventoryPanel = require(script.Parent:WaitForChild("InventoryPanel"))
+local BackpackPanel = require(script.Parent:WaitForChild("BackpackPanel"))
 local QuickUsePanel = require(script.Parent:WaitForChild("QuickUsePanel"))
 type LoadoutData = InventoryTypes.LoadoutData
 type EquipmentSlotId = InventoryTypes.EquipmentSlotId
@@ -30,14 +30,12 @@ export type LoadoutAppProps = {
 	onMouseLeave: (index: number) -> (),
 }
 
-local REFERENCE_SHORT_EDGE = 1080
-
 local P = ThemeConfig.Padding
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
 local R = ThemeConfig.CornerRadius
 local L = ThemeConfig.Loadout
-local COLUMN_RATIO_TOTAL = L.ColumnRatioEquip + L.ColumnRatioInv + L.ColumnRatioQuick
+local COLUMN_RATIO_TOTAL = L.ColumnRatioEquip + L.ColumnRatioBackpack + L.ColumnRatioQuick
 
 local function LoadoutApp(props: LoadoutAppProps)
 	local loadoutData = props.loadoutData
@@ -45,8 +43,9 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local _rows = props.rows
 	local cols = props.cols
 
-	-- Scale factor from viewport (reference = 1080 short edge); clamp to avoid extreme sizes
-	local scale = math.clamp(math.min(viewportSize.X, viewportSize.Y) / REFERENCE_SHORT_EDGE, 0.5, 2)
+	-- Scale factor from viewport (reference from config); clamp to avoid extreme sizes
+	local refShort = L.ReferenceShortEdge or 1080
+	local scale = math.clamp(math.min(viewportSize.X, viewportSize.Y) / refShort, 0.5, 2)
 
 	-- Scaled padding and font for this screen
 	local scaledP = {
@@ -54,7 +53,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 		OuterFrameVertical = math.floor(P.OuterFrameVertical * scale),
 		TitleToContent = math.floor(P.TitleToContent * scale),
 		ColumnGap = math.floor(P.ColumnGap * scale),
-		InventorySlot = math.floor(P.InventorySlot * scale),
+		BackpackSlot = math.floor(P.BackpackSlot * scale),
 	}
 	local scaledF = {
 		TitleHeight = math.floor(F.TitleHeight * scale),
@@ -68,11 +67,11 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local availableForColumns = contentWidth - totalColumnPadding
 
 	local equipmentWidth = math.floor(availableForColumns * L.ColumnRatioEquip / COLUMN_RATIO_TOTAL)
-	local inventoryWidth = math.floor(availableForColumns * L.ColumnRatioInv / COLUMN_RATIO_TOTAL)
+	local backpackWidth = math.floor(availableForColumns * L.ColumnRatioBackpack / COLUMN_RATIO_TOTAL)
 	local quickUseWidth = math.floor(availableForColumns * L.ColumnRatioQuick / COLUMN_RATIO_TOTAL)
 
-	-- Inventory slot size (square); same size used for backpack and quick slots so they match
-	local inventorySlotSize = math.floor((inventoryWidth - (cols - 1) * scaledP.InventorySlot) / cols)
+	-- Backpack slot size (square); same size used for backpack and quick slots so they match
+	local backpackSlotSize = math.floor((backpackWidth - (cols - 1) * scaledP.BackpackSlot) / cols)
 
 	return React.createElement("Frame", {
 		Name = "LoadoutApp",
@@ -147,7 +146,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 					equipment = loadoutData.equipment,
 					weapons = loadoutData.weapons,
 					columnWidth = equipmentWidth,
-					inventorySlotSize = inventorySlotSize,
+					backpackSlotSize = backpackSlotSize,
 					scale = scale,
 					dragEnabled = props.dragEnabled,
 					onEquipmentDragStart = props.onEquipmentDragStart,
@@ -155,10 +154,10 @@ local function LoadoutApp(props: LoadoutAppProps)
 					onAbilityClick = props.onAbilityClick,
 				}),
 			}),
-			InventoryCol = React.createElement("ScrollingFrame", {
-				Name = "InventoryCol",
-				Size = UDim2.new(0, inventoryWidth, 1, 0),
-				BackgroundColor3 = ThemeConfig.DebugColumnColors.Inventory,
+			BackpackCol = React.createElement("ScrollingFrame", {
+				Name = "BackpackCol",
+				Size = UDim2.new(0, backpackWidth, 1, 0),
+				BackgroundColor3 = ThemeConfig.DebugColumnColors.Backpack,
 				BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
 				LayoutOrder = 2,
 				CanvasSize = UDim2.fromOffset(0, 0),
@@ -174,11 +173,11 @@ local function LoadoutApp(props: LoadoutAppProps)
 					VerticalAlignment = Enum.VerticalAlignment.Top,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 				}),
-				Panel = React.createElement(InventoryPanel, {
-					inventoryData = loadoutData.inventory,
+				Panel = React.createElement(BackpackPanel, {
+					backpackData = loadoutData.backpack,
 					rows = props.rows,
 					cols = props.cols,
-					columnWidth = inventoryWidth,
+					columnWidth = backpackWidth,
 					scale = scale,
 					gridRef = props.inventoryGridRef,
 					dragEnabled = props.dragEnabled,
@@ -208,7 +207,7 @@ local function LoadoutApp(props: LoadoutAppProps)
 				}),
 				Panel = React.createElement(QuickUsePanel, {
 					quickUseData = loadoutData.quickUse,
-					slotSize = inventorySlotSize,
+					slotSize = backpackSlotSize,
 					columnWidth = quickUseWidth,
 					scale = scale,
 					dragEnabled = props.dragEnabled,

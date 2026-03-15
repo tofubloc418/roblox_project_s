@@ -4,7 +4,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
-export type DragContainerId = "inventory" | "equipment" | "quickuse" | "stash" | "loot"
+export type DragContainerId = "backpack" | "equipment" | "quickuse" | "stash" | "loot"
 
 export type DragDescriptor = {
 	container: DragContainerId,

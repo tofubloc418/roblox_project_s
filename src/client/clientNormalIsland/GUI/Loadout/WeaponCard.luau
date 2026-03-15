@@ -46,8 +46,16 @@ local function WeaponCard(props: WeaponCardProps)
 	local weaponSlotContainerRef = React.useRef(nil :: GuiObject?)
 
 	local scaledCard = math.floor(P.Card * scale)
-	local abilitySlotSize = math.floor(L.AbilitySlotSize * scale)
 	local scaledAbilityGap = math.floor(P.AbilitySlot * scale)
+
+	-- Ability slots: cap by width so they fit when column is narrow; use min scale so they don't shrink too fast vertically
+	local availableWidth = panelWidth - 2 * scaledCard - 4 * scaledAbilityGap
+	local maxAbilitySizeFromWidth = math.floor(availableWidth / 5)
+	local abilityScale = math.max(scale, L.AbilitySlotMinScale or 0.65)
+	local abilitySlotSize = math.min(
+		math.floor(L.AbilitySlotSize * abilityScale),
+		math.max(1, maxAbilitySizeFromWidth)
+	)
 
 	-- Outer card: height:width = 6:9
 	local outerCardHeight = math.floor(panelWidth * L.OuterCardHeightRatio)
@@ -86,7 +94,7 @@ local function WeaponCard(props: WeaponCardProps)
 	end
 
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
-	local innerAbilitySize = abilitySlotSize - 2 * borderWidth
+	local innerAbilitySize = math.max(1, abilitySlotSize - 2 * borderWidth)
 
 	local abilitySlots: { [string | number]: any } = {}
 	for i = 1, ABILITY_COUNT do

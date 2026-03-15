@@ -18,7 +18,7 @@ export type EquipmentPanelProps = {
 	equipment: EquipmentData?,
 	weapons: { [number]: WeaponData? }?,
 	columnWidth: number?,
-	inventorySlotSize: number?,
+	backpackSlotSize: number?,
 	scale: number?,
 	dragEnabled: boolean?,
 	onEquipmentDragStart: (slotId: EquipmentSlotId) -> (),
@@ -34,7 +34,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 	local equipment = (props.equipment or {}) :: EquipmentData
 	local weapons = props.weapons or {}
 	local columnWidth = props.columnWidth or 250
-	local inventorySlotSize = props.inventorySlotSize or 64
+	local backpackSlotSize = props.backpackSlotSize or 64
 	local scale = props.scale or 1
 
 	local scaledHeaderHeight = math.floor(F.SectionHeaderHeight * scale)
@@ -83,7 +83,7 @@ local function EquipmentPanel(props: EquipmentPanelProps)
 			}),
 			TopRow = React.createElement("Frame", {
 				Name = "TopRow",
-				Size = UDim2.new(1, 0, 0, inventorySlotSize),
+				Size = UDim2.new(1, 0, 0, backpackSlotSize),
 				BackgroundTransparency = 1,
 				LayoutOrder = 1,
 			}, {

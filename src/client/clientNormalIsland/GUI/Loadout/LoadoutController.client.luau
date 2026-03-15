@@ -41,10 +41,18 @@ type InventorySyncPayload = InventoryTypes.InventorySyncPayload
 type SerializedItem    = InventoryTypes.SerializedItem
 
 type DragDescriptor = {
-	container: "inventory" | "equipment" | "quickuse" | "stash" | "loot",
+	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot",
 	index: number?,
 	slotId: string?,
 }
+
+-- Map UI container id to server ContainerId (server still uses "inventory" for backpack storage)
+local function toServerContainer(c: "backpack" | "equipment" | "quickuse" | "stash" | "loot"): string
+	if c == "backpack" then
+		return "inventory"
+	end
+	return c
+end
 
 local visibleInventorySlotMap: { [number]: number }
 
@@ -76,7 +84,7 @@ local function buildLoadoutData(payload: InventorySyncPayload): LoadoutData
 		slotMap[slot] = slot
 	end
 	visibleInventorySlotMap = slotMap
-	local inventory: InventoryData = { slots = invSlots, equippedSlot = nil }
+	local backpack: InventoryData = { slots = invSlots, equippedSlot = nil }
 
 	local equipment: EquipmentData = {}
 	if payload.equipment.Backpack then
@@ -107,7 +115,7 @@ local function buildLoadoutData(payload: InventorySyncPayload): LoadoutData
 	end
 
 	return {
-		inventory = inventory,
+		backpack  = backpack,
 		equipment = equipment,
 		weapons   = weapons,
 		quickUse  = { slots = quickSlots },
@@ -120,7 +128,7 @@ local COLS = 4
 
 -- ── State ─────────────────────────────────────────────────────────────────────
 local loadoutData: LoadoutData = {
-	inventory = { slots = {}, equippedSlot = nil },
+	backpack  = { slots = {}, equippedSlot = nil },
 	equipment = nil,
 	weapons   = nil,
 	quickUse  = nil,
@@ -174,7 +182,7 @@ local function render()
 			end
 
 			DragDropManager.prepareDrag({
-				container = "inventory",
+				container = "backpack",
 				index = index,
 			}, buildGhostVisual(item))
 		end,
@@ -309,7 +317,7 @@ local function getDraggedInstanceId(source: DragDescriptor): string?
 		return nil
 	end
 
-	if source.container == "inventory" and source.index then
+	if source.container == "backpack" and source.index then
 		local backendSlot = getBackendInventorySlot(source.index)
 		if backendSlot == nil then
 			return nil
@@ -367,14 +375,14 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 
 	local fromSlot: number | string? = nil
 	local toSlot: number | string? = nil
-	if source.container == "inventory" then
+	if source.container == "backpack" then
 		fromSlot = getBackendInventorySlot(source.index)
 	elseif source.container == "equipment" then
 		fromSlot = source.slotId
 	elseif source.container == "quickuse" then
 		fromSlot = source.index
 	end
-	if target.container == "inventory" then
+	if target.container == "backpack" then
 		toSlot = getBackendInventorySlot(target.index)
 	elseif target.container == "equipment" then
 		toSlot = target.slotId
@@ -382,12 +390,12 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		toSlot = target.index
 	end
 
-	local canMove = (source.container == "inventory" or source.container == "equipment" or source.container == "quickuse")
-		and (target.container == "inventory" or target.container == "equipment" or target.container == "quickuse")
+	local canMove = (source.container == "backpack" or source.container == "equipment" or source.container == "quickuse")
+		and (target.container == "backpack" or target.container == "equipment" or target.container == "quickuse")
 		and fromSlot ~= nil and toSlot ~= nil
 
 	if canMove then
-		requestMove:FireServer(source.container, fromSlot, target.container, toSlot)
+		requestMove:FireServer(toServerContainer(source.container), fromSlot, toServerContainer(target.container), toSlot)
 	end
 end)
 

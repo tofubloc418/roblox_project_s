@@ -1,19 +1,20 @@
 --!strict
--- Center panel: functional inventory grid connected to server
+-- Center panel: backpack grid connected to server
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
+local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local InventorySlot = require(script.Parent:WaitForChild("InventorySlot"))
 type InventoryData = InventoryTypes.InventoryData
 type ItemStack = InventoryTypes.ItemStack
 
-export type InventoryPanelProps = {
-	inventoryData: InventoryData,
+export type BackpackPanelProps = {
+	backpackData: InventoryData,
 	rows: number,
 	cols: number,
 	columnWidth: number?,
@@ -29,23 +30,23 @@ local P = ThemeConfig.Padding
 local F = ThemeConfig.Font
 local C = ThemeConfig.Colors
 
-local function InventoryPanel(props: InventoryPanelProps)
+local function BackpackPanel(props: BackpackPanelProps)
 	local rows = props.rows
 	local cols = props.cols
 	local columnWidth = props.columnWidth or 400
 	local scale = props.scale or 1
-	local inventoryData = props.inventoryData
+	local backpackData = props.backpackData
 	local slotCount = rows * cols
 
-	local scaledInventorySlot = math.floor(P.InventorySlot * scale)
+	local scaledBackpackSlot = math.floor(P.BackpackSlot * scale)
 	local scaledHeaderHeight = math.floor(F.SectionHeaderHeight * scale)
 	local scaledHeaderSize = math.floor(F.SectionHeaderSize * scale)
 	local scaledHeaderToContent = math.floor(P.HeaderToContent * scale)
 
 	-- Compute slot size from column width: cols * slotSize + (cols-1) * padding = columnWidth
-	local slotSize = math.floor((columnWidth - (cols - 1) * scaledInventorySlot) / cols)
-	local gridWidth = cols * slotSize + (cols - 1) * scaledInventorySlot
-	local gridHeight = rows * slotSize + (rows - 1) * scaledInventorySlot
+	local slotSize = math.floor((columnWidth - (cols - 1) * scaledBackpackSlot) / cols)
+	local gridWidth = cols * slotSize + (cols - 1) * scaledBackpackSlot
+	local gridHeight = rows * slotSize + (rows - 1) * scaledBackpackSlot
 	local panelHeight = scaledHeaderHeight + scaledHeaderToContent + gridHeight
 
 	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
@@ -59,9 +60,9 @@ local function InventoryPanel(props: InventoryPanelProps)
 
 	local slots: { [string]: any } = {}
 	for i = 1, slotCount do
-		local raw = inventoryData.slots[i]
+		local raw = backpackData.slots[i]
 		local stack: ItemStack? = if raw and typeof(raw) == "table" then raw :: ItemStack else nil
-		local isActive = inventoryData.equippedSlot == i
+		local isActive = backpackData.equippedSlot == i
 		slots["Slot" .. i] = React.createElement(GradientBorder, {
 			size = innerSlotSize,
 			layoutOrder = i,
@@ -69,14 +70,14 @@ local function InventoryPanel(props: InventoryPanelProps)
 			onMouseEnter = function()
 				props.onMouseEnter(i)
 				DragDropManager.notifyHoverEnter({
-					container = "inventory",
+					container = "backpack",
 					index = i,
 				})
 			end,
 			onMouseLeave = function()
 				props.onMouseLeave(i)
 				DragDropManager.notifyHoverLeave({
-					container = "inventory",
+					container = "backpack",
 					index = i,
 				})
 			end,
@@ -104,7 +105,7 @@ local function InventoryPanel(props: InventoryPanelProps)
 	end
 
 	return React.createElement("Frame", {
-		Name = "InventoryPanel",
+		Name = "BackpackPanel",
 		Size = UDim2.fromOffset(gridWidth, panelHeight),
 		BackgroundTransparency = 1,
 		LayoutOrder = 2,
@@ -135,7 +136,7 @@ local function InventoryPanel(props: InventoryPanelProps)
 		}, {
 			GridLayout = React.createElement("UIGridLayout", {
 				CellSize = UDim2.fromOffset(slotSize, slotSize),
-				CellPadding = UDim2.fromOffset(scaledInventorySlot, scaledInventorySlot),
+				CellPadding = UDim2.fromOffset(scaledBackpackSlot, scaledBackpackSlot),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 				FillDirectionMaxCells = cols,
 			}),
@@ -159,4 +160,4 @@ local function InventoryPanel(props: InventoryPanelProps)
 	})
 end
 
-return InventoryPanel
+return BackpackPanel

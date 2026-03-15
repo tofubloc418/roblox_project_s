@@ -22,7 +22,7 @@ export type InventorySlotProps = {
 	onMouseLeave: (() -> ())?,
 }
 
-local DEFAULT_SLOT_SIZE = LayoutConfig.DefaultSlotSize.Inventory
+local DEFAULT_SLOT_SIZE = LayoutConfig.DefaultSlotSize.Backpack
 local C = ThemeConfig.Colors
 local R = ThemeConfig.CornerRadius
 local F = ThemeConfig.Font
@@ -57,7 +57,7 @@ local function InventorySlot(props: InventorySlotProps)
 		end
 
 		DragDropManager.prepareDrag({
-			container = "inventory",
+			container = "backpack",
 			index = props.index,
 		}, {
 			imageId = imageId,
@@ -89,8 +89,8 @@ local function InventorySlot(props: InventorySlotProps)
 		}),
 		Label = React.createElement("TextLabel", {
 			Name = "Label",
-			Size = UDim2.fromScale(1, LayoutConfig.SlotLabel.Inventory.LabelHeightScale),
-			Position = UDim2.fromScale(LayoutConfig.SlotLabel.Inventory.LabelXPos, LayoutConfig.SlotLabel.Inventory.LabelYPos),
+			Size = UDim2.fromScale(1, LayoutConfig.SlotLabel.Backpack.LabelHeightScale),
+			Position = UDim2.fromScale(LayoutConfig.SlotLabel.Backpack.LabelXPos, LayoutConfig.SlotLabel.Backpack.LabelYPos),
 			BackgroundTransparency = 1,
 			TextScaled = true,
 			TextColor3 = C.Text.Primary,

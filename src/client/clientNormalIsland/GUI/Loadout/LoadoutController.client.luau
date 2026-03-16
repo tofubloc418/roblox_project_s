@@ -26,6 +26,7 @@ local DataServiceClient = DataService.client
 local React         = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local ReactRoblox   = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
 local LoadoutApp    = require(script.Parent:WaitForChild("LoadoutApp"))
@@ -39,6 +40,9 @@ type LoadoutData       = InventoryTypes.LoadoutData
 type EquipmentSlotId   = InventoryTypes.EquipmentSlotId
 type InventorySyncPayload = InventoryTypes.InventorySyncPayload
 type SerializedItem    = InventoryTypes.SerializedItem
+type AbilityPresetsData = InventoryTypes.AbilityPresetsData
+type AbilitySlotData   = InventoryTypes.AbilitySlotData
+type SerializedPreset  = InventoryTypes.SerializedPreset
 
 type DragDescriptor = {
 	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot",
@@ -73,7 +77,19 @@ local function buildGhostVisual(item: SerializedItem): { imageId: string, labelT
 	}
 end
 
-local function buildLoadoutData(payload: InventorySyncPayload): LoadoutData
+local function presetToAbilities(preset: SerializedPreset?): { [number]: AbilitySlotData? }
+	local out: { [number]: AbilitySlotData? } = {}
+	if not preset then return out end
+	for i = 1, 5 do
+		local slot = preset[i]
+		if slot and slot.aid then
+			out[i] = { abilityId = slot.aid, isUltimate = slot.ult == true }
+		end
+	end
+	return out
+end
+
+local function buildLoadoutData(payload: InventorySyncPayload, abilityPresets: AbilityPresetsData?): LoadoutData
 	-- Inventory: 1:1 grid (position i = backend slot i). Use getSlotItem so string keys from DataStore work.
 	local invSlots: { [number]: ItemStack? } = {}
 	local slotMap: { [number]: number } = {}
@@ -100,12 +116,15 @@ local function buildLoadoutData(payload: InventorySyncPayload): LoadoutData
 		equipment["Weapon2" :: EquipmentSlotId] = toItemStack(payload.equipment.Weapon2)
 	end
 
+	local presets = abilityPresets or {}
 	local weapons: { [number]: WeaponData? } = {}
 	if payload.equipment.Weapon1 then
-		weapons[1] = { itemId = payload.equipment.Weapon1.tid, abilities = {} }
+		local presetKey = GetPresetKey.GetPresetKeyForEquipmentSlot(payload.equipment, "Weapon1")
+		weapons[1] = { itemId = payload.equipment.Weapon1.tid, abilities = presetToAbilities(presets[presetKey]) }
 	end
 	if payload.equipment.Weapon2 then
-		weapons[2] = { itemId = payload.equipment.Weapon2.tid, abilities = {} }
+		local presetKey = GetPresetKey.GetPresetKeyForEquipmentSlot(payload.equipment, "Weapon2")
+		weapons[2] = { itemId = payload.equipment.Weapon2.tid, abilities = presetToAbilities(presets[presetKey]) }
 	end
 
 	local quickSlots: { [number]: ItemStack? } = {}
@@ -250,6 +269,7 @@ local function refreshLoadoutFromData()
 	local eq  = dsGet({ "equipment" })
 	local qu  = dsGet({ "quickUse" })
 	local cur = dsGet({ "currency" })
+	local ap  = dsGet({ "abilityPresets" })
 	if type(inv) == "table" and type(eq) == "table" and type(qu) == "table" then
 		local payload: InventorySyncPayload = {
 			inventory = inv,
@@ -258,7 +278,7 @@ local function refreshLoadoutFromData()
 			currency  = type(cur) == "table" and cur or { gold = 0 },
 		}
 		latestPayload = payload
-		loadoutData = buildLoadoutData(payload)
+		loadoutData = buildLoadoutData(payload, type(ap) == "table" and ap or nil)
 		render()
 	end
 end
@@ -272,7 +292,7 @@ task.spawn(function()
 	dataReady = true
 	refreshLoadoutFromData()
 	
-	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" } }) do
+	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" } }) do
 		local sig = client:getChangedSignal(path)
 		if sig and type(sig.Connect) == "function" then
 			sig:Connect(refreshLoadoutFromData)

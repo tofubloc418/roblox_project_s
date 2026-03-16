@@ -92,8 +92,10 @@ local virtualCursorOffset = Vector2.new(0, 0)
 
 local function renderHud()
 	local state = HudLoadoutDataAdapter.getState()
+	local abilityBarSlots = HudLoadoutDataAdapter.getAbilityBarSlots()
 	hudRoot:render(React.createElement(HudLoadoutApp, {
 		state = state,
+		abilityBarSlots = abilityBarSlots,
 		viewportSize = getViewportSize(),
 		onSlot1 = function()
 			handleSlotSwitch("Weapon1")

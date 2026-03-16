@@ -179,4 +179,12 @@ ThemeConfig.HudLoadout = {
 	BarInactiveBackgroundTransparency = 0.4,
 }
 
+--[[
+	ABILITY BAR (bottom-center, 5 ability slots)
+]]
+ThemeConfig.AbilityBar = {
+	SlotSize = 48,
+	SlotGap  = 6,
+}
+
 return ThemeConfig

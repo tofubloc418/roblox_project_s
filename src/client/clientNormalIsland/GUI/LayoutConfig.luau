@@ -109,4 +109,14 @@ LayoutConfig.HudLoadout = {
 	ZIndex      = 5,
 }
 
+--[[
+	ABILITY BAR (bottom-center, 5 slots for current/last active weapon abilities)
+]]
+LayoutConfig.AbilityBar = {
+	AnchorPoint = Vector2.new(0.5, 1),
+	Position    = UDim2.fromScale(0.5, 1),
+	OffsetY     = -24, -- pixels from bottom edge
+	ZIndex      = 5,
+}
+
 return LayoutConfig

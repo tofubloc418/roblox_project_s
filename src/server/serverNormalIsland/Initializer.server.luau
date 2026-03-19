@@ -13,6 +13,7 @@ local DataServiceBootstrap = require(script.Parent:WaitForChild(DATA_FOLDER):Wai
 local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
 local AbilityExecutionService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityExecutionService"))
+local KeybindsService = require(script.Parent:WaitForChild("Input"):WaitForChild("KeybindsService"))
 
 local DamageService = require(script.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local WeaponService = require(script.Parent:WaitForChild("Weapons"):WaitForChild("WeaponService"))
@@ -49,6 +50,7 @@ ensureMatchInfo()
 -- Service boot
 
 DataServiceBootstrap.Initialize()
+KeybindsService.Initialize()
 InventoryService.Initialize()
 AbilityDataService.Initialize()
 AbilityExecutionService.Initialize()
@@ -154,6 +156,7 @@ print("[Initializer] Initialization complete")
 -- Export service refs for other server scripts.
 _G.Services = {
 	DataServiceBootstrap = DataServiceBootstrap,
+	KeybindsService = KeybindsService,
 	InventoryService  = InventoryService,
 	AbilityDataService = AbilityDataService,
 	AbilityExecutionService = AbilityExecutionService,

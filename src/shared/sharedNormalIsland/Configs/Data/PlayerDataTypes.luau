@@ -1,6 +1,6 @@
 --!strict
--- InventoryTypes
--- Shared type definitions for the inventory / loadout system.
+-- PlayerDataTypes
+-- Shared type definitions for client UI payloads and persisted player data.
 --
 -- ── TWO LAYERS OF TYPES ────────────────────────────────────────────────────────
 --
@@ -126,8 +126,10 @@ export type CurrencyData = {
 	premium: number?,
 }
 
+export type StoredKeybindValue = string | { string }
+
 export type PlayerSettings = {
-	keybinds: { [string]: string }?,
+	keybinds: { [string]: StoredKeybindValue }?,
 	uiScale: number?,
 }
 

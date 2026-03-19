@@ -2,7 +2,6 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local player = Players.LocalPlayer
@@ -14,6 +13,9 @@ local MapMath = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("
 local MinimapView = require(script.Parent:WaitForChild("MinimapView"))
 local HudBuilder = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("HudBuilder"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 local Controller = {}
 Controller.enabled = true
@@ -73,12 +75,14 @@ function Controller:ToggleFullMap()
 end
 
 function Controller:SetupInput()
-	UserInputService.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if input.KeyCode == MinimapConfig.Controls.ToggleMapKey then
+	KeybindsClient.bindAction(KeybindIds.ToggleMap, function(_name, state, _input)
+		if state == Enum.UserInputState.Begin then
 			self:ToggleFullMap()
 		end
-	end)
+		return Enum.ContextActionResult.Sink
+	end, {
+		actionName = "ToggleMap",
+	})
 end
 
 function Controller:Start()

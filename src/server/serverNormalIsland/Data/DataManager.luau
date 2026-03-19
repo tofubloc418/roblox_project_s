@@ -6,7 +6,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local StatsConfig    = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Stats"):WaitForChild("StatsConfig"))
 
 type PlayerData = InventoryTypes.PlayerData
@@ -60,7 +60,9 @@ function DataManager.createDefaultData(userId: number): PlayerData
 
 		currency = { gold = 0 },
 
-		settings = {},
+		settings = {
+			keybinds = {},
+		},
 	}
 end
 

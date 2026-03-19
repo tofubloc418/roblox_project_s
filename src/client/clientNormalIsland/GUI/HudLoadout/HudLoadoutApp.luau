@@ -21,7 +21,10 @@ local HudActionRow = require(script.Parent:WaitForChild("HudActionRow"))
 local HudSlotCard = require(script.Parent:WaitForChild("HudSlotCard"))
 local HudWeaponCard = require(script.Parent:WaitForChild("HudWeaponCard"))
 local HudAbilityBar = require(script.Parent:WaitForChild("HudAbilityBar"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
 type AbilitySlotData = InventoryTypes.AbilitySlotData
@@ -121,7 +124,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 				}),
 
 				ColQuick = React.createElement(HudSlotCard, {
-					keybind = "Q",
+					keybind = KeybindsClient.getDisplayString(KeybindIds.HudQuickUse),
 					iconImage = quickImageId ~= "" and quickImageId or nil,
 					isActive = state.activeSlot == "QuickUse",
 					size = H.SlotSize,
@@ -130,7 +133,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 				}),
 
 				ColFists = React.createElement(HudSlotCard, {
-					keybind = "3",
+					keybind = KeybindsClient.getDisplayString(KeybindIds.HudFists),
 					iconImage = FISTS_ICON,
 					isActive = state.activeSlot == "Fists",
 					size = H.SlotSize,
@@ -154,7 +157,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 					}),
 
 					Weapon1Card = React.createElement(HudWeaponCard, {
-						keybind = "1",
+						keybind = KeybindsClient.getDisplayString(KeybindIds.HudWeapon1),
 						weaponName = state.weapon1 and state.weapon1.displayName or nil,
 						iconImage = weapon1ImageId ~= "" and weapon1ImageId or nil,
 						isActive = state.activeSlot == "Weapon1",
@@ -165,7 +168,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 					}),
 
 					Weapon2Card = React.createElement(HudWeaponCard, {
-						keybind = "2",
+						keybind = KeybindsClient.getDisplayString(KeybindIds.HudWeapon2),
 						weaponName = state.weapon2 and state.weapon2.displayName or nil,
 						iconImage = weapon2ImageId ~= "" and weapon2ImageId or nil,
 						isActive = state.activeSlot == "Weapon2",

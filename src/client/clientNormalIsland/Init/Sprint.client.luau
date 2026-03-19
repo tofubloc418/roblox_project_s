@@ -6,6 +6,9 @@ local setSprintRemote: RemoteEvent = inputRemotes:WaitForChild("SetSprint")
 local jumpPressedRemote: RemoteEvent = inputRemotes:WaitForChild("JumpPressed")
 
 local player = Players.LocalPlayer
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 -- Toggle sprint desire and adjust walkspeed locally for responsiveness
 local function setSprint(desired: boolean)
@@ -25,9 +28,9 @@ end
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
-	if input.KeyCode == Enum.KeyCode.LeftControl then
+	if KeybindsClient.isInputForAction(KeybindIds.Sprint, input) then
 		setSprint(true)
-	elseif input.KeyCode == Enum.KeyCode.Space then
+	elseif KeybindsClient.isInputForAction(KeybindIds.Jump, input) then
 		jumpPressedRemote:FireServer()
 	end
 end)
@@ -35,7 +38,7 @@ end)
 UserInputService.InputEnded:Connect(function(input, gp)
 	if gp then return end
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
-	if input.KeyCode == Enum.KeyCode.LeftControl then
+	if KeybindsClient.isInputForAction(KeybindIds.Sprint, input) then
 		setSprint(false)
 	end
 end)
@@ -56,8 +59,6 @@ player:GetAttributeChangedSignal("Stamina"):Connect(function()
 	end
 end)
 
--- Sink Space when jumping is disallowed to prevent attempt
-local CAS = game:GetService("ContextActionService")
 local function blockJump(_, state, input)
     if state == Enum.UserInputState.Begin then
         local stamina = player:GetAttribute("Stamina") or 0
@@ -69,6 +70,8 @@ local function blockJump(_, state, input)
     end
     return Enum.ContextActionResult.Pass
 end
-CAS:BindAction("BlockJumpOnLowStamina", blockJump, false, Enum.KeyCode.Space)
+KeybindsClient.bindAction(KeybindIds.Jump, blockJump, {
+	actionName = "BlockJumpOnLowStamina",
+})
 
 

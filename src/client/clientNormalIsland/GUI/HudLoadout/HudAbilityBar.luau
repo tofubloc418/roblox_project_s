@@ -4,7 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
 
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local AbilityIconResolver = require(script.Parent.Parent:WaitForChild("Loadout"):WaitForChild("AbilityIconResolver"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))

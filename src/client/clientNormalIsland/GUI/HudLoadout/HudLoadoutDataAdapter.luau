@@ -17,7 +17,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudLoadoutTypes  = require(script.Parent:WaitForChild("HudLoadoutTypes"))
-local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local GetPresetKey     = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")

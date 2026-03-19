@@ -19,7 +19,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 
-local InventoryTypes    = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes    = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local ItemIconResolver  = require(script.Parent.Parent:WaitForChild("Loadout"):WaitForChild("ItemIconResolver"))
 local RadialDial        = require(script.Parent.Parent:WaitForChild("RadialDial"):WaitForChild("RadialDial"))
 local RadialDialTypes   = require(script.Parent.Parent:WaitForChild("RadialDial"):WaitForChild("RadialDialTypes"))

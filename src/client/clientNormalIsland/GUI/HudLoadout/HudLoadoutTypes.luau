@@ -2,7 +2,7 @@
 -- Type definitions for the HUD Loadout equipment section.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 type ItemStack = InventoryTypes.ItemStack
 
 -- Which "slot" the player currently has active (for gameplay + HUD highlighting)

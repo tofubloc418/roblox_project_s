@@ -48,11 +48,6 @@ MinimapConfig.PlayerIcon = {
     RotationOffset = 0, -- degrees; flip icon if asset points opposite
 }
 
--- Input settings
-MinimapConfig.Controls = {
-    ToggleMapKey = Enum.KeyCode.M,
-}
-
 -- Minimap assets for each island
 MinimapConfig.minimapAssets = {
     ["NormalIsland1"] = "rbxassetid://128918368774464",

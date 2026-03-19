@@ -5,7 +5,6 @@ local Players              = game:GetService("Players")
 local ReplicatedStorage    = game:GetService("ReplicatedStorage")
 local UserInputService     = game:GetService("UserInputService")
 local StarterGui           = game:GetService("StarterGui")
-local ContextActionService = game:GetService("ContextActionService")
 local RunService           = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
@@ -25,12 +24,15 @@ local DataService = require(ReplicatedStorage:WaitForChild("Packages"):WaitForCh
 local DataServiceClient = DataService.client
 local React         = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 local ReactRoblox   = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
 local LoadoutApp    = require(script.Parent:WaitForChild("LoadoutApp"))
 local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 type ItemStack         = InventoryTypes.ItemStack
 type InventoryData     = InventoryTypes.InventoryData
@@ -313,7 +315,9 @@ local function onToggleLoadout(_actionName: string, inputState: Enum.UserInputSt
 	end
 	return Enum.ContextActionResult.Sink
 end
-ContextActionService:BindAction("ToggleLoadout", onToggleLoadout, false, Enum.KeyCode.Tab)
+KeybindsClient.bindAction(KeybindIds.ToggleLoadout, onToggleLoadout, {
+	actionName = "ToggleLoadout",
+})
 
 function getEquipmentItem(slotId: string): SerializedItem?
 	local payload = latestPayload

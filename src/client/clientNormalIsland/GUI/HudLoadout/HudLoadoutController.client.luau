@@ -25,7 +25,6 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -37,6 +36,9 @@ local HudLoadoutDataAdapter = require(script.Parent:WaitForChild("HudLoadoutData
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local HudLoadoutApp = require(script.Parent:WaitForChild("HudLoadoutApp"))
 local HudRadialDial = require(script.Parent:WaitForChild("HudRadialDial"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
 type HudActiveSlot = HudLoadoutTypes.HudActiveSlot
@@ -143,6 +145,9 @@ end
 -- ── Data adapter subscription ────────────────────────────────────────────────
 -- Re-render HUD whenever adapter state changes (e.g. from external systems).
 HudLoadoutDataAdapter.subscribe(function(_state: HudLoadoutState)
+	renderHud()
+end)
+KeybindsClient.subscribe(function()
 	renderHud()
 end)
 
@@ -288,30 +293,36 @@ end)
 -- ── Key bindings ─────────────────────────────────────────────────────────────
 
 -- Keys 1 and 2: weapon slots
-ContextActionService:BindAction("HudWeapon1", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudWeapon1, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		handleSlotSwitch("Weapon1")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.One)
+end, {
+	actionName = "HudWeapon1",
+})
 
-ContextActionService:BindAction("HudWeapon2", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudWeapon2, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		handleSlotSwitch("Weapon2")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Two)
+end, {
+	actionName = "HudWeapon2",
+})
 
 -- Key 3: fists / unequip
-ContextActionService:BindAction("HudFists", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudFists, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		HudLoadoutDataAdapter.setActiveSlot("Fists")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Three)
+end, {
+	actionName = "HudFists",
+})
 
 -- Key Q: tap = equip current quick slot; hold = radial dial
-ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _input)
+KeybindsClient.bindAction(KeybindIds.HudQuickUse, function(_name, inputState, _input)
 	if inputState == Enum.UserInputState.Begin then
 		qPressTime = os.clock()
 		-- Start showing radial after a tiny delay handled in Heartbeat
@@ -351,7 +362,9 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 		end
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Q)
+end, {
+	actionName = "HudQuickUse",
+})
 
 -- Heartbeat: open radial once Q has been held past the threshold
 RunService.Heartbeat:Connect(function()
@@ -367,12 +380,14 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Key F: flashlight toggle
-ContextActionService:BindAction("HudFlashlight", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudFlashlight, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		HudLoadoutDataAdapter.toggleFlashlight()
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.F)
+end, {
+	actionName = "HudFlashlight",
+})
 
 -- ── Viewport resize ──────────────────────────────────────────────────────────
 

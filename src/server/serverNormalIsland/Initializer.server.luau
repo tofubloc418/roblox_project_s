@@ -12,6 +12,7 @@ local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
 local DataServiceBootstrap = require(script.Parent:WaitForChild(DATA_FOLDER):WaitForChild(DATA_SERVICE_BOOTSTRAP_NAME))
 local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
+local AbilityExecutionService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityExecutionService"))
 
 local DamageService = require(script.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local WeaponService = require(script.Parent:WaitForChild("Weapons"):WaitForChild("WeaponService"))
@@ -50,6 +51,7 @@ ensureMatchInfo()
 DataServiceBootstrap.Initialize()
 InventoryService.Initialize()
 AbilityDataService.Initialize()
+AbilityExecutionService.Initialize()
 StatsService:Initialize()
 WeaponService:Initialize()
 
@@ -154,6 +156,7 @@ _G.Services = {
 	DataServiceBootstrap = DataServiceBootstrap,
 	InventoryService  = InventoryService,
 	AbilityDataService = AbilityDataService,
+	AbilityExecutionService = AbilityExecutionService,
 	StatsService      = StatsService,
 	DamageService     = DamageService,
 }

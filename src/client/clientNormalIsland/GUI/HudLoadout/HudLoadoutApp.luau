@@ -20,8 +20,11 @@ local ItemIconResolver = require(script.Parent.Parent:WaitForChild("Loadout"):Wa
 local HudActionRow = require(script.Parent:WaitForChild("HudActionRow"))
 local HudSlotCard = require(script.Parent:WaitForChild("HudSlotCard"))
 local HudWeaponCard = require(script.Parent:WaitForChild("HudWeaponCard"))
+local HudAbilityBar = require(script.Parent:WaitForChild("HudAbilityBar"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
 
 type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
+type AbilitySlotData = InventoryTypes.AbilitySlotData
 
 local H = ThemeConfig.HudLoadout
 local L = LayoutConfig.HudLoadout
@@ -32,6 +35,7 @@ local FISTS_ICON: string? = nil
 
 export type HudLoadoutAppProps = {
 	state: HudLoadoutState,
+	abilityBarSlots: { [number]: AbilitySlotData? }?,
 	viewportSize: Vector2,
 	-- Callbacks wired by the controller
 	onSlot1: () -> (),
@@ -73,101 +77,110 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 	-- Weapon slots are square, same size as Q and 3
 	local slotSize = H.SlotSize
 
+	local abilityBarSlots = props.abilityBarSlots or {}
+
+	-- Full-screen root so we can position loadout (right) and ability bar (bottom-center) independently
 	return React.createElement("Frame", {
-		Name = "HudLoadoutApp",
-		AnchorPoint = L.AnchorPoint,
-		Position = L.Position,
-		Size = UDim2.new(0, 0, 0, 0),
-		AutomaticSize = Enum.AutomaticSize.XY,
+		Name = "HudLoadoutAppRoot",
+		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		-- Outer layout: action row on top, slot columns below
-		OuterLayout = React.createElement("UIListLayout", {
-			FillDirection = Enum.FillDirection.Vertical,
-			HorizontalAlignment = Enum.HorizontalAlignment.Right,
-			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 8),
-		}),
-
-		-- ── Action row (flashlight key) ────────────────────────────────────
-		ActionRow = React.createElement(HudActionRow, {
-			flashlightOn = state.flashlightOn,
-			layoutOrder = 1,
-		}),
-
-		-- ── Three-column slot area ─────────────────────────────────────────
-		ColumnsFrame = React.createElement("Frame", {
-			Name = "ColumnsFrame",
+		-- ── Right-side loadout (Q, 3, 1, 2) ─────────────────────────────────
+		LoadoutFrame = React.createElement("Frame", {
+			Name = "HudLoadoutApp",
+			AnchorPoint = L.AnchorPoint,
+			Position = L.Position,
 			Size = UDim2.new(0, 0, 0, 0),
 			AutomaticSize = Enum.AutomaticSize.XY,
 			BackgroundTransparency = 1,
-			LayoutOrder = 2,
 		}, {
-			ColumnsLayout = React.createElement("UIListLayout", {
-				FillDirection = Enum.FillDirection.Horizontal,
-				VerticalAlignment = Enum.VerticalAlignment.Bottom,
+			OuterLayout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, H.ColumnGap),
+				Padding = UDim.new(0, 8),
 			}),
 
-			-- ── Column 1: Q (quick-use) ──────────────────────────────────
-			ColQuick = React.createElement(HudSlotCard, {
-				keybind = "Q",
-				iconImage = quickImageId ~= "" and quickImageId or nil,
-				isActive = state.activeSlot == "QuickUse",
-				size = H.SlotSize,
+			ActionRow = React.createElement(HudActionRow, {
+				flashlightOn = state.flashlightOn,
 				layoutOrder = 1,
-				onActivated = props.onQuickUse,
 			}),
 
-			-- ── Column 2: 3 (fists / unequip) ───────────────────────────
-			ColFists = React.createElement(HudSlotCard, {
-				keybind = "3",
-				iconImage = FISTS_ICON,
-				isActive = state.activeSlot == "Fists",
-				size = H.SlotSize,
-				layoutOrder = 2,
-				onActivated = props.onSlot3,
-			}),
-
-			-- ── Column 3: weapon slots (stacked vertically, square like Q and 3) ──────────────
-			ColWeapons = React.createElement("Frame", {
-				Name = "ColWeapons",
-				Size = UDim2.new(0, slotSize, 0, 0),
-				AutomaticSize = Enum.AutomaticSize.Y,
+			ColumnsFrame = React.createElement("Frame", {
+				Name = "ColumnsFrame",
+				Size = UDim2.new(0, 0, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.XY,
 				BackgroundTransparency = 1,
-				LayoutOrder = 3,
+				LayoutOrder = 2,
 			}, {
-				WeaponsLayout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					HorizontalAlignment = Enum.HorizontalAlignment.Right,
+				ColumnsLayout = React.createElement("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
 					VerticalAlignment = Enum.VerticalAlignment.Bottom,
 					SortOrder = Enum.SortOrder.LayoutOrder,
 					Padding = UDim.new(0, H.ColumnGap),
 				}),
 
-				Weapon1Card = React.createElement(HudWeaponCard, {
-					keybind = "1",
-					weaponName = state.weapon1 and state.weapon1.displayName or nil,
-					iconImage = weapon1ImageId ~= "" and weapon1ImageId or nil,
-					isActive = state.activeSlot == "Weapon1",
-					showVisual = show1,
-					width = slotSize,
+				ColQuick = React.createElement(HudSlotCard, {
+					keybind = "Q",
+					iconImage = quickImageId ~= "" and quickImageId or nil,
+					isActive = state.activeSlot == "QuickUse",
+					size = H.SlotSize,
 					layoutOrder = 1,
-					onActivated = props.onSlot1,
+					onActivated = props.onQuickUse,
 				}),
 
-				Weapon2Card = React.createElement(HudWeaponCard, {
-					keybind = "2",
-					weaponName = state.weapon2 and state.weapon2.displayName or nil,
-					iconImage = weapon2ImageId ~= "" and weapon2ImageId or nil,
-					isActive = state.activeSlot == "Weapon2",
-					showVisual = show2,
-					width = slotSize,
+				ColFists = React.createElement(HudSlotCard, {
+					keybind = "3",
+					iconImage = FISTS_ICON,
+					isActive = state.activeSlot == "Fists",
+					size = H.SlotSize,
 					layoutOrder = 2,
-					onActivated = props.onSlot2,
+					onActivated = props.onSlot3,
+				}),
+
+				ColWeapons = React.createElement("Frame", {
+					Name = "ColWeapons",
+					Size = UDim2.new(0, slotSize, 0, 0),
+					AutomaticSize = Enum.AutomaticSize.Y,
+					BackgroundTransparency = 1,
+					LayoutOrder = 3,
+				}, {
+					WeaponsLayout = React.createElement("UIListLayout", {
+						FillDirection = Enum.FillDirection.Vertical,
+						HorizontalAlignment = Enum.HorizontalAlignment.Right,
+						VerticalAlignment = Enum.VerticalAlignment.Bottom,
+						SortOrder = Enum.SortOrder.LayoutOrder,
+						Padding = UDim.new(0, H.ColumnGap),
+					}),
+
+					Weapon1Card = React.createElement(HudWeaponCard, {
+						keybind = "1",
+						weaponName = state.weapon1 and state.weapon1.displayName or nil,
+						iconImage = weapon1ImageId ~= "" and weapon1ImageId or nil,
+						isActive = state.activeSlot == "Weapon1",
+						showVisual = show1,
+						width = slotSize,
+						layoutOrder = 1,
+						onActivated = props.onSlot1,
+					}),
+
+					Weapon2Card = React.createElement(HudWeaponCard, {
+						keybind = "2",
+						weaponName = state.weapon2 and state.weapon2.displayName or nil,
+						iconImage = weapon2ImageId ~= "" and weapon2ImageId or nil,
+						isActive = state.activeSlot == "Weapon2",
+						showVisual = show2,
+						width = slotSize,
+						layoutOrder = 2,
+						onActivated = props.onSlot2,
+					}),
 				}),
 			}),
+		}),
+
+		-- ── Bottom-center ability bar (5 slots) ─────────────────────────────
+		AbilityBar = React.createElement(HudAbilityBar, {
+			slots = abilityBarSlots,
 		}),
 	})
 end

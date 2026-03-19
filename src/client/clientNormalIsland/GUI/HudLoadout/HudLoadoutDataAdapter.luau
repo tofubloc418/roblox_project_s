@@ -18,6 +18,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudLoadoutTypes  = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local GetPresetKey     = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local DataService = require(Packages:WaitForChild("DataService")) :: any
@@ -29,6 +30,9 @@ type ItemStack          = InventoryTypes.ItemStack
 type InventorySyncPayload = InventoryTypes.InventorySyncPayload
 type SerializedItem     = InventoryTypes.SerializedItem
 type AbilityPresetsData = InventoryTypes.AbilityPresetsData
+type AbilitySlotData    = InventoryTypes.AbilitySlotData
+type SerializedPreset   = InventoryTypes.SerializedPreset
+type StoredEquipmentData = InventoryTypes.StoredEquipmentData
 
 -- ── Internal state ────────────────────────────────────────────────────────────
 
@@ -44,6 +48,14 @@ local _state: HudLoadoutState = {
 
 -- Latest ability presets (keyed by weaponTag / presetKey).
 local _abilityPresets: AbilityPresetsData = {}
+
+-- Last received equipment (for ability bar preset key resolution).
+local _lastEquipment: StoredEquipmentData = {
+	Backpack = nil,
+	Armor = nil,
+	Weapon1 = nil,
+	Weapon2 = nil,
+}
 
 local _subscribers: { (HudLoadoutState) -> () } = {}
 
@@ -101,6 +113,30 @@ function HudLoadoutDataAdapter.getAbilityPresets(): AbilityPresetsData
 	return _abilityPresets
 end
 
+-- Build 5 ability slots for the HUD bar from SerializedPreset.
+local function presetToAbilitySlots(preset: SerializedPreset?): { [number]: AbilitySlotData? }
+	local out: { [number]: AbilitySlotData? } = {}
+	if not preset then return out end
+	for i = 1, 5 do
+		local slot = preset[i]
+		if slot and slot.aid then
+			out[i] = { abilityId = slot.aid, isUltimate = slot.ult == true }
+		end
+	end
+	return out
+end
+
+-- Returns the 5 ability slots for the HUD ability bar (current or last active weapon).
+function HudLoadoutDataAdapter.getAbilityBarSlots(): { [number]: AbilitySlotData? }
+	local presetKey = GetPresetKey.GetAbilityBarPresetKey(
+		_state.activeSlot,
+		_state.expandedWeapon,
+		_lastEquipment
+	)
+	local preset = _abilityPresets[presetKey]
+	return presetToAbilitySlots(preset)
+end
+
 --[[
 	receiveServerPayload(payload)
 	Called (or fired automatically via SyncFullState remote) whenever the server
@@ -109,6 +145,13 @@ end
 ]]
 function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayload)
 	local eq = payload.equipment
+
+	_lastEquipment = {
+		Backpack = eq.Backpack,
+		Armor = eq.Armor,
+		Weapon1 = eq.Weapon1,
+		Weapon2 = eq.Weapon2,
+	}
 
 	local w1: HudLoadoutTypes.HudWeaponInfo? = nil
 	local w2: HudLoadoutTypes.HudWeaponInfo? = nil

@@ -1,9 +1,8 @@
 --!strict
 --[[
 	WeaponController (Client)
-	Reusable helper module that any weapon Logic script can require to get
-	standard melee behaviour: equip/unequip animations, sequenced attack
-	combos, ShapecastHitbox hit detection, and sound playback.
+	Reusable helper used by weapon Logic modules to provide standard melee:
+	animations, combo sequencing, ShapecastHitbox hit detection, and sounds.
 
 	USAGE (from a weapon's Logic.luau):
 	  local WeaponController = require(...)
@@ -23,21 +22,9 @@ local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NA
 
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
 
--- ── Remote setup ────────────────────────────────────────────────────────────
--- The server-side WeaponService listens on this remote.
-local weaponRemotes = ReplicatedStorage:FindFirstChild("WeaponRemotes")
-if not weaponRemotes then
-	weaponRemotes = Instance.new("Folder")
-	weaponRemotes.Name = "WeaponRemotes"
-	weaponRemotes.Parent = ReplicatedStorage
-end
-
-local weaponAttackRemote = weaponRemotes:FindFirstChild("WeaponAttackRequest")
-if not weaponAttackRemote then
-	weaponAttackRemote = Instance.new("RemoteEvent")
-	weaponAttackRemote.Name = "WeaponAttackRequest"
-	weaponAttackRemote.Parent = weaponRemotes
-end
+-- Remotes are created by the server in WeaponService.Initialize().
+local weaponRemotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
+local weaponAttackRemote = weaponRemotes:WaitForChild("WeaponAttackRequest") :: RemoteEvent
 
 -- ── Module ──────────────────────────────────────────────────────────────────
 
@@ -70,8 +57,6 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	equipped: boolean,
 	-- Connections to clean up
 	_connections: { RBXScriptConnection },
-	-- C0/C1 grip (Motor6D); nil for Fists / no Handle
-	_gripMotor: Motor6D?,
 }, WeaponController))
 
 --[[
@@ -124,7 +109,6 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.equipped = false
 
 	self._connections = {}
-	self._gripMotor = nil
 
 	return self :: any
 end
@@ -183,22 +167,11 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 		self.hitSound = createSoundOnPart(handle, stats.hitSoundId)
 	end
 
-	-- C0/C1 grip: Motor6D RightHand -> Handle (WeaponRigging)
+	-- Weapon visuals (and the `RightGrip` Motor6D) are server-owned/replicated.
+	-- The client should not create/destroy grip motors.
 	if handle and handle:IsA("BasePart") and self.weaponModel ~= self.character then
-		local rightHand = self.character:FindFirstChild("RightHand")
-		if rightHand and rightHand:IsA("BasePart") then
-			local rightHandPart = rightHand :: BasePart
-			local handlePart = handle :: BasePart
-
+		if self.weaponModel.Parent ~= self.character then
 			self.weaponModel.Parent = self.character
-			local motor = Instance.new("Motor6D")
-			motor.Name = "RightGrip"
-			motor.Part0 = rightHandPart
-			motor.Part1 = handlePart
-			motor.C0 = if stats.gripC0 then stats.gripC0 else CFrame.new(0, 0, 0)
-			motor.C1 = if stats.gripC1 then stats.gripC1 else CFrame.new(0, 0, 0)
-			motor.Parent = handlePart
-			self._gripMotor = motor
 		end
 	end
 
@@ -355,11 +328,6 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 		conn:Disconnect()
 	end
 	table.clear(self._connections)
-
-	if self._gripMotor then
-		self._gripMotor:Destroy()
-		self._gripMotor = nil
-	end
 
 	-- Destroy runtime sounds
 	if self.swingSound then self.swingSound:Destroy(); self.swingSound = nil end

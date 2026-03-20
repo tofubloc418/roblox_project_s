@@ -63,7 +63,6 @@ local function SettingsShellApp(props: SettingsShellAppProps)
 		TitleToContent = math.floor(P.TitleToContent * scale),
 	}
 
-	-- Tabs scale about half as fast as the rest of the UI
 	local tabScale = 1 + (scale - 1) * 0.5
 	local tabBarH = math.floor(S.TabBarHeight * tabScale)
 	local tabBarGap = math.floor(S.TabGap * tabScale)

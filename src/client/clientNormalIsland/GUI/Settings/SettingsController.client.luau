@@ -415,15 +415,13 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 	-- Ability pool → preset slot drop
 	if source.container == "ability_pool" and target.container == "equipment" and target.slotId then
 		local slotIdStr = target.slotId :: string
-		local sep = string.find(slotIdStr, "_")
-		if sep then
-			local weaponTag = string.sub(slotIdStr, 1, sep - 1)
-			local slotIndex = tonumber(string.sub(slotIdStr, sep + 1))
-			if weaponTag and slotIndex and source.slotId then
-				local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
-				if requestSetPreset then
-					requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId, false)
-				end
+		local weaponTag, indexStr = string.match(slotIdStr, "^(.*)_([^_]+)$")
+		local slotIndex = if indexStr then tonumber(indexStr) else nil
+
+		if weaponTag and slotIndex and source.slotId then
+			local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
+			if requestSetPreset then
+				requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId, false)
 			end
 		end
 		return

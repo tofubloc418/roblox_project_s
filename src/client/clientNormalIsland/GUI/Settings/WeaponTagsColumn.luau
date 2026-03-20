@@ -57,22 +57,17 @@ type TagRowProps = {
 local function TagRow(props: TagRowProps)
 	local hovered, setHovered = React.useState(false)
 
-	-- Drive slot size from horizontal column width so all 5 always fit.
-	-- Replicate the SettingsShellApp geometry: panel = vp.X * WidthScale - outerPad*2.
 	local vp = props.viewportSize
 	local shellScale = math.clamp(math.min(vp.X, vp.Y) / (L.ReferenceShortEdge or 1080), 0.5, 2)
 	local outerPad = math.floor(P.OuterFrameHorizontal * shellScale) * 2
 	local shellContentWidth = vp.X * L.WidthScale - outerPad
 
-	-- Then take the tags column fraction and subtract the ColumnGap applied in AbilityPage
 	local totalRatio = A.ColumnRatioTags + A.ColumnRatioPool + A.ColumnRatioDetails
 	local tagColWidth = shellContentWidth * (A.ColumnRatioTags / totalRatio) - P.ColumnGap
-	
-	-- Content width must also not exceed the scroll area which has a scrollbar
 	local safeContentWidth = tagColWidth - C.ScrollBar.Thickness - 2
 
 	local available = safeContentWidth - A.PresetRowPadding * 2 - A.PresetSlotGap * 4
-	local slotSize = math.clamp(math.floor(available / 5), 24, 52)   -- min 24px, max 52px
+	local slotSize = math.clamp(math.floor(available / 5), 24, 52)
 	local slotGap  = A.PresetSlotGap
 	local rowPad   = A.PresetRowPadding
 

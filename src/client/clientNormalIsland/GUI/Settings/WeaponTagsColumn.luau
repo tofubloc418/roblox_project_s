@@ -248,7 +248,7 @@ local function WeaponTagsColumn(props: WeaponTagsColumnProps)
 			Title = React.createElement("TextLabel", {
 				Size = UDim2.fromScale(1, 1),
 				BackgroundTransparency = 1,
-				Text = "WEAPON TAGS",
+				Text = "WEAPONS",
 				TextColor3 = C.Text.Primary,
 				Font = F.Family,
 				TextSize = F.TitleSize * 0.55,

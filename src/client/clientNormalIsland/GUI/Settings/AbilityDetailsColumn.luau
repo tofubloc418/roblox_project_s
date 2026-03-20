@@ -63,6 +63,7 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 	end
 
 	local displayName = config.displayName or config.abilityId
+	local description = config.description
 	local iconId = config.iconId
 	local hasIcon = iconId ~= nil and iconId ~= ""
 
@@ -191,13 +192,26 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 				TextXAlignment = Enum.TextXAlignment.Center,
 				LayoutOrder = 3,
 			}) else nil,
+			-- Description
+			Description = if description then React.createElement("TextLabel", {
+				Size = UDim2.new(1, -24, 0, 0),
+				AutomaticSize = Enum.AutomaticSize.Y,
+				BackgroundTransparency = 1,
+				Text = description,
+				TextColor3 = C.Text.Secondary,
+				Font = F.FamilySecondary,
+				TextSize = 15,
+				TextWrapped = true,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				LayoutOrder = 4,
+			}) else nil,
 			-- Compatible tags section
 			TagsSection = React.createElement("Frame", {
 				Name = "TagsSection",
 				Size = UDim2.new(1, 0, 0, 0),
 				AutomaticSize = Enum.AutomaticSize.Y,
 				BackgroundTransparency = 1,
-				LayoutOrder = 4,
+				LayoutOrder = 5,
 			}, {
 				Layout = React.createElement("UIListLayout", {
 					SortOrder = Enum.SortOrder.LayoutOrder,

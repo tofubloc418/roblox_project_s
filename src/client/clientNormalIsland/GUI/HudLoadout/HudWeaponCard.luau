@@ -1,18 +1,5 @@
 --!strict
---[[
-	HudWeaponCard
-	=============
-	Weapon slot card for the HUD's right column (slots 1 and 2).
-
-	Same shape as Q and 3: square visual slot, keybind bar with centered key.
-	Structure when visual is SHOWN (active or last-active weapon):
-	  ┌──────────┐
-	  │   [1]    │   ← HudKeybindBar (centered keybind, same as Q/3)
-	  │   Icon   │   ← square slot (SlotSize × SlotSize)
-	  └──────────┘
-
-	When visual is HIDDEN: bar only; visual clip-frame tweens to 0 height.
-]]
+-- Weapon slot card: keybind bar + optional icon strip (tweens height when collapsed).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -33,9 +20,7 @@ export type HudWeaponCardProps = {
 	weaponName: string?,
 	iconImage: string?,
 	isActive: boolean,
-	-- true = show bar + visual icon; false = show bar only
 	showVisual: boolean,
-	-- Square side length (defaults to SlotSize, same as Q and 3)
 	width: number?,
 	layoutOrder: number?,
 	onActivated: (() -> ())?,
@@ -45,10 +30,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 	local size = props.width or H.SlotSize
 	local imageId = props.iconImage or ""
 
-	-- Ref to the clipping frame whose height we tween imperatively
 	local clipRef = React.useRef(nil :: Frame?)
-
-	-- Track the previous showVisual value to detect transitions vs. first render
 	local prevShowVisual = React.useRef(props.showVisual)
 	local isFirstRender = React.useRef(true)
 
@@ -60,7 +42,6 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 		local targetSize = UDim2.new(0, size, 0, targetHeight)
 
 		if isFirstRender.current then
-			-- No animation on mount; jump directly to target
 			isFirstRender.current = false
 			frame.Size = targetSize
 		elseif prevShowVisual.current ~= props.showVisual then
@@ -95,7 +76,6 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 			layoutOrder = 1,
 		}),
 
-		-- ClipFrame: height tweens 0 ↔ SlotSize; square slot below bar
 		ClipFrame = React.createElement("Frame", {
 			Name = "ClipFrame",
 			Size = UDim2.new(0, size, 0, initialVisualHeight),

@@ -14,15 +14,7 @@ export type HudWeaponInfo = {
 	displayName: string,
 }
 
---[[
-	Full HUD loadout state.
-
-	expandedWeapon:
-	  Tracks which weapon card shows its visual icon slot.
-	  This is intentionally SEPARATE from activeSlot: switching to Q or Fists
-	  does NOT collapse the last active weapon's visual (spec §5). Only switching
-	  between Weapon1 and Weapon2 updates expandedWeapon.
-]]
+-- expandedWeapon only changes when switching Weapon1 <-> Weapon2 (QuickUse/Fists leave it).
 export type HudLoadoutState = {
 	activeSlot: HudActiveSlot,
 	expandedWeapon: ("Weapon1" | "Weapon2")?,

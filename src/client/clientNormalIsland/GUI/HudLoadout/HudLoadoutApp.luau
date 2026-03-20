@@ -77,7 +77,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 	local show1 = state.expandedWeapon == "Weapon1"
 	local show2 = state.expandedWeapon == "Weapon2"
 
-	-- Weapon slots are square, same size as Q and 3
+	-- Weapon slots match quick-use / fists column width
 	local slotSize = H.SlotSize
 
 	local abilityBarSlots = props.abilityBarSlots or {}
@@ -88,7 +88,6 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 		Size = UDim2.fromScale(1, 1),
 		BackgroundTransparency = 1,
 	}, {
-		-- ── Right-side loadout (Q, 3, 1, 2) ─────────────────────────────────
 		LoadoutFrame = React.createElement("Frame", {
 			Name = "HudLoadoutApp",
 			AnchorPoint = L.AnchorPoint,

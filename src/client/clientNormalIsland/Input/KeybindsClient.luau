@@ -24,7 +24,6 @@ type BindRecord = {
 	actionId: string,
 	callback: BindCallback,
 	createTouchButton: boolean,
-	isBound: boolean,
 }
 
 local _overrideNamesByAction: { [string]: { string } } = {}
@@ -49,7 +48,6 @@ end
 
 local function bindRecord(record: BindRecord)
 	ContextActionService:UnbindAction(record.casActionName)
-	record.isBound = false
 
 	local overrideNames = _overrideNamesByAction[record.actionId]
 	local keyCodes = if overrideNames ~= nil
@@ -69,7 +67,6 @@ local function bindRecord(record: BindRecord)
 	end
 
 	ContextActionService:BindAction(record.casActionName, record.callback, record.createTouchButton, table.unpack(keyCodes))
-	record.isBound = true
 end
 
 local function rebindAll()
@@ -168,7 +165,6 @@ function KeybindsClient.bindAction(actionId: string, callback: BindCallback, opt
 		actionId = actionId,
 		callback = callback,
 		createTouchButton = if options and options.createTouchButton ~= nil then options.createTouchButton else false,
-		isBound = false,
 	}
 
 	_bindings[record.id] = record

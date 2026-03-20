@@ -1,20 +1,5 @@
 --!strict
---[[
-	HudRadialDial
-	=============
-	Thin adapter between the HUD loadout system and the generic RadialDial
-	component. Maps quick-slot ItemStack data into RadialSlotData, then
-	delegates all rendering to RadialDial.
-
-	Responsibilities:
-	  • Iterate over all 8 quick-use slots (always all 8, even if empty).
-	  • Resolve item icon and display name via ItemIconResolver.
-	  • For empty slots, use displayName = "Empty Slot" and isEmpty = true.
-	  • Pass resolved slots + highlighted index to RadialDial.
-
-	The onSelect callback has been removed — selection is handled exclusively
-	by the Q-release logic in HudLoadoutController.
-]]
+-- Maps quick-use items into RadialDial props; selection is driven by HudLoadoutController.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))

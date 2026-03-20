@@ -1,18 +1,5 @@
 --!strict
---[[
-	HudSlotCard
-	===========
-	Generic slot card used for the Q (quick-use) and 3 (fists/unequip) slots.
-
-	Style matches the weapon slots (1–2): translucent gray slot only, no gradient rim.
-	No gap between the keybind bar and the square visual.
-
-	Structure (bottom of column anchor point):
-	  ┌──────────┐
-	  │ KeyBar   │   ← HudKeybindBar (centered keybind, width = size)
-	  │  Icon    │   ← square ImageButton (translucent gray + stroke, no gap)
-	  └──────────┘
-]]
+-- Square slot + keybind bar (quick-use / fists columns).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -27,10 +14,8 @@ local R = ThemeConfig.CornerRadius
 
 export type HudSlotCardProps = {
 	keybind: string,
-	-- Item icon asset id (nil = empty slot)
 	iconImage: string?,
 	isActive: boolean,
-	-- Square side length in pixels (defaults to ThemeConfig.HudLoadout.SlotSize)
 	size: number?,
 	layoutOrder: number?,
 	onActivated: (() -> ())?,
@@ -40,7 +25,6 @@ local function HudSlotCard(props: HudSlotCardProps)
 	local size = props.size or H.SlotSize
 	local imageId = props.iconImage or ""
 
-	-- Total card height = bar + slot (no gap)
 	local totalHeight = H.BarHeight + size
 
 	return React.createElement("Frame", {
@@ -64,7 +48,6 @@ local function HudSlotCard(props: HudSlotCardProps)
 			layoutOrder = 1,
 		}),
 
-		-- Translucent gray slot only (same style as weapon slots 1–2), no gradient rim
 		Slot = React.createElement("ImageButton", {
 			Name = "SlotVisual",
 			Size = UDim2.new(0, size, 0, size),

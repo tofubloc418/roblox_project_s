@@ -36,7 +36,6 @@ local function waitForProfile(player: Player): boolean
 			return false
 		end
 	end
-
 	return true
 end
 
@@ -52,7 +51,6 @@ local function normalizeKeybindNames(rawValue: any): { string }?
 			table.insert(validNames, name)
 		end
 	end
-
 	return validNames
 end
 
@@ -60,7 +58,6 @@ local function encodeStoredValue(names: { string }): string | { string }
 	if #names == 1 then
 		return names[1]
 	end
-
 	return names
 end
 
@@ -68,18 +65,15 @@ local KeybindsService = {}
 
 function KeybindsService.SetKeybinds(player: Player, actionId: string, rawValue: any): boolean
 	if not KeybindRegistry.Has(actionId) then
-		warn(string.format("[KeybindsService] Rejected unknown actionId '%s'", tostring(actionId)))
 		return false
 	end
 
 	local names = normalizeKeybindNames(rawValue)
 	if not names then
-		warn(string.format("[KeybindsService] Rejected invalid keybind payload for '%s'", actionId))
 		return false
 	end
 
 	if not waitForProfile(player) then
-		warn(string.format("[KeybindsService] No loaded profile for %s", player.Name))
 		return false
 	end
 

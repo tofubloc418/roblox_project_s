@@ -1,5 +1,5 @@
 --!strict
--- LoadoutController: Tab loadout UI, DataService sync, and drag-drop → RequestMove / RequestUnequip.
+-- LoadoutController: loadout UI, DataService sync, drag-drop → RequestMove / RequestUnequip.
 
 local Players              = game:GetService("Players")
 local ReplicatedStorage    = game:GetService("ReplicatedStorage")
@@ -302,7 +302,6 @@ task.spawn(function()
 	end
 end)
 
--- ── Loadout toggle (Tab) ──────────────────────────────────────────────────────
 local function onToggleLoadout(_actionName: string, inputState: Enum.UserInputState, _input: InputObject?)
 	if inputState == Enum.UserInputState.Begin then
 		loadoutOpen            = not loadoutOpen

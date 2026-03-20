@@ -180,11 +180,6 @@ end
 
 -- ── Write methods (UI-only state) ─────────────────────────────────────────────
 
---[[
-	setActiveSlot(slot)
-	Does NOT update expandedWeapon — managed by the controller so that switching
-	to Q or Fists never collapses the last active weapon visual.
-]]
 function HudLoadoutDataAdapter.setActiveSlot(slot: HudActiveSlot)
 	_state = {
 		activeSlot            = slot,
@@ -212,7 +207,6 @@ function HudLoadoutDataAdapter.setExpandedWeapon(weapon: ("Weapon1" | "Weapon2")
 	_notify()
 end
 
--- Set which quick-slot item is currently selected (used on Q tap).
 function HudLoadoutDataAdapter.setCurrentQuickSlotIndex(index: number)
 	_state = {
 		activeSlot            = _state.activeSlot,

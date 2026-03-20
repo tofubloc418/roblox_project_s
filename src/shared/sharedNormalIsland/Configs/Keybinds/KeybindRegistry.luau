@@ -103,7 +103,6 @@ function KeybindRegistry.Get(actionId: string): KeybindEntry?
 	if not entry then
 		return nil
 	end
-
 	return {
 		default = cloneKeyCodes(entry.default),
 		category = entry.category,
@@ -116,7 +115,6 @@ function KeybindRegistry.GetDefaultKeyCodes(actionId: string): { Enum.KeyCode }
 	if not entry then
 		return {}
 	end
-
 	return cloneKeyCodes(entry.default)
 end
 

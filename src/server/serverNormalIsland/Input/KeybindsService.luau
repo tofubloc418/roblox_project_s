@@ -77,6 +77,12 @@ function KeybindsService.SetKeybinds(player: Player, actionId: string, rawValue:
 		return false
 	end
 
+	-- Empty list removes stored override so registry defaults apply (reset / clear conflict).
+	if #names == 0 then
+		setAtPath(player, { "settings", "keybinds", actionId }, nil)
+		return true
+	end
+
 	setAtPath(player, { "settings", "keybinds", actionId }, encodeStoredValue(names))
 	return true
 end

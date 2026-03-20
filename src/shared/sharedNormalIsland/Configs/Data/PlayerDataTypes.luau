@@ -47,7 +47,7 @@ export type AbilitySlotData = { abilityId: string, isUltimate: boolean }
 -- Weapon card data (item + its ability configuration).
 export type WeaponData = { itemId: string, abilities: { [number]: AbilitySlotData? } }
 
--- Full state bundle passed from LoadoutController to LoadoutApp.
+-- Full state bundle passed from SettingsController / LoadoutApp.
 export type LoadoutData = {
 	backpack: InventoryData,
 	equipment: EquipmentData?,

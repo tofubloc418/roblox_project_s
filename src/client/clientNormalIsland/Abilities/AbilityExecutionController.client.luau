@@ -67,6 +67,10 @@ for slotIndex, actionId in ipairs(SLOT_ACTIONS) do
 	KeybindsClient.bindAction(
 		actionId,
 		function(_name: string, state: Enum.UserInputState, _input: InputObject)
+			-- Keybinds UI capture uses the same keys; avoid firing abilities while rebinding.
+			if KeybindsClient.areGameplayActionsSuppressed() then
+				return Enum.ContextActionResult.Sink
+			end
 			if state == Enum.UserInputState.Begin then
 				requestUseAbility:FireServer(slotIndex)
 			end

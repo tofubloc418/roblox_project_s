@@ -1,11 +1,11 @@
 --!strict
--- LoadoutController: loadout UI, DataService sync, drag-drop → RequestMove / RequestUnequip.
+-- Settings: tabbed UI, inventory/loadout, keybinds, drag-drop, DataService sync.
 
-local Players              = game:GetService("Players")
-local ReplicatedStorage    = game:GetService("ReplicatedStorage")
-local UserInputService     = game:GetService("UserInputService")
-local StarterGui           = game:GetService("StarterGui")
-local RunService           = game:GetService("RunService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 
@@ -14,37 +14,38 @@ local function getViewportSize(): Vector2
 	return (cam and cam.ViewportSize) or Vector2.new(1920, 1080)
 end
 
-local remotes          = ReplicatedStorage:WaitForChild("InventoryRemotes")
-local requestMove      = remotes:WaitForChild("RequestMove")      :: RemoteEvent
-local requestClearQuick = remotes:WaitForChild("RequestClearQuick") :: RemoteEvent
-local requestUnequip   = remotes:WaitForChild("RequestUnequip")   :: RemoteEvent
+local remotes = ReplicatedStorage:WaitForChild("InventoryRemotes")
+local requestMove = remotes:WaitForChild("RequestMove") :: RemoteEvent
+local requestUnequip = remotes:WaitForChild("RequestUnequip") :: RemoteEvent
 
--- ── Modules ───────────────────────────────────────────────────────────────────
 local DataService = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("DataService"))
 local DataServiceClient = DataService.client
-local React         = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
-local ReactRoblox   = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
+local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
+local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
+local KeybindConflictTooltipLayer = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("KeybindConflictTooltipLayer"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
-local LoadoutApp    = require(script.Parent:WaitForChild("LoadoutApp"))
-local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
+local SettingsShellApp = require(script.Parent:WaitForChild("SettingsShellApp"))
+local ItemIconResolver = require(script.Parent.Parent:WaitForChild("Loadout"):WaitForChild("ItemIconResolver"))
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
 local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
 local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
-type ItemStack         = InventoryTypes.ItemStack
-type InventoryData     = InventoryTypes.InventoryData
-type EquipmentData    = InventoryTypes.EquipmentData
-type WeaponData        = InventoryTypes.WeaponData
-type LoadoutData       = InventoryTypes.LoadoutData
-type EquipmentSlotId   = InventoryTypes.EquipmentSlotId
+local setKeybindsRemote = ReplicatedStorage:WaitForChild("KeybindRemotes"):WaitForChild("SetKeybinds") :: RemoteEvent
+
+type ItemStack = InventoryTypes.ItemStack
+type InventoryData = InventoryTypes.InventoryData
+type EquipmentData = InventoryTypes.EquipmentData
+type WeaponData = InventoryTypes.WeaponData
+type LoadoutData = InventoryTypes.LoadoutData
+type EquipmentSlotId = InventoryTypes.EquipmentSlotId
 type InventorySyncPayload = InventoryTypes.InventorySyncPayload
-type SerializedItem    = InventoryTypes.SerializedItem
+type SerializedItem = InventoryTypes.SerializedItem
 type AbilityPresetsData = InventoryTypes.AbilityPresetsData
-type AbilitySlotData   = InventoryTypes.AbilitySlotData
-type SerializedPreset  = InventoryTypes.SerializedPreset
+type AbilitySlotData = InventoryTypes.AbilitySlotData
+type SerializedPreset = InventoryTypes.SerializedPreset
 
 type DragDescriptor = {
 	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot",
@@ -52,7 +53,6 @@ type DragDescriptor = {
 	slotId: string?,
 }
 
--- Map UI container id to server ContainerId (server still uses "inventory" for backpack storage)
 local function toServerContainer(c: "backpack" | "equipment" | "quickuse" | "stash" | "loot"): string
 	if c == "backpack" then
 		return "inventory"
@@ -61,8 +61,6 @@ local function toServerContainer(c: "backpack" | "equipment" | "quickuse" | "sta
 end
 
 local visibleInventorySlotMap: { [number]: number }
-
--- ── Payload → LoadoutData (for React panels) ───────────────────────────────────
 
 local function toItemStack(item: SerializedItem): ItemStack
 	return { itemId = item.tid, count = item.cnt or 1, maxStack = 1 }
@@ -81,7 +79,9 @@ end
 
 local function presetToAbilities(preset: SerializedPreset?): { [number]: AbilitySlotData? }
 	local out: { [number]: AbilitySlotData? } = {}
-	if not preset then return out end
+	if not preset then
+		return out
+	end
 	for i = 1, 5 do
 		local slot = preset[i]
 		if slot and slot.aid then
@@ -92,7 +92,6 @@ local function presetToAbilities(preset: SerializedPreset?): { [number]: Ability
 end
 
 local function buildLoadoutData(payload: InventorySyncPayload, abilityPresets: AbilityPresetsData?): LoadoutData
-	-- Inventory: 1:1 grid (position i = backend slot i). Use getSlotItem so string keys from DataStore work.
 	local invSlots: { [number]: ItemStack? } = {}
 	local slotMap: { [number]: number } = {}
 	local maxInvSlots = payload.inventory.maxSlots or 16
@@ -136,62 +135,67 @@ local function buildLoadoutData(payload: InventorySyncPayload, abilityPresets: A
 	end
 
 	return {
-		backpack  = backpack,
+		backpack = backpack,
 		equipment = equipment,
-		weapons   = weapons,
-		quickUse  = { slots = quickSlots },
+		weapons = weapons,
+		quickUse = { slots = quickSlots },
 	}
 end
 
--- ── Config ────────────────────────────────────────────────────────────────────
 local ROWS = 4
 local COLS = 4
 
--- ── State ─────────────────────────────────────────────────────────────────────
 local loadoutData: LoadoutData = {
-	backpack  = { slots = {}, equippedSlot = nil },
+	backpack = { slots = {}, equippedSlot = nil },
 	equipment = nil,
-	weapons   = nil,
-	quickUse  = nil,
+	weapons = nil,
+	quickUse = nil,
 }
 local latestPayload: InventorySyncPayload? = nil
 visibleInventorySlotMap = {}
-local loadoutOpen   = false
+local settingsOpen = false
 local dataReady = false
 local inventoryGridRef = { current = nil :: Frame? }
 local getEquipmentItem: (slotId: string) -> SerializedItem?
 local getBackendInventorySlot: (visibleSlot: number?) -> number?
 
--- ── ScreenGui ─────────────────────────────────────────────────────────────────
-StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack,    false)
-StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList,  false)
+local activeTabId = "loadout"
+local keybindsRevision = 0
+local keybindListening = false
+
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
+StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
-local loadoutScreen = Instance.new("ScreenGui")
-loadoutScreen.Name             = "LoadoutScreen"
-loadoutScreen.ResetOnSpawn     = false
-loadoutScreen.Enabled          = false
-loadoutScreen.ZIndexBehavior   = Enum.ZIndexBehavior.Global
-loadoutScreen.IgnoreGuiInset   = true
-loadoutScreen.Parent           = playerGui
+local settingsScreen = Instance.new("ScreenGui")
+settingsScreen.Name = "SettingsScreen"
+settingsScreen.ResetOnSpawn = false
+settingsScreen.Enabled = false
+settingsScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
+settingsScreen.IgnoreGuiInset = true
+settingsScreen.Parent = playerGui
 
-DragDropManager.attachGhostLayer(loadoutScreen)
+DragDropManager.attachGhostLayer(settingsScreen)
+KeybindConflictTooltipLayer.attach(settingsScreen)
 
-local loadoutRoot = ReactRoblox.createRoot(loadoutScreen)
+local settingsRoot = ReactRoblox.createRoot(settingsScreen)
 
--- ── Render ────────────────────────────────────────────────────────────────────
 local function render()
-	loadoutRoot:render(React.createElement(LoadoutApp, {
-		loadoutData      = loadoutData,
-		rows             = ROWS,
-		cols             = COLS,
-		viewportSize     = getViewportSize(),
+	settingsRoot:render(React.createElement(SettingsShellApp, {
+		activeTabId = activeTabId,
+		onTabActivated = function(tabId: string)
+			activeTabId = tabId
+			render()
+		end,
+		viewportSize = getViewportSize(),
+		loadoutData = loadoutData,
+		loadoutRows = ROWS,
+		loadoutCols = COLS,
 		inventoryGridRef = inventoryGridRef,
-		dragEnabled      = loadoutOpen and dataReady,
-
-		onDragStart = function(index: number)
-			if not loadoutOpen then
+		loadoutDragEnabled = settingsOpen and dataReady,
+		onLoadoutDragStart = function(index: number)
+			if not settingsOpen then
 				return
 			end
 
@@ -207,9 +211,8 @@ local function render()
 				index = index,
 			}, buildGhostVisual(item))
 		end,
-
-		onEquipmentDragStart = function(slotId: EquipmentSlotId)
-			if not loadoutOpen then
+		onLoadoutEquipmentDragStart = function(slotId: EquipmentSlotId)
+			if not settingsOpen then
 				return
 			end
 
@@ -223,9 +226,8 @@ local function render()
 				slotId = slotId,
 			}, buildGhostVisual(item))
 		end,
-
-		onQuickUseDragStart = function(index: number)
-			if not loadoutOpen then
+		onLoadoutQuickUseDragStart = function(index: number)
+			if not settingsOpen then
 				return
 			end
 
@@ -245,42 +247,44 @@ local function render()
 				index = index,
 			}, buildGhostVisual(item))
 		end,
-
-		onEquipmentClick = function(slotId: EquipmentSlotId)
+		onLoadoutEquipmentClick = function(slotId: EquipmentSlotId)
 			local eq = loadoutData.equipment
 			if eq and eq[slotId] then
 				requestUnequip:FireServer(slotId)
 			end
 		end,
-
-		onAbilityClick  = function(_weaponIndex: number, _abilityIndex: number) end,
-		onQuickUseClick = function(_index: number) end,
-		onMouseEnter    = function(_i: number) end,
-		onMouseLeave    = function(_i: number) end,
+		onLoadoutAbilityClick = function(_weaponIndex: number, _abilityIndex: number) end,
+		onLoadoutQuickUseClick = function(_index: number) end,
+		onLoadoutMouseEnter = function(_i: number) end,
+		onLoadoutMouseLeave = function(_i: number) end,
+		keybindsRevision = keybindsRevision,
+		setKeybindsRemote = setKeybindsRemote,
+		onKeybindListeningChange = function(listening: boolean)
+			keybindListening = listening
+		end,
+		settingsScreenGui = settingsScreen,
 	}))
 end
 
--- ── DataService: initial state + updates (replication is automatic) ────────────
 local function dsGet(path: { string }): any?
-	local client = DataServiceClient
-	return client:get(path)
+	return DataServiceClient:get(path)
 end
 
 local function refreshLoadoutFromData()
 	local inv = dsGet({ "inventory" })
-	local eq  = dsGet({ "equipment" })
-	local qu  = dsGet({ "quickUse" })
+	local eq = dsGet({ "equipment" })
+	local qu = dsGet({ "quickUse" })
 	local cur = dsGet({ "currency" })
-	local ap  = dsGet({ "abilityPresets" })
+	local ap = dsGet({ "abilityPresets" })
 	if type(inv) == "table" and type(eq) == "table" and type(qu) == "table" then
 		local payload: InventorySyncPayload = {
 			inventory = inv,
 			equipment = eq,
-			quickUse  = qu,
-			currency  = type(cur) == "table" and cur or { gold = 0 },
+			quickUse = qu,
+			currency = if type(cur) == "table" then cur else { gold = 0 },
 		}
 		latestPayload = payload
-		loadoutData = buildLoadoutData(payload, type(ap) == "table" and ap or nil)
+		loadoutData = buildLoadoutData(payload, if type(ap) == "table" then ap else nil)
 		render()
 	end
 end
@@ -293,8 +297,8 @@ task.spawn(function()
 	client:waitForData()
 	dataReady = true
 	refreshLoadoutFromData()
-	
-	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" } }) do
+
+	for _, path in { { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" } } do
 		local sig = client:getChangedSignal(path)
 		if sig and type(sig.Connect) == "function" then
 			sig:Connect(refreshLoadoutFromData)
@@ -302,14 +306,30 @@ task.spawn(function()
 	end
 end)
 
+KeybindsClient.subscribe(function()
+	keybindsRevision += 1
+	render()
+end)
+
 local function onToggleLoadout(_actionName: string, inputState: Enum.UserInputState, _input: InputObject?)
 	if inputState == Enum.UserInputState.Begin then
-		loadoutOpen            = not loadoutOpen
-		if not loadoutOpen then
-			DragDropManager.cancelDrag()
+		if keybindListening then
+			return Enum.ContextActionResult.Sink
 		end
-		loadoutScreen.Enabled  = loadoutOpen
-		CursorManager.setEnabledFor("Loadout", loadoutOpen)
+
+		local wasOpen = settingsOpen
+		settingsOpen = not settingsOpen
+
+		if settingsOpen and not wasOpen then
+			activeTabId = "loadout"
+		end
+
+		if not settingsOpen then
+			DragDropManager.cancelDrag()
+			KeybindConflictTooltipLayer.hide()
+		end
+		settingsScreen.Enabled = settingsOpen
+		CursorManager.setEnabledFor("Loadout", settingsOpen)
 		render()
 	end
 	return Enum.ContextActionResult.Sink
@@ -334,35 +354,6 @@ function getBackendInventorySlot(visibleSlot: number?): number?
 	return visibleInventorySlotMap[visibleSlot]
 end
 
-local function getDraggedInstanceId(source: DragDescriptor): string?
-	local payload = latestPayload
-	if not payload then
-		return nil
-	end
-
-	if source.container == "backpack" and source.index then
-		local backendSlot = getBackendInventorySlot(source.index)
-		if backendSlot == nil then
-			return nil
-		end
-
-		local item = (InventoryTypes :: any).getSlotItem(payload.inventory.slots, backendSlot)
-		return item and item.iid or nil
-	end
-
-	if source.container == "equipment" and source.slotId then
-		local item = getEquipmentItem(source.slotId)
-		return item and item.iid or nil
-	end
-
-	if source.container == "quickuse" and source.index then
-		local item = (InventoryTypes :: any).getSlotItem(payload.quickUse.slots, source.index)
-		return (type(item) == "table" and item.iid) or nil
-	end
-
-	return nil
-end
-
 local function descriptorsMatch(source: DragDescriptor, target: DragDescriptor): boolean
 	if source.container ~= target.container then
 		return false
@@ -380,7 +371,7 @@ local function descriptorsMatch(source: DragDescriptor, target: DragDescriptor):
 end
 
 DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDescriptor?, _pointerPosition: Vector2)
-	if not loadoutOpen or not dataReady then
+	if not settingsOpen or not dataReady then
 		return
 	end
 
@@ -388,7 +379,6 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		if source.container == "equipment" and source.slotId then
 			requestUnequip:FireServer(source.slotId)
 		end
-		-- Quick-use dropped outside any slot: no-op (item stays in place).
 		return
 	end
 
@@ -422,7 +412,7 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 	end
 end)
 
-UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed:boolean)
 	if gameProcessed then
 		return
 	end
@@ -436,7 +426,6 @@ localPlayer.CharacterAdded:Connect(function()
 	DragDropManager.cancelDrag()
 end)
 
--- ── Viewport resize ───────────────────────────────────────────────────────────
 local lastViewportSize = getViewportSize()
 RunService.Heartbeat:Connect(function()
 	local current = getViewportSize()
@@ -446,5 +435,4 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ── Initial render ────────────────────────────────────────────────────────────
 render()

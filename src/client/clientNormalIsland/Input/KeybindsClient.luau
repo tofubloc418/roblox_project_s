@@ -32,6 +32,9 @@ local _bindings: { [number]: BindRecord } = {}
 local _nextSubscriberId = 0
 local _nextBindingId = 0
 
+-- When true, gameplay handlers (e.g. ability RequestUseAbility) should not fire for rebound keys.
+local _gameplayActionsSuppressed = false
+
 local function cloneStringArray(values: { string }): { string }
 	local copy: { string } = {}
 	for _, value in ipairs(values) do
@@ -44,6 +47,19 @@ local function notifySubscribers()
 	for _, callback in pairs(_subscribers) do
 		callback()
 	end
+end
+
+local function keyCodeSetsOverlap(a: { Enum.KeyCode }, b: { Enum.KeyCode }): boolean
+	local seen: { [Enum.KeyCode]: boolean } = {}
+	for _, k in a do
+		seen[k] = true
+	end
+	for _, k in b do
+		if seen[k] then
+			return true
+		end
+	end
+	return false
 end
 
 local function bindRecord(record: BindRecord)
@@ -189,6 +205,38 @@ function KeybindsClient.subscribe(callback: Subscriber): () -> ()
 	return function()
 		_subscribers[subscriberId] = nil
 	end
+end
+
+function KeybindsClient.setGameplayActionsSuppressed(suppressed: boolean)
+	_gameplayActionsSuppressed = suppressed
+end
+
+function KeybindsClient.areGameplayActionsSuppressed(): boolean
+	return _gameplayActionsSuppressed
+end
+
+-- Other registry actions that share at least one KeyCode with this action (for conflict UI).
+function KeybindsClient.getOtherActionIdsSharingKeysWith(actionId: string): { string }
+	local myKeys = KeybindsClient.getBinds(actionId)
+	local out: { string } = {}
+	for otherId, _ in KeybindRegistry.GetAll() do
+		if otherId ~= actionId and keyCodeSetsOverlap(myKeys, KeybindsClient.getBinds(otherId)) then
+			table.insert(out, otherId)
+		end
+	end
+	table.sort(out)
+	return out
+end
+
+-- Human-readable descriptions of conflicting actions (registry `description` field).
+function KeybindsClient.getConflictDescriptionsForAction(actionId: string): { string }
+	local ids = KeybindsClient.getOtherActionIdsSharingKeysWith(actionId)
+	local labels: { string } = {}
+	for _, id in ids do
+		local entry = KeybindRegistry.Get(id)
+		table.insert(labels, if entry then entry.description else id)
+	end
+	return labels
 end
 
 return table.freeze(KeybindsClient)

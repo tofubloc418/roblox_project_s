@@ -2,6 +2,7 @@
 -- Root loadout component: dark overlay + 3-panel horizontal layout
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
 
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
@@ -20,6 +21,12 @@ export type LoadoutAppProps = {
 	viewportSize: Vector2?,
 	inventoryGridRef: { current: Frame? }?,
 	dragEnabled: boolean?,
+	--- When false, hides the "LOADOUT" title (e.g. embedded in tabbed settings shell).
+	showHeader: boolean?,
+	--- When true, only renders the three-column PanelsRow to fit inside SettingsShellApp content.
+	embeddedInShell: boolean?,
+	--- Inner width for column math when embedded (matches shell content area width).
+	shellContentWidth: number?,
 	onDragStart: (index: number) -> (),
 	onEquipmentDragStart: (slotId: EquipmentSlotId) -> (),
 	onQuickUseDragStart: (index: number) -> (),
@@ -42,6 +49,8 @@ local function LoadoutApp(props: LoadoutAppProps)
 	local viewportSize = props.viewportSize or LayoutConfig.DefaultViewportSize
 	local _rows = props.rows
 	local cols = props.cols
+	local embeddedInShell = props.embeddedInShell == true
+	local showHeader = if embeddedInShell then false else (if props.showHeader == nil then true else props.showHeader)
 
 	-- Scale factor from viewport (reference from config); clamp to avoid extreme sizes
 	local refShort = L.ReferenceShortEdge or 1080
@@ -56,12 +65,16 @@ local function LoadoutApp(props: LoadoutAppProps)
 		BackpackSlot = math.floor(P.BackpackSlot * scale),
 	}
 	local scaledF = {
-		TitleHeight = math.floor(F.TitleHeight * scale),
+		TitleHeight = if showHeader then math.floor(F.TitleHeight * scale) else 0,
 		TitleSize = math.floor(F.TitleSize * scale),
 	}
 
-	-- Outer frame content width (after UIPadding)
-	local contentWidth = viewportSize.X * L.WidthScale - scaledP.OuterFrameHorizontal * 2
+	local titleToContentGap = if showHeader then scaledP.TitleToContent else 0
+
+	-- Outer frame content width (after UIPadding), or shell-provided width when embedded.
+	local contentWidth = if embeddedInShell and props.shellContentWidth
+		then props.shellContentWidth
+		else viewportSize.X * L.WidthScale - scaledP.OuterFrameHorizontal * 2
 	-- Only padding between the 3 columns (2 gaps); left/right come from outer frame's UIPadding
 	local totalColumnPadding = scaledP.ColumnGap * 2
 	local availableForColumns = contentWidth - totalColumnPadding
@@ -72,6 +85,123 @@ local function LoadoutApp(props: LoadoutAppProps)
 
 	-- Backpack slot size (square); same size used for backpack and quick slots so they match
 	local backpackSlotSize = math.floor((backpackWidth - (cols - 1) * scaledP.BackpackSlot) / cols)
+
+	local panelsRow = React.createElement("Frame", {
+		Name = "PanelsRow",
+		Size = if embeddedInShell then UDim2.fromScale(1, 1) else UDim2.new(1, 0, 1, -(scaledF.TitleHeight + titleToContentGap)),
+		BackgroundTransparency = 1,
+		LayoutOrder = 2,
+	}, {
+		Layout = React.createElement("UIListLayout", {
+			FillDirection = Enum.FillDirection.Horizontal,
+			Padding = UDim.new(0, scaledP.ColumnGap),
+			SortOrder = Enum.SortOrder.LayoutOrder,
+			VerticalAlignment = Enum.VerticalAlignment.Top,
+			HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		}),
+		EquipmentCol = React.createElement("ScrollingFrame", {
+			Name = "EquipmentCol",
+			Size = UDim2.new(0, equipmentWidth, 1, 0),
+			BackgroundColor3 = ThemeConfig.DebugColumnColors.Equipment,
+			BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
+			LayoutOrder = 1,
+			CanvasSize = UDim2.fromOffset(0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = C.ScrollBar.Thickness,
+			ScrollBarImageColor3 = C.ScrollBar.Color,
+			ScrollBarImageTransparency = C.ScrollBar.Transparency,
+			ClipsDescendants = true,
+		}, {
+			Layout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				VerticalAlignment = Enum.VerticalAlignment.Top,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+			Panel = React.createElement(EquipmentPanel, {
+				equipment = loadoutData.equipment,
+				weapons = loadoutData.weapons,
+				columnWidth = equipmentWidth,
+				backpackSlotSize = backpackSlotSize,
+				scale = scale,
+				dragEnabled = props.dragEnabled,
+				onEquipmentDragStart = props.onEquipmentDragStart,
+				onEquipmentClick = props.onEquipmentClick,
+				onAbilityClick = props.onAbilityClick,
+			}),
+		}),
+		BackpackCol = React.createElement("ScrollingFrame", {
+			Name = "BackpackCol",
+			Size = UDim2.new(0, backpackWidth, 1, 0),
+			BackgroundColor3 = ThemeConfig.DebugColumnColors.Backpack,
+			BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
+			LayoutOrder = 2,
+			CanvasSize = UDim2.fromOffset(0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = C.ScrollBar.Thickness,
+			ScrollBarImageColor3 = C.ScrollBar.Color,
+			ScrollBarImageTransparency = C.ScrollBar.Transparency,
+			ClipsDescendants = true,
+		}, {
+			Layout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				VerticalAlignment = Enum.VerticalAlignment.Top,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+			Panel = React.createElement(BackpackPanel, {
+				backpackData = loadoutData.backpack,
+				rows = props.rows,
+				cols = props.cols,
+				columnWidth = backpackWidth,
+				scale = scale,
+				gridRef = props.inventoryGridRef,
+				dragEnabled = props.dragEnabled,
+				onDragStart = props.onDragStart,
+				onMouseEnter = props.onMouseEnter,
+				onMouseLeave = props.onMouseLeave,
+			}),
+		}),
+		QuickUseCol = React.createElement("ScrollingFrame", {
+			Name = "QuickUseCol",
+			Size = UDim2.new(0, quickUseWidth, 1, 0),
+			BackgroundColor3 = ThemeConfig.DebugColumnColors.QuickUse,
+			BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
+			LayoutOrder = 3,
+			CanvasSize = UDim2.fromOffset(0, 0),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = C.ScrollBar.Thickness,
+			ScrollBarImageColor3 = C.ScrollBar.Color,
+			ScrollBarImageTransparency = C.ScrollBar.Transparency,
+			ClipsDescendants = true,
+		}, {
+			Layout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				VerticalAlignment = Enum.VerticalAlignment.Top,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+			}),
+			Panel = React.createElement(QuickUsePanel, {
+				quickUseData = loadoutData.quickUse,
+				slotSize = backpackSlotSize,
+				columnWidth = quickUseWidth,
+				scale = scale,
+				dragEnabled = props.dragEnabled,
+				onDragStart = props.onQuickUseDragStart,
+				onSlotClick = props.onQuickUseClick,
+			}),
+		}),
+	})
+
+	if embeddedInShell then
+		return React.createElement("Frame", {
+			Name = "LoadoutApp",
+			Size = UDim2.fromScale(1, 1),
+			BackgroundTransparency = 1,
+		}, {
+			PanelsRow = panelsRow,
+		})
+	end
 
 	return React.createElement("Frame", {
 		Name = "LoadoutApp",
@@ -89,134 +219,31 @@ local function LoadoutApp(props: LoadoutAppProps)
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.MainFrame) }),
 			Padding = React.createElement("UIPadding", {
-				PaddingTop = UDim.new(0, scaledP.TitleToContent),
+				PaddingTop = UDim.new(0, titleToContentGap),
 				PaddingBottom = UDim.new(0, scaledP.OuterFrameVertical),
 				PaddingLeft = UDim.new(0, scaledP.OuterFrameHorizontal),
 				PaddingRight = UDim.new(0, scaledP.OuterFrameHorizontal),
 			}),
 			Layout = React.createElement("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, scaledP.TitleToContent),
+				Padding = UDim.new(0, titleToContentGap),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
-			Header = React.createElement("TextLabel", {
-				Name = "Header",
-				Size = UDim2.new(1, 0, 0, scaledF.TitleHeight),
-				BackgroundTransparency = 1,
-				Text = "LOADOUT",
-				TextColor3 = C.Text.Primary,
-				Font = F.Family,
-				TextSize = scaledF.TitleSize,
-				TextXAlignment = Enum.TextXAlignment.Left,
-				LayoutOrder = 1,
-			}),
-			PanelsRow = React.createElement("Frame", {
-				Name = "PanelsRow",
-				Size = UDim2.new(1, 0, 1, -(scaledF.TitleHeight + scaledP.TitleToContent)),
-				BackgroundTransparency = 1,
-				LayoutOrder = 2,
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					Padding = UDim.new(0, scaledP.ColumnGap),
-					SortOrder = Enum.SortOrder.LayoutOrder,
-					VerticalAlignment = Enum.VerticalAlignment.Top,
-					HorizontalAlignment = Enum.HorizontalAlignment.Left,
-				}),
-			EquipmentCol = React.createElement("ScrollingFrame", {
-				Name = "EquipmentCol",
-				Size = UDim2.new(0, equipmentWidth, 1, 0),
-				BackgroundColor3 = ThemeConfig.DebugColumnColors.Equipment,
-				BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
-				LayoutOrder = 1,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollingDirection = Enum.ScrollingDirection.Y,
-				ScrollBarThickness = C.ScrollBar.Thickness,
-				ScrollBarImageColor3 = C.ScrollBar.Color,
-				ScrollBarImageTransparency = C.ScrollBar.Transparency,
-				ClipsDescendants = true,
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					VerticalAlignment = Enum.VerticalAlignment.Top,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-				Panel = React.createElement(EquipmentPanel, {
-					equipment = loadoutData.equipment,
-					weapons = loadoutData.weapons,
-					columnWidth = equipmentWidth,
-					backpackSlotSize = backpackSlotSize,
-					scale = scale,
-					dragEnabled = props.dragEnabled,
-					onEquipmentDragStart = props.onEquipmentDragStart,
-					onEquipmentClick = props.onEquipmentClick,
-					onAbilityClick = props.onAbilityClick,
-				}),
-			}),
-			BackpackCol = React.createElement("ScrollingFrame", {
-				Name = "BackpackCol",
-				Size = UDim2.new(0, backpackWidth, 1, 0),
-				BackgroundColor3 = ThemeConfig.DebugColumnColors.Backpack,
-				BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
-				LayoutOrder = 2,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollingDirection = Enum.ScrollingDirection.Y,
-				ScrollBarThickness = C.ScrollBar.Thickness,
-				ScrollBarImageColor3 = C.ScrollBar.Color,
-				ScrollBarImageTransparency = C.ScrollBar.Transparency,
-				ClipsDescendants = true,
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					VerticalAlignment = Enum.VerticalAlignment.Top,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-				Panel = React.createElement(BackpackPanel, {
-					backpackData = loadoutData.backpack,
-					rows = props.rows,
-					cols = props.cols,
-					columnWidth = backpackWidth,
-					scale = scale,
-					gridRef = props.inventoryGridRef,
-					dragEnabled = props.dragEnabled,
-					onDragStart = props.onDragStart,
-					onMouseEnter = props.onMouseEnter,
-					onMouseLeave = props.onMouseLeave,
-				}),
-			}),
-			QuickUseCol = React.createElement("ScrollingFrame", {
-				Name = "QuickUseCol",
-				Size = UDim2.new(0, quickUseWidth, 1, 0),
-				BackgroundColor3 = ThemeConfig.DebugColumnColors.QuickUse,
-				BackgroundTransparency = ThemeConfig.DebugColumnColors.Transparency,
-				LayoutOrder = 3,
-				CanvasSize = UDim2.fromOffset(0, 0),
-				AutomaticCanvasSize = Enum.AutomaticSize.Y,
-				ScrollingDirection = Enum.ScrollingDirection.Y,
-				ScrollBarThickness = C.ScrollBar.Thickness,
-				ScrollBarImageColor3 = C.ScrollBar.Color,
-				ScrollBarImageTransparency = C.ScrollBar.Transparency,
-				ClipsDescendants = true,
-			}, {
-				Layout = React.createElement("UIListLayout", {
-					FillDirection = Enum.FillDirection.Vertical,
-					VerticalAlignment = Enum.VerticalAlignment.Top,
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-				Panel = React.createElement(QuickUsePanel, {
-					quickUseData = loadoutData.quickUse,
-					slotSize = backpackSlotSize,
-					columnWidth = quickUseWidth,
-					scale = scale,
-					dragEnabled = props.dragEnabled,
-					onDragStart = props.onQuickUseDragStart,
-					onSlotClick = props.onQuickUseClick,
-				}),
-			}),
-			})
-		})
+			Header = if showHeader
+				then React.createElement("TextLabel", {
+					Name = "Header",
+					Size = UDim2.new(1, 0, 0, scaledF.TitleHeight),
+					BackgroundTransparency = 1,
+					Text = "LOADOUT",
+					TextColor3 = C.Text.Primary,
+					Font = F.Family,
+					TextSize = scaledF.TitleSize,
+					TextXAlignment = Enum.TextXAlignment.Left,
+					LayoutOrder = 1,
+				})
+				else nil,
+			PanelsRow = panelsRow,
+		}),
 	})
 end
 

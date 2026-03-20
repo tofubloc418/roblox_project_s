@@ -56,8 +56,11 @@ end
 
 local KeybindsCodec = {}
 
-function KeybindsCodec.KeyCodeToName(keyCode: Enum.KeyCode): string
-	return keyCode.Name
+function KeybindsCodec.KeyCodeToName(keyCode: Enum.KeyCode?): string
+	if not keyCode then
+		return "Unknown"
+	end
+	return (keyCode :: Enum.KeyCode).Name
 end
 
 function KeybindsCodec.NameToKeyCode(name: string): Enum.KeyCode?

@@ -3,9 +3,11 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContextActionService = game:GetService("ContextActionService")
 
 local localPlayer = Players.LocalPlayer
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 export type AbilityClientContext = {
 	player: Player,
@@ -53,24 +55,29 @@ if scriptsFolder then
 	end)
 end
 
-local SLOT_KEYS: { Enum.KeyCode } = {
-	Enum.KeyCode.R,
-	Enum.KeyCode.T,
-	Enum.KeyCode.Y,
-	Enum.KeyCode.G,
-	Enum.KeyCode.H,
+local SLOT_ACTIONS: { string } = {
+	KeybindIds.AbilitySlot1,
+	KeybindIds.AbilitySlot2,
+	KeybindIds.AbilitySlot3,
+	KeybindIds.AbilitySlot4,
+	KeybindIds.AbilitySlot5,
 }
 
-for slotIndex, keyCode in ipairs(SLOT_KEYS) do
-	ContextActionService:BindAction(
-		"AbilitySlot" .. tostring(slotIndex),
+for slotIndex, actionId in ipairs(SLOT_ACTIONS) do
+	KeybindsClient.bindAction(
+		actionId,
 		function(_name: string, state: Enum.UserInputState, _input: InputObject)
+			-- Keybinds UI capture uses the same keys; avoid firing abilities while rebinding.
+			if KeybindsClient.areGameplayActionsSuppressed() then
+				return Enum.ContextActionResult.Sink
+			end
 			if state == Enum.UserInputState.Begin then
 				requestUseAbility:FireServer(slotIndex)
 			end
 			return Enum.ContextActionResult.Sink
 		end,
-		false,
-		keyCode
+		{
+			actionName = "AbilitySlot" .. tostring(slotIndex),
+		}
 	)
 end

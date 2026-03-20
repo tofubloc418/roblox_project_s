@@ -119,4 +119,13 @@ LayoutConfig.AbilityBar = {
 	ZIndex      = 5,
 }
 
+--[[
+	SETTINGS SHELL ZIndex (Global ZIndexBehavior on ScreenGui)
+]]
+LayoutConfig.Settings = {
+	TabBarZIndex = 14,
+	TabButtonZIndex = 15,
+	ListeningOverlayZIndex = 20,
+}
+
 return LayoutConfig

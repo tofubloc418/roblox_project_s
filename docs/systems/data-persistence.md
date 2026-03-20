@@ -341,7 +341,7 @@ The system uses a `Container` abstraction to unify inventory, stash, and equipme
 
 ### State replication (dataService)
 
-Inventory, equipment, quickUse, currency, and abilityPresets are **replicated to the client automatically** by the dataService package when the server calls `set`/`update` on the path-based API. The client reads state via the dataService client API (`get`, and optionally `getChangedSignal` for path-based updates). LoadoutController and HudLoadoutDataAdapter build their UI state from these reads; they do not rely on SyncFullState or SyncAbilityPresets for state.
+Inventory, equipment, quickUse, currency, and abilityPresets are **replicated to the client automatically** by the dataService package when the server calls `set`/`update` on the path-based API. The client reads state via the dataService client API (`get`, and optionally `getChangedSignal` for path-based updates). SettingsController (tabbed loadout / keybinds UI) and HudLoadoutDataAdapter build their UI state from these reads; they do not rely on SyncFullState or SyncAbilityPresets for state.
 
 ### Remotes (InventoryRemotes)
 
@@ -463,7 +463,7 @@ ModifierService (converts ItemModifier → StatModifier)
 AbilityService (reads abilityPresets via AbilityDataService; fires ability remotes)
 ConsumableService (calls InventoryService; fires consumable remotes)
 
-Client UI (LoadoutController, HudLoadoutDataAdapter)
+Client UI (SettingsController, HudLoadoutDataAdapter)
     ↓ request remotes (RequestMove, RequestEquip, etc.)
 Server handlers (validate, then DataService:set/update)
     ↓ replication automatic

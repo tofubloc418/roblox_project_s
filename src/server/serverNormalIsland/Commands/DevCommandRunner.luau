@@ -6,7 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local InventoryService     = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
-local InventoryTypes       = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes")) :: any
+local InventoryTypes       = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes")) :: any
 local ItemRegistry         = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 
 export type Result = { lines: { string }, isWarning: boolean }

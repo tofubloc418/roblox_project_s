@@ -187,4 +187,47 @@ ThemeConfig.AbilityBar = {
 	SlotGap  = 6,
 }
 
+--[[
+	SETTINGS SHELL (tabbed loadout / keybinds / future pages)
+]]
+ThemeConfig.Settings = {
+	TabBarHeight = 40,
+	TabPadding = 12,
+	TabGap = 2,
+	TabMinWidth = 120,
+	TabCornerRadius = 6,
+
+	TabActiveBackground = Color3.fromRGB(22, 22, 28),
+	TabActiveBackgroundTransparency = 0.3,
+	TabActiveText = Color3.fromRGB(255, 255, 255),
+
+	TabInactiveBackground = Color3.fromRGB(35, 35, 42),
+	TabInactiveBackgroundTransparency = 0.5,
+	TabInactiveText = Color3.fromRGB(180, 180, 190),
+
+	TabHoverText = Color3.fromRGB(220, 220, 230),
+	TabHoverBackgroundTransparency = 0.35,
+}
+
+ThemeConfig.KeybindsPage = {
+	RowHeight = 44,
+	RowGap = 4,
+	CategoryGap = 20,
+	ButtonWidth = 140,
+	ButtonHeight = 34,
+	ButtonCornerRadius = 6,
+
+	ListeningText = Color3.fromRGB(100, 180, 255),
+	ListeningStroke = Color3.fromRGB(100, 180, 255),
+	ConflictText = Color3.fromRGB(255, 180, 80),
+	ConflictWarningIconColor = Color3.fromRGB(225, 110, 120),
+	ConflictTooltipBackground = Color3.fromRGB(26, 29, 34),
+	ConflictTooltipTransparency = 0,
+	ConflictTooltipText = Color3.fromRGB(245, 248, 252),
+	ConflictTooltipMaxWidth = 260,
+	ConflictTooltipTextSize = 15,
+	ResetButtonWidth = 220,
+	ScrollGapNextToTrack = 10,
+}
+
 return ThemeConfig

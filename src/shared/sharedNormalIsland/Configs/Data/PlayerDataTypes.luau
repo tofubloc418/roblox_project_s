@@ -1,6 +1,6 @@
 --!strict
--- InventoryTypes
--- Shared type definitions for the inventory / loadout system.
+-- PlayerDataTypes
+-- Shared type definitions for client UI payloads and persisted player data.
 --
 -- ── TWO LAYERS OF TYPES ────────────────────────────────────────────────────────
 --
@@ -47,7 +47,7 @@ export type AbilitySlotData = { abilityId: string, isUltimate: boolean }
 -- Weapon card data (item + its ability configuration).
 export type WeaponData = { itemId: string, abilities: { [number]: AbilitySlotData? } }
 
--- Full state bundle passed from LoadoutController to LoadoutApp.
+-- Full state bundle passed from SettingsController / LoadoutApp.
 export type LoadoutData = {
 	backpack: InventoryData,
 	equipment: EquipmentData?,
@@ -126,8 +126,10 @@ export type CurrencyData = {
 	premium: number?,
 }
 
+export type StoredKeybindValue = string | { string }
+
 export type PlayerSettings = {
-	keybinds: { [string]: string }?,
+	keybinds: { [string]: StoredKeybindValue }?,
 	uiScale: number?,
 }
 

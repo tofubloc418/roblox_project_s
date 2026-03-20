@@ -1,31 +1,11 @@
 --!strict
 --[[
-	HudLoadoutController
-	====================
-	Client-side controller for the in-game HUD equipment section.
-
-	Responsibilities:
-	  1. Create the ScreenGui and mount the React root.
-	  2. Subscribe to HudLoadoutDataAdapter for state changes → re-render.
-	  3. Bind input keys (1, 2, 3, Q, F) via ContextActionService.
-	  4. Own the expandedWeapon logic (see §5 of spec).
-	  5. Manage Q hold → show radial dial, Q release → hide and select.
-
-	expandedWeapon rule (spec §5):
-	  • Switching between Weapon1 and Weapon2 → update expandedWeapon to
-	    the newly active weapon (collapses the other card's visual).
-	  • Switching from a weapon to Q or Fists → leave expandedWeapon unchanged
-	    (last active weapon keeps its visual).
-
-	Q tap vs hold detection:
-	  • Q Begin: record timestamp.
-	  • Q End  : if held < HOLD_THRESHOLD_SECS → tap (equip current quick item).
-	             if held ≥ HOLD_THRESHOLD_SECS → was hold; hide radial and apply selection.
+	HudLoadoutController: HUD loadout ScreenGui, DataAdapter subscription,
+	expandedWeapon rules, quick-use hold→radial behavior, and KeybindsClient binds.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ContextActionService = game:GetService("ContextActionService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -37,6 +17,9 @@ local HudLoadoutDataAdapter = require(script.Parent:WaitForChild("HudLoadoutData
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local HudLoadoutApp = require(script.Parent:WaitForChild("HudLoadoutApp"))
 local HudRadialDial = require(script.Parent:WaitForChild("HudRadialDial"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
 type HudActiveSlot = HudLoadoutTypes.HudActiveSlot
@@ -61,7 +44,7 @@ hudScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
 hudScreen.IgnoreGuiInset = true
 hudScreen.Parent = playerGui
 
--- Radial dial ScreenGui (above HUD, below loadout; shown only while Q is held)
+-- Radial dial ScreenGui (shown while quick-use bind is held)
 local radialScreen = Instance.new("ScreenGui")
 radialScreen.Name = "HudRadialScreen"
 radialScreen.ResetOnSpawn = false
@@ -80,7 +63,7 @@ local handleSlotSwitch: (newSlot: HudActiveSlot) -> ()
 
 -- ── Radial state ─────────────────────────────────────────────────────────────
 
-local HOLD_THRESHOLD_SECS = 0.2    -- seconds before Q is treated as a hold
+local HOLD_THRESHOLD_SECS = 0.2
 
 local radialVisible = false
 local qPressTime: number? = nil
@@ -130,7 +113,7 @@ handleSlotSwitch = function(newSlot: HudActiveSlot)
 	HudLoadoutDataAdapter.setActiveSlot(newSlot)
 
 	-- Only update expandedWeapon when the player moves between weapon slots.
-	-- Switching to Q or Fists intentionally leaves it unchanged.
+	-- Switching to QuickUse or Fists leaves expandedWeapon unchanged.
 	if newSlot == "Weapon1" or newSlot == "Weapon2" then
 		-- If we are expanding a weapon for the first time (expandedWeapon is nil),
 		-- or switching from one weapon to the other, set it to the new slot.
@@ -143,6 +126,9 @@ end
 -- ── Data adapter subscription ────────────────────────────────────────────────
 -- Re-render HUD whenever adapter state changes (e.g. from external systems).
 HudLoadoutDataAdapter.subscribe(function(_state: HudLoadoutState)
+	renderHud()
+end)
+KeybindsClient.subscribe(function()
 	renderHud()
 end)
 
@@ -285,37 +271,36 @@ RunService.Heartbeat:Connect(function()
 	renderRadial()
 end)
 
--- ── Key bindings ─────────────────────────────────────────────────────────────
-
--- Keys 1 and 2: weapon slots
-ContextActionService:BindAction("HudWeapon1", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudWeapon1, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		handleSlotSwitch("Weapon1")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.One)
+end, {
+	actionName = "HudWeapon1",
+})
 
-ContextActionService:BindAction("HudWeapon2", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudWeapon2, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		handleSlotSwitch("Weapon2")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Two)
+end, {
+	actionName = "HudWeapon2",
+})
 
--- Key 3: fists / unequip
-ContextActionService:BindAction("HudFists", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudFists, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		HudLoadoutDataAdapter.setActiveSlot("Fists")
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Three)
+end, {
+	actionName = "HudFists",
+})
 
--- Key Q: tap = equip current quick slot; hold = radial dial
-ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _input)
+KeybindsClient.bindAction(KeybindIds.HudQuickUse, function(_name, inputState, _input)
 	if inputState == Enum.UserInputState.Begin then
 		qPressTime = os.clock()
-		-- Start showing radial after a tiny delay handled in Heartbeat
-		-- (we don't open it immediately to distinguish taps)
 
 	elseif inputState == Enum.UserInputState.End then
 		local pressTime = qPressTime
@@ -324,9 +309,7 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 		if pressTime then
 			local held = os.clock() - pressTime
 			if held < HOLD_THRESHOLD_SECS then
-				-- Tap: equip current quick-slot item
 				HudLoadoutDataAdapter.setActiveSlot("QuickUse")
-				-- Close radial if it somehow got opened
 				if radialVisible then
 					radialVisible = false
 					radialScreen.Enabled = false
@@ -334,7 +317,6 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 					renderRadial()
 				end
 			else
-				-- Hold release: apply highlighted selection and equip quick slot (same as tap Q).
 				if radialVisible then
 					if highlightedIndex then
 						HudLoadoutDataAdapter.setCurrentQuickSlotIndex(highlightedIndex)
@@ -351,9 +333,10 @@ ContextActionService:BindAction("HudQuickUse", function(_name, inputState, _inpu
 		end
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.Q)
+end, {
+	actionName = "HudQuickUse",
+})
 
--- Heartbeat: open radial once Q has been held past the threshold
 RunService.Heartbeat:Connect(function()
 	if qPressTime and not radialVisible then
 		local held = os.clock() - qPressTime
@@ -366,13 +349,14 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- Key F: flashlight toggle
-ContextActionService:BindAction("HudFlashlight", function(_name, state, _input)
+KeybindsClient.bindAction(KeybindIds.HudFlashlight, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
 		HudLoadoutDataAdapter.toggleFlashlight()
 	end
 	return Enum.ContextActionResult.Sink
-end, false, Enum.KeyCode.F)
+end, {
+	actionName = "HudFlashlight",
+})
 
 -- ── Viewport resize ──────────────────────────────────────────────────────────
 

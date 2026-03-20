@@ -8,17 +8,23 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local AbilityRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("AbilityRegistry"))
 local _ItemRegistry  = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Inventory"):WaitForChild("InventoryTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 
 local DataService = DataServiceBootstrap.GetDataService()
 
 local function getAbilityPresets(player: Player): AbilityPresetsData?
 	local ds = DataService
-	if type(ds.get) == "function" then
-		return ds.get(player, { "abilityPresets" }) :: AbilityPresetsData?
-	end
-	if type(ds.Get) == "function" then
-		return ds.Get(player, { "abilityPresets" }) :: AbilityPresetsData?
+	local ok, presets = pcall(function(): AbilityPresetsData?
+		if type(ds.get) == "function" then
+			return ds.get(player, { "abilityPresets" }) :: AbilityPresetsData?
+		end
+		if type(ds.Get) == "function" then
+			return ds.Get(player, { "abilityPresets" }) :: AbilityPresetsData?
+		end
+		return nil
+	end)
+	if ok then
+		return presets
 	end
 	return nil
 end

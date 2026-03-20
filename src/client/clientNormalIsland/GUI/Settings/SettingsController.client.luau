@@ -48,7 +48,7 @@ type AbilitySlotData = InventoryTypes.AbilitySlotData
 type SerializedPreset = InventoryTypes.SerializedPreset
 
 type DragDescriptor = {
-	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot",
+	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot" | "ability_pool",
 	index: number?,
 	slotId: string?,
 }
@@ -162,6 +162,8 @@ local getBackendInventorySlot: (visibleSlot: number?) -> number?
 local activeTabId = "loadout"
 local keybindsRevision = 0
 local keybindListening = false
+local cachedAbilityPresets: AbilityPresetsData = {}
+local cachedUnlockedAbilities: { [string]: boolean } = {}
 
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
@@ -263,6 +265,17 @@ local function render()
 			keybindListening = listening
 		end,
 		settingsScreenGui = settingsScreen,
+
+		-- Abilities tab
+		abilityPresets = cachedAbilityPresets,
+		unlockedAbilities = cachedUnlockedAbilities,
+		abilityDragEnabled = settingsOpen and dataReady,
+		onAbilityDragToPreset = function(abilityId: string, weaponTag: string, slotIndex: number)
+			local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
+			if requestSetPreset then
+				requestSetPreset:FireServer(weaponTag, slotIndex, abilityId, false)
+			end
+		end,
 	}))
 end
 
@@ -276,6 +289,9 @@ local function refreshLoadoutFromData()
 	local qu = dsGet({ "quickUse" })
 	local cur = dsGet({ "currency" })
 	local ap = dsGet({ "abilityPresets" })
+	local ua = dsGet({ "unlockedAbilities" })
+	if type(ap) == "table" then cachedAbilityPresets = ap end
+	if type(ua) == "table" then cachedUnlockedAbilities = ua end
 	if type(inv) == "table" and type(eq) == "table" and type(qu) == "table" then
 		local payload: InventorySyncPayload = {
 			inventory = inv,
@@ -298,7 +314,7 @@ task.spawn(function()
 	dataReady = true
 	refreshLoadoutFromData()
 
-	for _, path in { { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" } } do
+	for _, path in { { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" }, { "unlockedAbilities" } } do
 		local sig = client:getChangedSignal(path)
 		if sig and type(sig.Connect) == "function" then
 			sig:Connect(refreshLoadoutFromData)
@@ -395,6 +411,23 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 	elseif source.container == "quickuse" then
 		fromSlot = source.index
 	end
+
+	-- Ability pool → preset slot drop
+	if source.container == "ability_pool" and target.container == "equipment" and target.slotId then
+		local slotIdStr = target.slotId :: string
+		local sep = string.find(slotIdStr, "_")
+		if sep then
+			local weaponTag = string.sub(slotIdStr, 1, sep - 1)
+			local slotIndex = tonumber(string.sub(slotIdStr, sep + 1))
+			if weaponTag and slotIndex and source.slotId then
+				local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
+				if requestSetPreset then
+					requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId, false)
+				end
+			end
+		end
+		return
+	end
 	if target.container == "backpack" then
 		toSlot = getBackendInventorySlot(target.index)
 	elseif target.container == "equipment" then
@@ -408,7 +441,7 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		and fromSlot ~= nil and toSlot ~= nil
 
 	if canMove then
-		requestMove:FireServer(toServerContainer(source.container), fromSlot, toServerContainer(target.container), toSlot)
+		requestMove:FireServer(toServerContainer(source.container :: any), fromSlot, toServerContainer(target.container :: any), toSlot)
 	end
 end)
 

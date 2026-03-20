@@ -161,6 +161,7 @@ export type PlayerData = {
 	quickUse: StoredQuickUseData,
 	stash: StashData,
 	abilityPresets: AbilityPresetsData,
+	unlockedAbilities: { [string]: boolean },
 	currency: CurrencyData,
 	settings: PlayerSettings,
 }

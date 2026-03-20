@@ -9,7 +9,8 @@ export type TabDef = {
 
 local SettingsTabConfig: { TabDef } = {
 	{ id = "loadout", label = "LOADOUT", layoutOrder = 1 },
-	{ id = "keybinds", label = "KEYBINDS", layoutOrder = 2 },
+	{ id = "abilities", label = "ABILITIES", layoutOrder = 2 },
+	{ id = "keybinds", label = "KEYBINDS", layoutOrder = 3 },
 }
 
 return table.freeze(SettingsTabConfig)

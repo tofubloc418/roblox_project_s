@@ -100,5 +100,26 @@ ItemEnums.WeaponTag = {
 	Quarterstaff  = "Quarterstaff",
 }
 
+-- ── Weapon Tag Display Names ──────────────────────────────────────────────────
+ItemEnums.WeaponTagDisplayName = {
+	[ItemEnums.WeaponTag.Dagger]        = "Dagger",
+	[ItemEnums.WeaponTag.StraightSword] = "Straight Sword",
+	[ItemEnums.WeaponTag.Greatsword]    = "Greatsword",
+	[ItemEnums.WeaponTag.CurvedSword]   = "Curved Sword",
+	[ItemEnums.WeaponTag.Axe]           = "Axe",
+	[ItemEnums.WeaponTag.Greataxe]      = "Greataxe",
+	[ItemEnums.WeaponTag.Hammer]        = "Hammer",
+	[ItemEnums.WeaponTag.GreatHammer]   = "Great Hammer",
+	[ItemEnums.WeaponTag.Spear]         = "Spear",
+	[ItemEnums.WeaponTag.Halberd]       = "Halberd",
+	[ItemEnums.WeaponTag.Fist]          = "Fist",
+	[ItemEnums.WeaponTag.Whip]          = "Whip",
+	[ItemEnums.WeaponTag.Staff]         = "Staff",
+	[ItemEnums.WeaponTag.Seal]          = "Seal",
+	[ItemEnums.WeaponTag.Bow]           = "Bow",
+	[ItemEnums.WeaponTag.Crossbow]      = "Crossbow",
+	[ItemEnums.WeaponTag.ThrustingSword] = "Thrusting Sword",
+	[ItemEnums.WeaponTag.Quarterstaff]  = "Quarterstaff",
+}
 
 return ItemEnums

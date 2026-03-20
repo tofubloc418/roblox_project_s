@@ -85,8 +85,7 @@ function AbilityDataService.SetPresetSlot(
 	player: Player,
 	presetKey: string,
 	slotIndex: number,
-	abilityId: string?,
-	isUltimate: boolean?
+	abilityId: string?
 ): boolean
 
 	local presets = getAbilityPresets(player)
@@ -111,7 +110,16 @@ function AbilityDataService.SetPresetSlot(
 		return true
 	end
 
-	if isUltimate then
+	-- Securely fetch isUltimate from the central registry
+	local config = AbilityRegistry.GetAbility(abilityId)
+	if not config then
+		return false
+	end
+	
+	-- We explicitly ignore any isUltimate passed as an argument
+	local isActuallyUltimate = config.isUltimate == true
+
+	if isActuallyUltimate then
 		local existingSlot = preset[slotIndex]
 		local alreadyUlt   = existingSlot and existingSlot.ult
 		if not alreadyUlt then
@@ -129,7 +137,7 @@ function AbilityDataService.SetPresetSlot(
 
 	preset[slotIndex] = ({
 		aid = abilityId,
-		ult = isUltimate and true or nil,
+		ult = isActuallyUltimate and true or nil,
 	}) :: SerializedPresetSlot
 
 	setAbilityPresetKey(player, presetKey, preset)
@@ -160,18 +168,16 @@ function AbilityDataService.Initialize()
 	_requestSetAbilityPreset = remoteFolder:WaitForChild("RequestSetAbilityPreset") :: RemoteEvent
 
 	-- Client requests a preset slot change.
-	-- Arguments: presetKey (string), slotIndex (number), abilityId (string?), isUltimate (boolean?)
+	-- Arguments: presetKey (string), slotIndex (number), abilityId (string?)
 	_requestSetAbilityPreset.OnServerEvent:Connect(function(
 		player: Player,
 		presetKey: any,
 		slotIndex: any,
-		abilityId: any,
-		isUltimate: any
+		abilityId: any
 	)
 		if type(presetKey) ~= "string" or type(slotIndex) ~= "number" then return end
 		if abilityId ~= nil and type(abilityId) ~= "string" then return end
-		local ultimate: boolean? = if type(isUltimate) == "boolean" then isUltimate else nil
-		AbilityDataService.SetPresetSlot(player, presetKey, slotIndex, abilityId, ultimate)
+		AbilityDataService.SetPresetSlot(player, presetKey, slotIndex, abilityId)
 	end)
 end
 

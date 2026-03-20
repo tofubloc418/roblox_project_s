@@ -421,7 +421,7 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		if weaponTag and slotIndex and source.slotId then
 			local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
 			if requestSetPreset then
-				requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId, false)
+				requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId)
 			end
 		end
 		return

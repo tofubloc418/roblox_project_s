@@ -1,5 +1,5 @@
 --!strict
--- Weapon slot with 5 ability sub-slots inside a contained card (Arc Raiders style)
+-- Equipment weapon card: main slot + row of five ability presets.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React"))
@@ -10,7 +10,8 @@ local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local ItemIconResolver = require(script.Parent:WaitForChild("ItemIconResolver"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
-local AbilitySlot = require(script.Parent:WaitForChild("AbilitySlot"))
+local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
+local AbilityPresetSlot = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetSlot"))
 type WeaponData = InventoryTypes.WeaponData
 type EquipmentSlotId = InventoryTypes.EquipmentSlotId
 
@@ -33,11 +34,11 @@ local C = ThemeConfig.Colors
 local R = ThemeConfig.CornerRadius
 local F = ThemeConfig.Font
 local L = ThemeConfig.Loadout
+local GB = ThemeConfig.GradientBorder
 
 local function WeaponCard(props: WeaponCardProps)
 	local weapon = props.weapon
 	local imageId = ""
-	-- Show label only when slot is empty; hide when weapon is equipped
 	local displayText = if weapon then "" else props.slotLabel
 	local panelWidth = props.panelWidth or 250
 	local scale = props.scale or 1
@@ -48,7 +49,6 @@ local function WeaponCard(props: WeaponCardProps)
 	local scaledCard = math.floor(P.Card * scale)
 	local scaledAbilityGap = math.floor(P.AbilitySlot * scale)
 
-	-- Ability slots: cap by width so they fit when column is narrow; use min scale so they don't shrink too fast vertically
 	local availableWidth = panelWidth - 2 * scaledCard - 4 * scaledAbilityGap
 	local maxAbilitySizeFromWidth = math.floor(availableWidth / 5)
 	local abilityScale = math.max(scale, L.AbilitySlotMinScale or 0.65)
@@ -57,9 +57,7 @@ local function WeaponCard(props: WeaponCardProps)
 		math.max(1, maxAbilitySizeFromWidth)
 	)
 
-	-- Outer card: height:width = 6:9
 	local outerCardHeight = math.floor(panelWidth * L.OuterCardHeightRatio)
-	-- Inner card (weapon visual) fills remaining space after abilities row and padding
 	local contentHeight = outerCardHeight - scaledCard * 2
 	local weaponSlotHeight = math.max(0, contentHeight - scaledCard - abilitySlotSize)
 
@@ -93,26 +91,29 @@ local function WeaponCard(props: WeaponCardProps)
 		props.onWeaponClick()
 	end
 
-	local borderWidth = ThemeConfig.GradientBorder and ThemeConfig.GradientBorder.BorderWidth or 2
-	local innerAbilitySize = math.max(1, abilitySlotSize - 2 * borderWidth)
+	local borderWidth = GB.BorderWidth or 2
+	local innerPx = math.max(1, abilitySlotSize - 2 * borderWidth)
+	local abilityPreset = weapon and weapon.abilityPreset or nil
 
 	local abilitySlots: { [string | number]: any } = {}
 	for i = 1, ABILITY_COUNT do
+		local aid, isUlt = AbilityPresetSlotUtils.readSlot(abilityPreset, i)
 		abilitySlots["Ability" .. i] = React.createElement(GradientBorder, {
-			size = innerAbilitySize,
+			size = abilitySlotSize,
+			fitWithin = true,
 			layoutOrder = i,
 			cornerRadius = R.SlotSmall,
 			onActivated = function()
 				props.onAbilityClick(i)
 			end,
 		}, {
-			Slot = React.createElement(AbilitySlot, {
-				index = i,
-				ability = weapon and weapon.abilities[i] or nil,
-				size = innerAbilitySize,
-				onClick = function()
-					props.onAbilityClick(i)
-				end,
+			Slot = React.createElement(AbilityPresetSlot, {
+				aid = aid,
+				isUlt = isUlt,
+				variant = "settings",
+				pixelSize = innerPx,
+				layoutOrder = 0,
+				zIndex = LayoutConfig.ZIndex.Content,
 			}),
 		})
 	end

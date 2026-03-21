@@ -1,6 +1,5 @@
 --!strict
--- WeaponTagsColumn: Column 1 of the Abilities page.
--- Scrollable list of weapon tags with expandable preset slots.
+-- Abilities page: weapon tags + five preset slots per expanded tag.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -10,6 +9,8 @@ local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
 local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
+local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
+local AbilityPresetSlot = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetSlot"))
 
 type AbilityPresetsData = { [string]: { [number]: { aid: string, ult: boolean? }? } }
 
@@ -27,6 +28,7 @@ local A = ThemeConfig.AbilitiesPage
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
 local R = ThemeConfig.CornerRadius
+local GB = ThemeConfig.GradientBorder
 local L = ThemeConfig.Loadout    -- for WidthScale
 local P = ThemeConfig.Padding    -- for OuterFrameHorizontal
 local AZ = LayoutConfig.Settings.AbilitiesPage
@@ -80,7 +82,6 @@ local function TagRow(props: TagRowProps)
 		elseif isHover then A.TagHoverText
 		else C.Text.Secondary
 
-	-- Preset row (visible only when expanded)
 	local presetChildren: { [string]: any }? = nil
 	if isSelected then
 		local preset = props.abilityPresets[tag] or {}
@@ -91,12 +92,10 @@ local function TagRow(props: TagRowProps)
 			Padding = UDim.new(0, slotGap),
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 		})
+		local borderW = GB.BorderWidth or 2
+		local innerPx = math.max(1, slotSize - 2 * borderW)
 		for i = 1, 5 do
-			local slotData = preset[i]
-			local abilityId = slotData and slotData.aid or nil
-
-			local slotTag = tag
-			local slotIndex = i
+			local abilityId, isUlt = AbilityPresetSlotUtils.readSlot(preset, i)
 			pc["Slot" .. i] = React.createElement(GradientBorder, {
 				size = slotSize,
 				fitWithin = true,
@@ -106,7 +105,7 @@ local function TagRow(props: TagRowProps)
 					if abilityId then
 						props.onAbilityClicked(abilityId)
 					else
-						props.onPresetSlotClicked(slotTag, slotIndex)
+						props.onPresetSlotClicked(tag, i)
 					end
 				end,
 				onMouseEnter = function()
@@ -126,28 +125,13 @@ local function TagRow(props: TagRowProps)
 					end
 				end,
 				children = {
-					Slot = React.createElement("Frame", {
-						Name = "PresetSlot",
-						Size = UDim2.fromScale(1, 1),
-						BackgroundColor3 = Color3.fromRGB(45, 45, 52),
-						BackgroundTransparency = 0,
-						ZIndex = LayoutConfig.ZIndex.Content,
-					}, {
-						Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.SlotSmall) }),
-						Stroke = React.createElement("UIStroke", {
-							Color = Color3.fromRGB(80, 80, 88),
-							Thickness = 1,
-							Transparency = 0,
-						}),
-						Label = React.createElement("TextLabel", {
-							Size = UDim2.fromScale(1, 1),
-							BackgroundTransparency = 1,
-							Text = if abilityId then string.sub(abilityId, 1, 3) else "",
-							TextColor3 = if abilityId then C.Text.Primary else C.Text.Secondary,
-							Font = F.FamilySecondary,
-							TextScaled = true,
-							ZIndex = LayoutConfig.ZIndex.Content,
-						}),
+					Slot = React.createElement(AbilityPresetSlot, {
+						aid = abilityId,
+						isUlt = isUlt,
+						variant = "settings",
+						pixelSize = innerPx,
+						layoutOrder = 0,
+						zIndex = LayoutConfig.ZIndex.Content,
 					}),
 				},
 			})

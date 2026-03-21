@@ -1,6 +1,5 @@
 --!strict
--- AbilityDataService
--- Per-player ability preset slots (path: abilityPresets → presetKey → slots 1–5).
+-- abilityPresets[presetKey] slots 1–5; persists with string keys "1".."5" for stable JSON replication.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -29,7 +28,6 @@ local function setAtPath(player: Player, path: { string }, value: any)
 	DataService:set(player, path, value)
 end
 
--- Profile must be loaded; ensure `abilityPresets` exists as a table before nested writes.
 local function getOrInitAbilityPresets(player: Player): AbilityPresetsData?
 	waitForProfile(player)
 	local presets = rawGetAbilityPresets(player)
@@ -54,16 +52,29 @@ local function setAbilityPresetKey(player: Player, presetKey: string, preset: Se
 	DataService:set(player, { "abilityPresets", presetKey }, preset)
 end
 
--- ── Constants ─────────────────────────────────────────────────────────────────
-
 local MAX_PRESET_SLOTS = 5
 local MAX_ULTIMATE_PER_PRESET = 1
 
--- ── Internal helpers ──────────────────────────────────────────────────────────
+type WorkingPreset = { [number]: SerializedPresetSlot? }
 
-local function countUltimates(preset: SerializedPreset): number
+local function loadWorkingFromRaw(raw: any): WorkingPreset
+	local w: WorkingPreset = {}
+	for i = 1, MAX_PRESET_SLOTS do
+		local row = InventoryTypes.getSlotItem(raw, i)
+		if row and type(row) == "table" and type(row.aid) == "string" and row.aid ~= "" then
+			w[i] = ({
+				aid = row.aid,
+				ult = if row.ult == true then true else nil,
+			}) :: SerializedPresetSlot
+		end
+	end
+	return w
+end
+
+local function countUltimatesWorking(w: WorkingPreset): number
 	local n = 0
-	for _, slot in pairs(preset) do
+	for i = 1, MAX_PRESET_SLOTS do
+		local slot = w[i]
 		if slot and slot.ult then
 			n += 1
 		end
@@ -71,7 +82,20 @@ local function countUltimates(preset: SerializedPreset): number
 	return n
 end
 
--- ── Public API ────────────────────────────────────────────────────────────────
+-- Sparse numeric-key tables can replicate as length-1 arrays; string keys stay a JSON object.
+local function workingToStoredPreset(w: WorkingPreset): SerializedPreset
+	local out: any = {}
+	for i = 1, MAX_PRESET_SLOTS do
+		local s = w[i]
+		if s then
+			out[tostring(i)] = ({
+				aid = s.aid,
+				ult = if s.ult == true then true else nil,
+			}) :: SerializedPresetSlot
+		end
+	end
+	return out
+end
 
 local AbilityDataService = {}
 
@@ -108,14 +132,11 @@ function AbilityDataService.SetPresetSlot(
 		return false
 	end
 
-	local preset: SerializedPreset = {}
-	for k, v in pairs(presets[presetKey] or {}) do
-		preset[k] = v
-	end
+	local working = loadWorkingFromRaw(presets[presetKey])
 
 	if abilityId == nil then
-		preset[slotIndex] = nil
-		setAbilityPresetKey(player, presetKey, preset)
+		working[slotIndex] = nil
+		setAbilityPresetKey(player, presetKey, workingToStoredPreset(working))
 		return true
 	end
 
@@ -127,14 +148,15 @@ function AbilityDataService.SetPresetSlot(
 	local isActuallyUltimate = config.isUltimate == true
 
 	if isActuallyUltimate then
-		local existingSlot = preset[slotIndex]
+		local existingSlot = working[slotIndex]
 		local alreadyUlt = existingSlot and existingSlot.ult
 		if not alreadyUlt then
-			local ultCount = countUltimates(preset)
+			local ultCount = countUltimatesWorking(working)
 			if ultCount >= MAX_ULTIMATE_PER_PRESET then
-				for i, slot in pairs(preset) do
+				for i = 1, MAX_PRESET_SLOTS do
+					local slot = working[i]
 					if slot and slot.ult then
-						preset[i] = nil
+						working[i] = nil
 						break
 					end
 				end
@@ -142,12 +164,12 @@ function AbilityDataService.SetPresetSlot(
 		end
 	end
 
-	preset[slotIndex] = ({
+	working[slotIndex] = ({
 		aid = abilityId,
 		ult = isActuallyUltimate and true or nil,
 	}) :: SerializedPresetSlot
 
-	setAbilityPresetKey(player, presetKey, preset)
+	setAbilityPresetKey(player, presetKey, workingToStoredPreset(working))
 	return true
 end
 

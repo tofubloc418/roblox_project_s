@@ -18,7 +18,7 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- ═══════════════════════════════════════════════════════════════════════════════
--- SECTION A  –  UI LAYER  (unchanged; used by React components)
+-- SECTION A  –  UI LAYER
 -- ═══════════════════════════════════════════════════════════════════════════════
 
 -- A single item as the UI understands it (rendered in an inventory/equipment slot).
@@ -44,8 +44,19 @@ export type QuickUseData = { slots: { [number]: ItemStack? } }
 -- Ability slot within a weapon card.
 export type AbilitySlotData = { abilityId: string, isUltimate: boolean }
 
--- Weapon card data (item + its ability configuration).
-export type WeaponData = { itemId: string, abilities: { [number]: AbilitySlotData? } }
+export type SerializedPresetSlot = {
+	aid: string,
+	ult: boolean?,
+}
+-- Slots may use numeric or string keys ("1".."5") after save/load; use getSlotItem when reading.
+export type SerializedPreset = { [number]: SerializedPresetSlot? }
+export type AbilityPresetsData = { [string]: SerializedPreset }
+
+export type WeaponData = {
+	itemId: string,
+	abilities: { [number]: AbilitySlotData? },
+	abilityPreset: SerializedPreset?,
+}
 
 -- Full state bundle passed from SettingsController / LoadoutApp.
 export type LoadoutData = {
@@ -80,16 +91,6 @@ export type SerializedItem = {
 	mods: { SerializedMod }?,  -- bonus modifiers (nil = no modifiers)
 	cdat: { [string]: any }?,  -- custom per-instance data (reserved)
 }
-
--- ── Ability presets ───────────────────────────────────────────────────────────
--- Stored per weapon tag / preset key (e.g. "Greatsword", "Unique_Moonveil").
--- When a weapon is equipped, its abilityPresetKey is used to look up the preset.
-export type SerializedPresetSlot = {
-	aid: string,   -- abilityId
-	ult: boolean?, -- isUltimate (nil = false)
-}
-export type SerializedPreset = { [number]: SerializedPresetSlot? } -- slots 1–5
-export type AbilityPresetsData = { [string]: SerializedPreset }    -- presetKey → preset
 
 -- ── Container identifier ──────────────────────────────────────────────────────
 export type ContainerId = "inventory" | "stash" | "equipment" | "quickuse"

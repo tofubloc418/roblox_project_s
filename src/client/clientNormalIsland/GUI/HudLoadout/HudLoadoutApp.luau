@@ -1,13 +1,5 @@
 --!strict
---[[
-	HudLoadoutApp
-	=============
-	Root React component for the in-game HUD equipment section.
-
-	Props flow: controller reads from DataAdapter → passes HudLoadoutState
-	down to this component → distributes to sub-components. No sub-component
-	calls the adapter directly.
-]]
+-- HUD equipment stack: weapons, quick slots, bottom ability bar.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
@@ -22,25 +14,21 @@ local HudSlotCard = require(script.Parent:WaitForChild("HudSlotCard"))
 local HudWeaponCard = require(script.Parent:WaitForChild("HudWeaponCard"))
 local HudAbilityBar = require(script.Parent:WaitForChild("HudAbilityBar"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+type SerializedPreset = InventoryTypes.SerializedPreset
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
 local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
 local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 
 type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
-type AbilitySlotData = InventoryTypes.AbilitySlotData
-
 local H = ThemeConfig.HudLoadout
 local L = LayoutConfig.HudLoadout
 
--- Fists placeholder icon — nil means the slot renders empty (no icon).
--- Swap with a real asset id once available.
 local FISTS_ICON: string? = nil
 
 export type HudLoadoutAppProps = {
 	state: HudLoadoutState,
-	abilityBarSlots: { [number]: AbilitySlotData? }?,
+	abilityBarPreset: SerializedPreset?,
 	viewportSize: Vector2,
-	-- Callbacks wired by the controller
 	onSlot1: () -> (),
 	onSlot2: () -> (),
 	onSlot3: () -> (),
@@ -79,8 +67,6 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 
 	-- Weapon slots match quick-use / fists column width
 	local slotSize = H.SlotSize
-
-	local abilityBarSlots = props.abilityBarSlots or {}
 
 	-- Full-screen root so we can position loadout (right) and ability bar (bottom-center) independently
 	return React.createElement("Frame", {
@@ -182,7 +168,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 
 		-- ── Bottom-center ability bar (5 slots) ─────────────────────────────
 		AbilityBar = React.createElement(HudAbilityBar, {
-			slots = abilityBarSlots,
+			preset = props.abilityBarPreset,
 		}),
 	})
 end

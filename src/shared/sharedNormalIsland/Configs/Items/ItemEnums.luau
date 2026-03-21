@@ -9,7 +9,7 @@
 --   dynamic and need not be listed here; they are derived automatically from templateId.
 --
 -- HOW TO ADD A NEW SUBCATEGORY:
---   Add a key to ItemEnums.Subcategory. Update the relevant config file in Configs/Items/Weapons/.
+--   Add a key to ItemEnums.Subcategory (weapon buckets or consumable types, etc.).
 
 local ItemEnums = {}
 
@@ -29,27 +29,10 @@ ItemEnums.Category = {
 -- ── Subcategories ─────────────────────────────────────────────────────────────
 -- Second-level classification within a category.
 ItemEnums.Subcategory = {
-	-- Weapons (class)
-	Dagger        = "Dagger",
-	StraightSword = "StraightSword",
-	Greatsword    = "Greatsword",
-	Katana        = "Katana",
-	CurvedSword   = "CurvedSword",
-	Axe           = "Axe",
-	Greataxe      = "Greataxe",
-	Hammer        = "Hammer",
-	GreatHammer   = "GreatHammer",
-	Spear         = "Spear",
-	Halberd       = "Halberd",
-	Fist          = "Fist",
-	Whip          = "Whip",
-	Staff         = "Staff",
-	Seal          = "Seal",
-	Bow           = "Bow",
-	Crossbow      = "Crossbow",
-	ThrustingSword = "ThrustingSword",
-	Quarterstaff  = "Quarterstaff",
-	Unique        = "Unique", -- One-of-a-kind weapons that don't fit a class
+	-- Weapons (broad buckets; weaponTag names the specific weapon type for abilities / assets)
+	MeleeWeapon  = "MeleeWeapon",
+	MagicWeapon  = "MagicWeapon",
+	UniqueWeapon = "UniqueWeapon",
 	-- Consumables
 	Healing       = "Healing",
 	Buff          = "Buff",
@@ -76,8 +59,8 @@ ItemEnums.EquipmentSlot = {
 }
 
 -- ── Weapon Tags ───────────────────────────────────────────────────────────────
--- Each weapon template has exactly ONE weaponTag that abilities use for compatibility.
--- Class weapon tags match their Subcategory value by convention.
+-- Each weapon template has exactly ONE weaponTag that abilities use for compatibility
+-- and for ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId> asset layout.
 -- Unique weapon tags are derived as "Unique_<templateId>" and need not be listed here.
 ItemEnums.WeaponTag = {
 	Dagger        = "Dagger",
@@ -90,7 +73,7 @@ ItemEnums.WeaponTag = {
 	GreatHammer   = "GreatHammer",
 	Spear         = "Spear",
 	Halberd       = "Halberd",
-	Fist          = "Fist",
+	Fists         = "Fists",
 	Whip          = "Whip",
 	Staff         = "Staff",
 	Seal          = "Seal",
@@ -100,5 +83,26 @@ ItemEnums.WeaponTag = {
 	Quarterstaff  = "Quarterstaff",
 }
 
+-- ── Weapon Tag Display Names ──────────────────────────────────────────────────
+ItemEnums.WeaponTagDisplayName = {
+	[ItemEnums.WeaponTag.Dagger]        = "Dagger",
+	[ItemEnums.WeaponTag.StraightSword] = "Straight Sword",
+	[ItemEnums.WeaponTag.Greatsword]    = "Greatsword",
+	[ItemEnums.WeaponTag.CurvedSword]   = "Curved Sword",
+	[ItemEnums.WeaponTag.Axe]           = "Axe",
+	[ItemEnums.WeaponTag.Greataxe]      = "Greataxe",
+	[ItemEnums.WeaponTag.Hammer]        = "Hammer",
+	[ItemEnums.WeaponTag.GreatHammer]   = "Great Hammer",
+	[ItemEnums.WeaponTag.Spear]         = "Spear",
+	[ItemEnums.WeaponTag.Halberd]       = "Halberd",
+	[ItemEnums.WeaponTag.Fists]         = "Fists",
+	[ItemEnums.WeaponTag.Whip]          = "Whip",
+	[ItemEnums.WeaponTag.Staff]         = "Staff",
+	[ItemEnums.WeaponTag.Seal]          = "Seal",
+	[ItemEnums.WeaponTag.Bow]           = "Bow",
+	[ItemEnums.WeaponTag.Crossbow]      = "Crossbow",
+	[ItemEnums.WeaponTag.ThrustingSword] = "Thrusting Sword",
+	[ItemEnums.WeaponTag.Quarterstaff]  = "Quarterstaff",
+}
 
 return ItemEnums

@@ -24,7 +24,11 @@ local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("R
 local ReactRoblox = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("ReactRoblox"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
+local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
+local AbilityPresetsBridge = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetsBridge"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
+local AbilityPresetMutations = require(script.Parent:WaitForChild("AbilityPresetMutations"))
+local AbilityPresetToast = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetToast"))
 local KeybindConflictTooltipLayer = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("KeybindConflictTooltipLayer"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
 local SettingsShellApp = require(script.Parent:WaitForChild("SettingsShellApp"))
@@ -48,9 +52,15 @@ type AbilitySlotData = InventoryTypes.AbilitySlotData
 type SerializedPreset = InventoryTypes.SerializedPreset
 
 type DragDescriptor = {
-	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot",
+	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot" | "ability_pool" | "ability_preset",
 	index: number?,
 	slotId: string?,
+}
+
+type AbilityPresetOp = {
+	presetKey: string,
+	slotIndex: number,
+	abilityId: string?,
 }
 
 local function toServerContainer(c: "backpack" | "equipment" | "quickuse" | "stash" | "loot"): string
@@ -83,9 +93,9 @@ local function presetToAbilities(preset: SerializedPreset?): { [number]: Ability
 		return out
 	end
 	for i = 1, 5 do
-		local slot = preset[i]
-		if slot and slot.aid then
-			out[i] = { abilityId = slot.aid, isUltimate = slot.ult == true }
+		local aid, isUlt = AbilityPresetSlotUtils.readSlot(preset, i)
+		if aid then
+			out[i] = { abilityId = aid, isUltimate = isUlt }
 		end
 	end
 	return out
@@ -121,11 +131,21 @@ local function buildLoadoutData(payload: InventorySyncPayload, abilityPresets: A
 	local weapons: { [number]: WeaponData? } = {}
 	if payload.equipment.Weapon1 then
 		local presetKey = GetPresetKey.GetPresetKeyForEquipmentSlot(payload.equipment, "Weapon1")
-		weapons[1] = { itemId = payload.equipment.Weapon1.tid, abilities = presetToAbilities(presets[presetKey]) }
+		local preset = presets[presetKey]
+		weapons[1] = {
+			itemId = payload.equipment.Weapon1.tid,
+			abilities = presetToAbilities(preset),
+			abilityPreset = if type(preset) == "table" then preset :: SerializedPreset else nil,
+		}
 	end
 	if payload.equipment.Weapon2 then
 		local presetKey = GetPresetKey.GetPresetKeyForEquipmentSlot(payload.equipment, "Weapon2")
-		weapons[2] = { itemId = payload.equipment.Weapon2.tid, abilities = presetToAbilities(presets[presetKey]) }
+		local preset = presets[presetKey]
+		weapons[2] = {
+			itemId = payload.equipment.Weapon2.tid,
+			abilities = presetToAbilities(preset),
+			abilityPreset = if type(preset) == "table" then preset :: SerializedPreset else nil,
+		}
 	end
 
 	local quickSlots: { [number]: ItemStack? } = {}
@@ -162,6 +182,8 @@ local getBackendInventorySlot: (visibleSlot: number?) -> number?
 local activeTabId = "loadout"
 local keybindsRevision = 0
 local keybindListening = false
+local cachedAbilityPresets: AbilityPresetsData = {}
+local cachedUnlockedAbilities: { [string]: boolean } = {}
 
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
@@ -177,9 +199,19 @@ settingsScreen.IgnoreGuiInset = true
 settingsScreen.Parent = playerGui
 
 DragDropManager.attachGhostLayer(settingsScreen)
+AbilityPresetToast.attach(settingsScreen)
 KeybindConflictTooltipLayer.attach(settingsScreen)
 
 local settingsRoot = ReactRoblox.createRoot(settingsScreen)
+
+local function applyAbilityPresetOpsAsync(ops: { AbilityPresetOp })
+	task.spawn(function()
+		local ok, err = AbilityPresetMutations.invokeApplyOperations(ops)
+		if not ok and err then
+			AbilityPresetToast.showError(settingsScreen, err)
+		end
+	end)
+end
 
 local function render()
 	settingsRoot:render(React.createElement(SettingsShellApp, {
@@ -263,6 +295,9 @@ local function render()
 			keybindListening = listening
 		end,
 		settingsScreenGui = settingsScreen,
+		abilityPresets = cachedAbilityPresets,
+		unlockedAbilities = cachedUnlockedAbilities,
+		abilityDragEnabled = settingsOpen and dataReady,
 	}))
 end
 
@@ -271,11 +306,14 @@ local function dsGet(path: { string }): any?
 end
 
 local function refreshLoadoutFromData()
+	AbilityPresetsBridge.ensureInitialized()
 	local inv = dsGet({ "inventory" })
 	local eq = dsGet({ "equipment" })
 	local qu = dsGet({ "quickUse" })
 	local cur = dsGet({ "currency" })
-	local ap = dsGet({ "abilityPresets" })
+	local ua = dsGet({ "unlockedAbilities" })
+	cachedAbilityPresets = AbilityPresetsBridge.get() :: AbilityPresetsData
+	if type(ua) == "table" then cachedUnlockedAbilities = ua end
 	if type(inv) == "table" and type(eq) == "table" and type(qu) == "table" then
 		local payload: InventorySyncPayload = {
 			inventory = inv,
@@ -284,7 +322,7 @@ local function refreshLoadoutFromData()
 			currency = if type(cur) == "table" then cur else { gold = 0 },
 		}
 		latestPayload = payload
-		loadoutData = buildLoadoutData(payload, if type(ap) == "table" then ap else nil)
+		loadoutData = buildLoadoutData(payload, cachedAbilityPresets)
 		render()
 	end
 end
@@ -295,10 +333,20 @@ task.spawn(function()
 		client:init()
 	end
 	client:waitForData()
+
+	AbilityPresetsBridge.subscribe(function()
+		cachedAbilityPresets = AbilityPresetsBridge.get() :: AbilityPresetsData
+		if latestPayload then
+			loadoutData = buildLoadoutData(latestPayload, cachedAbilityPresets)
+		end
+		render()
+	end)
+	AbilityPresetsBridge.ensureInitialized()
+
 	dataReady = true
 	refreshLoadoutFromData()
 
-	for _, path in { { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "abilityPresets" } } do
+	for _, path in { { "inventory" }, { "equipment" }, { "quickUse" }, { "currency" }, { "unlockedAbilities" } } do
 		local sig = client:getChangedSignal(path)
 		if sig and type(sig.Connect) == "function" then
 			sig:Connect(refreshLoadoutFromData)
@@ -395,6 +443,14 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 	elseif source.container == "quickuse" then
 		fromSlot = source.index
 	end
+
+	if (source.container == "ability_pool" or source.container == "ability_preset") and target.container == "ability_preset" then
+		local ops = AbilityPresetMutations.buildPresetOperations(source, target, cachedAbilityPresets)
+		if ops and #ops > 0 then
+			applyAbilityPresetOpsAsync(ops :: { AbilityPresetOp })
+		end
+		return
+	end
 	if target.container == "backpack" then
 		toSlot = getBackendInventorySlot(target.index)
 	elseif target.container == "equipment" then
@@ -408,7 +464,7 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		and fromSlot ~= nil and toSlot ~= nil
 
 	if canMove then
-		requestMove:FireServer(toServerContainer(source.container), fromSlot, toServerContainer(target.container), toSlot)
+		requestMove:FireServer(toServerContainer(source.container :: any), fromSlot, toServerContainer(target.container :: any), toSlot)
 	end
 end)
 

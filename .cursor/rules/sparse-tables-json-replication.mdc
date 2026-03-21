@@ -1,0 +1,15 @@
+---
+description: Sparse Lua tables vs JSON/replication — use stable keys (e.g. string slot indices)
+globs: src/**/*.luau
+alwaysApply: false
+---
+
+# Sparse tables and JSON / replication
+
+When a table is saved, synced over the network, or run through JSON-like encoding, **sparse numeric keys** (e.g. only `1`, `3`, `5` set) are often treated as an **array**. Length/`#` can resolve to a small value (sometimes `1`), so **higher indices are dropped** on the other side. Server or DataStore introspection may still look correct if you read with `pairs`, while the **client** sees a truncated table—classic “only the first slot survives.”
+
+**Pattern:** For **fixed slots or labeled columns** (inventory indices, hotbar positions, preset slots), prefer **string keys** (`"1"`…`"n"`) when persisting so the payload encodes as a **JSON object**, not a broken short array. On read, use a single helper (e.g. `getSlotItem(t, i)` → `t[i] or t[tostring(i)]`) so both numeric and string keys work during migration.
+
+**Example (this project):** `abilityPresets[presetKey]` stores occupied slots under **`"1"`…`"5"`** (`AbilityDataService.workingToStoredPreset`); UI and shared utils read via `getSlotItem` / `AbilityPresetSlotUtils.readSlot`.
+
+Apply the same idea anywhere you persist **holey** numeric maps through layers that may JSON-encode them.

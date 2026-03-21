@@ -9,6 +9,7 @@ local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local LoadoutApp = require(script.Parent.Parent:WaitForChild("Loadout"):WaitForChild("LoadoutApp"))
 local TabBar = require(script.Parent:WaitForChild("TabBar"))
 local KeybindsPage = require(script.Parent:WaitForChild("KeybindsPage"))
+local AbilityPage = require(script.Parent:WaitForChild("AbilityPage"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 
 type LoadoutData = InventoryTypes.LoadoutData
@@ -37,6 +38,10 @@ export type SettingsShellAppProps = {
 	setKeybindsRemote: RemoteEvent,
 	onKeybindListeningChange: (listening: boolean) -> (),
 	settingsScreenGui: ScreenGui,
+
+	abilityPresets: { [string]: any }?,
+	unlockedAbilities: { [string]: boolean }?,
+	abilityDragEnabled: boolean?,
 }
 
 local P = ThemeConfig.Padding
@@ -57,8 +62,9 @@ local function SettingsShellApp(props: SettingsShellAppProps)
 		TitleToContent = math.floor(P.TitleToContent * scale),
 	}
 
-	local tabBarH = math.floor(S.TabBarHeight * scale)
-	local tabBarGap = math.floor(S.TabGap * scale)
+	local tabScale = 1 + (scale - 1) * 0.5
+	local tabBarH = math.floor(S.TabBarHeight * tabScale)
+	local tabBarGap = math.floor(S.TabGap * tabScale)
 
 	local shellContentWidth = viewportSize.X * L.WidthScale - scaledP.OuterFrameHorizontal * 2
 
@@ -90,8 +96,16 @@ local function SettingsShellApp(props: SettingsShellAppProps)
 		settingsScreenGui = props.settingsScreenGui,
 	})
 
+	local abilitiesElement = React.createElement(AbilityPage, {
+		viewportSize = viewportSize,
+		abilityPresets = props.abilityPresets or {},
+		unlockedAbilities = props.unlockedAbilities or {},
+		dragEnabled = props.abilityDragEnabled,
+	})
+
 	local activePage = if props.activeTabId == "loadout"
 		then loadoutElement
+		elseif props.activeTabId == "abilities" then abilitiesElement
 		elseif props.activeTabId == "keybinds" then keybindsElement
 		else loadoutElement
 
@@ -126,7 +140,7 @@ local function SettingsShellApp(props: SettingsShellAppProps)
 					onTabActivated = props.onTabActivated,
 					tabBarHeight = S.TabBarHeight,
 					tabFontSize = F.SectionHeaderSize * 0.82,
-					scale = scale,
+					scale = tabScale,
 				}),
 				Content = React.createElement("Frame", {
 					Name = "ShellContent",

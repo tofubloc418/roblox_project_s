@@ -362,7 +362,7 @@ All gameplay remotes remain under `ReplicatedStorage.InventoryRemotes`. **Reques
 | `RequestAbility` | Client → Server | Activate an ability |
 | `AbilityActivated` | Server → Clients | Notify nearby clients for VFX |
 | `AbilityCooldownSync` | Server → Client | Sync cooldown state |
-| `RequestSetAbilityPreset` | Client → Server | Set/clear ability in preset |
+| `RequestApplyAbilityPresetOps` | Client → Server (RemoteFunction) | Atomic multi-slot preset changes; returns success + optional error |
 | `SyncAbilityPresets` | Server → Client | **No longer fired.** Presets come from dataService. |
 | `RequestUseConsumable` | Client → Server | Use consumable from quick bar |
 | `ConsumableActivated` | Server → Clients | Notify nearby clients for VFX |

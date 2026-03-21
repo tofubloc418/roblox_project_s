@@ -168,7 +168,7 @@ ReplicatedStorage/
 │   ├── RequestAbility    (RemoteEvent)   -- Activate ability
 │   ├── AbilityActivated  (RemoteEvent)   -- Server→Clients: VFX notification
 │   ├── AbilityCooldownSync (RemoteEvent) -- Server→Client: cooldown state
-│   ├── RequestSetAbilityPreset (RemoteEvent) -- Set/clear ability in preset
+│   ├── RequestApplyAbilityPresetOps (RemoteFunction) -- Atomic multi-slot apply; returns { ok, error? }
 │   ├── SyncAbilityPresets (RemoteEvent)  -- No longer fired; presets from dataService
 │   ├── RequestUseConsumable (RemoteEvent) -- Use consumable from quick bar
 │   └── ConsumableActivated (RemoteEvent) -- Server→Clients: VFX notification

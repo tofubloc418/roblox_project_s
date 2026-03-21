@@ -1,40 +1,24 @@
 --!strict
---[[
-	HudLoadoutDataAdapter
-	=====================
-	Single source-of-truth for the HUD Loadout UI state.
-
-	BACKEND CONNECTION:
-	  Data is read from the dataService client API (path-based get + optional
-	  getChangedSignal). Initial state and updates come from DataService:get()
-	  for inventory, equipment, quickUse, and abilityPresets; we build
-	  InventorySyncPayload and call receiveServerPayload().
-
-	CONTROLLER INTERFACE (unchanged):
-	  Controllers read state via getState(), mutate it via the write methods,
-	  and re-render via subscribe(). React components are purely presentational.
-]]
+-- HUD loadout state: inventory/equipment/quickUse via DataService; ability presets via AbilityPresetsBridge.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HudLoadoutTypes  = require(script.Parent:WaitForChild("HudLoadoutTypes"))
-local InventoryTypes   = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
-local GetPresetKey     = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
+local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
+local AbilityPresetsBridge = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetsBridge"))
 
 local Packages = ReplicatedStorage:WaitForChild("Packages")
 local DataService = require(Packages:WaitForChild("DataService")) :: any
 local DataServiceClient = DataService.client
 
-type HudLoadoutState    = HudLoadoutTypes.HudLoadoutState
-type HudActiveSlot      = HudLoadoutTypes.HudActiveSlot
-type ItemStack          = InventoryTypes.ItemStack
+type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
+type HudActiveSlot = HudLoadoutTypes.HudActiveSlot
+type ItemStack = InventoryTypes.ItemStack
 type InventorySyncPayload = InventoryTypes.InventorySyncPayload
-type SerializedItem     = InventoryTypes.SerializedItem
+type SerializedItem = InventoryTypes.SerializedItem
 type AbilityPresetsData = InventoryTypes.AbilityPresetsData
-type AbilitySlotData    = InventoryTypes.AbilitySlotData
-type SerializedPreset   = InventoryTypes.SerializedPreset
+type SerializedPreset = InventoryTypes.SerializedPreset
 type StoredEquipmentData = InventoryTypes.StoredEquipmentData
-
--- ── Internal state ────────────────────────────────────────────────────────────
 
 local _state: HudLoadoutState = {
 	activeSlot            = "Weapon1",
@@ -46,10 +30,6 @@ local _state: HudLoadoutState = {
 	flashlightOn          = false,
 }
 
--- Latest ability presets (keyed by weaponTag / presetKey).
-local _abilityPresets: AbilityPresetsData = {}
-
--- Last received equipment (for ability bar preset key resolution).
 local _lastEquipment: StoredEquipmentData = {
 	Backpack = nil,
 	Armor = nil,
@@ -64,8 +44,6 @@ local function _notify()
 		cb(_state)
 	end
 end
-
--- ── Helpers ───────────────────────────────────────────────────────────────────
 
 local function toItemStack(item: SerializedItem): ItemStack
 	return { itemId = item.tid, count = item.cnt or 1, maxStack = 1 }
@@ -82,11 +60,8 @@ local function buildQuickUseItems(payload: InventorySyncPayload): { [number]: It
 	return result
 end
 
--- ── Public API ────────────────────────────────────────────────────────────────
-
 local HudLoadoutDataAdapter = {}
 
--- Returns a shallow copy of current state.
 function HudLoadoutDataAdapter.getState(): HudLoadoutState
 	return {
 		activeSlot            = _state.activeSlot,
@@ -99,7 +74,6 @@ function HudLoadoutDataAdapter.getState(): HudLoadoutState
 	}
 end
 
--- Subscribe to state changes.  Returns an unsubscribe function.
 function HudLoadoutDataAdapter.subscribe(callback: (HudLoadoutState) -> ()): () -> ()
 	table.insert(_subscribers, callback)
 	return function()
@@ -108,41 +82,22 @@ function HudLoadoutDataAdapter.subscribe(callback: (HudLoadoutState) -> ()): () 
 	end
 end
 
--- Returns the latest ability presets (keyed by weaponTag / presetKey).
 function HudLoadoutDataAdapter.getAbilityPresets(): AbilityPresetsData
-	return _abilityPresets
+	AbilityPresetsBridge.ensureInitialized()
+	return AbilityPresetsBridge.get() :: AbilityPresetsData
 end
 
--- Build 5 ability slots for the HUD bar from SerializedPreset.
-local function presetToAbilitySlots(preset: SerializedPreset?): { [number]: AbilitySlotData? }
-	local out: { [number]: AbilitySlotData? } = {}
-	if not preset then return out end
-	for i = 1, 5 do
-		local slot = preset[i]
-		if slot and slot.aid then
-			out[i] = { abilityId = slot.aid, isUltimate = slot.ult == true }
-		end
-	end
-	return out
-end
-
--- Returns the 5 ability slots for the HUD ability bar (current or last active weapon).
-function HudLoadoutDataAdapter.getAbilityBarSlots(): { [number]: AbilitySlotData? }
+function HudLoadoutDataAdapter.getAbilityBarPreset(): SerializedPreset?
+	AbilityPresetsBridge.ensureInitialized()
 	local presetKey = GetPresetKey.GetAbilityBarPresetKey(
 		_state.activeSlot,
 		_state.expandedWeapon,
 		_lastEquipment
 	)
-	local preset = _abilityPresets[presetKey]
-	return presetToAbilitySlots(preset)
+	local raw = AbilityPresetsBridge.get()[presetKey]
+	return if type(raw) == "table" then raw :: SerializedPreset else nil
 end
 
---[[
-	receiveServerPayload(payload)
-	Called (or fired automatically via SyncFullState remote) whenever the server
-	sends updated inventory/equipment/quickUse data.  Converts to HUD state and
-	notifies subscribers.
-]]
 function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayload)
 	local eq = payload.equipment
 
@@ -165,7 +120,6 @@ function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayloa
 
 	local quickItems = buildQuickUseItems(payload)
 
-	-- Preserve UI-only fields (activeSlot, expandedWeapon, flashlight, currentQuickSlotIndex).
 	_state = {
 		activeSlot            = _state.activeSlot,
 		expandedWeapon        = _state.expandedWeapon,
@@ -177,8 +131,6 @@ function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayloa
 	}
 	_notify()
 end
-
--- ── Write methods (UI-only state) ─────────────────────────────────────────────
 
 function HudLoadoutDataAdapter.setActiveSlot(slot: HudActiveSlot)
 	_state = {
@@ -220,7 +172,6 @@ function HudLoadoutDataAdapter.setCurrentQuickSlotIndex(index: number)
 	_notify()
 end
 
--- Toggle flashlight on/off.
 function HudLoadoutDataAdapter.toggleFlashlight()
 	_state = {
 		activeSlot            = _state.activeSlot,
@@ -234,9 +185,6 @@ function HudLoadoutDataAdapter.toggleFlashlight()
 	_notify()
 end
 
--- Replace weapon loadout (called when the loadout screen changes what is equipped).
--- After the InventoryService is live, this is driven by SyncFullState; this
--- method remains for any direct overrides the controller might need.
 function HudLoadoutDataAdapter.setWeapons(
 	weapon1: HudLoadoutTypes.HudWeaponInfo?,
 	weapon2: HudLoadoutTypes.HudWeaponInfo?
@@ -253,7 +201,6 @@ function HudLoadoutDataAdapter.setWeapons(
 	_notify()
 end
 
--- Replace the quick-use items table.
 function HudLoadoutDataAdapter.setQuickUseItems(items: { [number]: ItemStack? })
 	_state = {
 		activeSlot            = _state.activeSlot,
@@ -267,13 +214,11 @@ function HudLoadoutDataAdapter.setQuickUseItems(items: { [number]: ItemStack? })
 	_notify()
 end
 
--- Call DataService client get (supports .get or :get).
 local function dsGet(path: { string }): any?
 	local client = DataServiceClient
 	return client:get(path)
 end
 
--- Build InventorySyncPayload from dataService path reads.
 local function buildPayloadFromData(): InventorySyncPayload?
 	local inv = dsGet({ "inventory" })
 	local eq  = dsGet({ "equipment" })
@@ -293,22 +238,23 @@ local function refreshFromDataService()
 	if payload then
 		HudLoadoutDataAdapter.receiveServerPayload(payload)
 	end
-	local presets = dsGet({ "abilityPresets" })
-	if type(presets) == "table" then
-		_abilityPresets = presets
-	end
 end
 
--- Initialize dataService client and subscribe to data; no remotes for state.
 local function connectDataService()
 	local client = DataServiceClient
 	if not (client :: any).networker then
 		client:init()
 	end
 	client:waitForData()
+
+	AbilityPresetsBridge.subscribe(function()
+		_notify()
+	end)
+	AbilityPresetsBridge.ensureInitialized()
+
 	refreshFromDataService()
 
-	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" }, { "abilityPresets" } }) do
+	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" } }) do
 		local sig = client:getChangedSignal(path)
 		if sig and type(sig.Connect) == "function" then
 			sig:Connect(refreshFromDataService)

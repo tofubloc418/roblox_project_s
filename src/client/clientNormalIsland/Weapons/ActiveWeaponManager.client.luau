@@ -15,7 +15,7 @@ local WeaponController = require(script.Parent:WaitForChild("WeaponController"))
 local GUI = script.Parent.Parent:WaitForChild("GUI")
 local HudLoadoutDataAdapter = require(GUI:WaitForChild("HudLoadout"):WaitForChild("HudLoadoutDataAdapter")) :: any
 
-local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
+local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout")) :: any
 local Items = ReplicatedStorage:WaitForChild("Items")
 local Weapons = Items:WaitForChild("Weapons")
 local FistsLogic = require(Weapons:WaitForChild("Fists"):WaitForChild("Fists"):WaitForChild("Logic")) :: any
@@ -41,11 +41,7 @@ local function unequipCurrent()
 end
 
 local function getLogicModuleForTemplateId(templateId: string): any?
-	local template = ItemRegistry.GetTemplate(templateId)
-	if not template or not template.subcategory then return end
-
-	local subcategoryFolder = Weapons:FindFirstChild(template.subcategory)
-	local itemFolder = subcategoryFolder and subcategoryFolder:FindFirstChild(templateId)
+	local itemFolder = WeaponAssetLayout.GetWeaponItemFolder(Weapons, templateId)
 	if not itemFolder then return end
 
 	local logic = itemFolder:FindFirstChild("Logic")

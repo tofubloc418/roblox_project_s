@@ -230,4 +230,35 @@ ThemeConfig.KeybindsPage = {
 	ScrollGapNextToTrack = 10,
 }
 
+ThemeConfig.AbilitiesPage = {
+	-- Column width ratios (left : center : right)
+	ColumnRatioTags = 3,
+	ColumnRatioPool = 4,
+	ColumnRatioDetails = 3,
+
+	-- Weapon-tag list (left column)
+	TagRowHeight = 52,
+	TagRowGap = 4,
+	TagHeaderHeight = 48,
+	SearchBarHeight = 32,
+	SearchBarGap = 6,
+	TagSelectedColor = Color3.fromRGB(22, 22, 28), -- same as TabActiveBackground
+	TagSelectedTransparency = 0.3,                  -- same as TabActiveBackgroundTransparency
+	TagHoverText = Color3.fromRGB(220, 220, 230),
+
+	-- Preset slot row inside expanded tag
+	PresetSlotSize = 40,
+	PresetSlotGap = 6,
+	PresetRowPadding = 8,
+
+	-- Ability pool grid (center column)
+	PoolSlotSize = 64,
+	PoolSlotGap = 8,
+	PoolCols = 4,
+
+	-- Details pane (right column)
+	DetailsIconSize = 96,
+	DetailsTagPillHeight = 26,
+}
+
 return ThemeConfig

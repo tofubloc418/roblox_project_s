@@ -57,6 +57,7 @@ function DataManager.createDefaultData(userId: number): PlayerData
 		stash = { maxSlots = 100, slots = {} },
 
 		abilityPresets = {},
+		unlockedAbilities = {},
 
 		currency = { gold = 0 },
 

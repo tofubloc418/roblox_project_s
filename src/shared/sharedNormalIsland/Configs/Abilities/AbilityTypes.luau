@@ -14,6 +14,7 @@ export type AbilityConfig = {
 	iconId: string,
 	displayName: string?,
 	isUltimate: boolean,
+	description: string?,
 	compatibleTags: { string },
 	-- Optional: defaults to { adScaling = 1.0, mdScaling = 1.0 }.
 	damageScaling: AbilityDamageScaling?,

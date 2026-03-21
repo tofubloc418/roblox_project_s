@@ -62,6 +62,34 @@ function AbilityRegistry.GetDamageScaling(abilityId: string): { adScaling: numbe
 	}
 end
 
+-- Sorted ability IDs (Cmdr autocomplete, dev tools).
+function AbilityRegistry.GetAllAbilityIds(): { string }
+	local ids: { string } = {}
+	for id in pairs(_abilities) do
+		table.insert(ids, id)
+	end
+	table.sort(ids)
+	return ids
+end
+
+-- Unique compatible weapon tags across all abilities (Cmdr autocomplete).
+function AbilityRegistry.GetAllCompatibleTags(): { string }
+	local seen: { [string]: boolean } = {}
+	for _, config in pairs(_abilities) do
+		for _, tag in ipairs(config.compatibleTags) do
+			if tag ~= "" then
+				seen[tag] = true
+			end
+		end
+	end
+	local tags: { string } = {}
+	for tag in pairs(seen) do
+		table.insert(tags, tag)
+	end
+	table.sort(tags)
+	return tags
+end
+
 -- ── Sub-module auto-discovery ─────────────────────────────────────────────
 
 local function registerFile(moduleScript: Instance)

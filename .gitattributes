@@ -1,2 +1,13 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# LF in index and working tree (overrides core.autocrlf for these paths)
+* text=auto eol=lf
+
+# Obvious binaries — never line-end normalize
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.rbxm binary

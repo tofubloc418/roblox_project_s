@@ -13,5 +13,5 @@ return function(context, templateId: string, target: Player?, count: number?)
 	for _, line in ipairs(result.lines) do
 		context:Reply(line)
 	end
-	return result.lines[#result.lines] or "Done."
+	return ""
 end

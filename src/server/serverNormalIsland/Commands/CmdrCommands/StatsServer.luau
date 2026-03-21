@@ -25,5 +25,5 @@ return function(context, target: Player?)
 	else
 		context:Reply("  --- No leaderstats found ---")
 	end
-	return "Done."
+	return ""
 end

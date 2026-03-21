@@ -8,5 +8,5 @@ return function(context, target: Player?)
 	for _, line in ipairs(result.lines) do
 		context:Reply(line)
 	end
-	return result.lines[#result.lines] or "Done."
+	return ""
 end

@@ -15,6 +15,7 @@ local Workspace = game:GetService("Workspace")
 local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
+local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout"))
 
 local Items = ReplicatedStorage:WaitForChild("Items")
 local Weapons = Items:WaitForChild("Weapons")
@@ -62,18 +63,7 @@ local function getWeaponModelTemplate(templateId: string): Model?
 		return cached
 	end
 
-	local template = ItemRegistry.GetTemplate(templateId)
-	if not template or type(template.subcategory) ~= "string" then
-		return nil
-	end
-
-	local subcategoryFolder = Weapons:FindFirstChild(template.subcategory)
-	if not subcategoryFolder then
-		return nil
-	end
-
-	-- The current content layout expects subcategoryFolder/<templateId>/...
-	local itemFolder = subcategoryFolder:FindFirstChild(templateId)
+	local itemFolder = WeaponAssetLayout.GetWeaponItemFolder(Weapons, templateId)
 	if not itemFolder then
 		return nil
 	end

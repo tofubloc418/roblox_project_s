@@ -1,10 +1,17 @@
 --!strict
--- DragDropManager: ghost visual, slot hit-testing, and drop callbacks for loadout/stash drag-and-drop.
+-- Drag ghost, hover targets, drop subscribers (loadout, stash, ability pool / preset slots).
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
-export type DragContainerId = "backpack" | "equipment" | "quickuse" | "stash" | "loot"
+export type DragContainerId =
+	"backpack"
+	| "equipment"
+	| "quickuse"
+	| "stash"
+	| "loot"
+	| "ability_pool"
+	| "ability_preset"
 
 export type DragDescriptor = {
 	container: DragContainerId,

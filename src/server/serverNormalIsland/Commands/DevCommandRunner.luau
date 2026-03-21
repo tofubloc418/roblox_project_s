@@ -4,6 +4,31 @@
 local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+type PresetOpPayload = {
+	presetKey: string,
+	slotIndex: number,
+	abilityId: string?,
+}
+
+local function tryApplyAbilityPresetOpsBindable(player: Player, ops: { PresetOpPayload }): (boolean, string?)
+	local folder = ReplicatedStorage:FindFirstChild("InventoryRemotes")
+	if not folder then
+		return false, "InventoryRemotes not found."
+	end
+	local bf = folder:FindFirstChild("ApplyAbilityPresetOpsBindable")
+	if not bf or not bf:IsA("BindableFunction") then
+		return false, "ApplyAbilityPresetOpsBindable missing (run AbilityDataService.Initialize)."
+	end
+	local pack = (bf :: BindableFunction):Invoke(player, ops)
+	if type(pack) ~= "table" then
+		return false, "Preset apply returned no result."
+	end
+	if pack.ok == true then
+		return true, nil
+	end
+	return false, if type(pack.error) == "string" then pack.error else "Failed."
+end
+
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local InventoryService     = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService   = require(script.Parent.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
@@ -307,9 +332,15 @@ function runSetAbilityPreset(
 		end
 	end
 
-	local ok = AbilityDataService.SetPresetSlot(who, weaponTag, slotIndex, abilityId)
+	local ok, applyErr = tryApplyAbilityPresetOpsBindable(who, {
+		{
+			presetKey = weaponTag,
+			slotIndex = slotIndex,
+			abilityId = abilityId,
+		},
+	})
 	if not ok then
-		return errResult(string.format("Failed to set preset (data not loaded for '%s'?).", who.Name))
+		return errResult(string.format("Failed to set preset: %s", applyErr or "unknown error."))
 	end
 
 	local label = who == sender and "your" or (who.Name .. "'s")
@@ -325,11 +356,49 @@ function runSetAbilityPreset(
 	)
 end
 
+function runLearnAbility(sender: Player, abilityId: string, target: Player?): Result
+	local who = target or sender
+	if not AbilityRegistry.GetAbility(abilityId) then
+		return errResult(string.format("Unknown ability '%s'.", abilityId))
+	end
+
+	DataServiceBootstrap.WaitForPlayerData(who)
+	local ds: any = DataServiceBootstrap.GetDataService()
+	local root: any = nil
+	if type(ds.get) == "function" then
+		root = ds:get(who, {})
+	elseif type(ds.Get) == "function" then
+		root = ds:Get(who, {})
+	end
+	local ua = if type(root) == "table" then root.unlockedAbilities else nil
+	local already = type(ua) == "table" and ua[abilityId] == true
+
+	if type(ds.set) == "function" then
+		ds:set(who, { "unlockedAbilities", abilityId }, true)
+	elseif type(ds.Set) == "function" then
+		ds:Set(who, { "unlockedAbilities", abilityId }, true)
+	else
+		return errResult("DataService has no set method.")
+	end
+
+	local label = who == sender and "You" or who.Name
+	if already then
+		return okResult(string.format("[Dev] %s already had '%s' unlocked.", label, abilityId))
+	end
+	return okResult(string.format("[Dev] %s learned '%s' (added to unlockedAbilities).", label, abilityId))
+end
+
 function runRemoveAbilityPresetSlot(sender: Player, weaponTag: string, slotIndex: number, target: Player?): Result
 	local who = target or sender
-	local ok = AbilityDataService.SetPresetSlot(who, weaponTag, slotIndex, nil)
+	local ok, applyErr = tryApplyAbilityPresetOpsBindable(who, {
+		{
+			presetKey = weaponTag,
+			slotIndex = slotIndex,
+			abilityId = nil,
+		},
+	})
 	if not ok then
-		return errResult(string.format("Failed to clear slot (data not loaded for '%s'?).", who.Name))
+		return errResult(string.format("Failed to clear slot: %s", applyErr or "unknown error."))
 	end
 	local label = who == sender and "your" or (who.Name .. "'s")
 	return okResult(string.format("[Dev] Cleared %s preset [%s] slot %d.", label, weaponTag, slotIndex))
@@ -357,5 +426,6 @@ return {
 	runSave = runSave,
 	runAbilityPresets = runAbilityPresets,
 	runSetAbilityPreset = runSetAbilityPreset,
+	runLearnAbility = runLearnAbility,
 	runRemoveAbilityPresetSlot = runRemoveAbilityPresetSlot,
 }

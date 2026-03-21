@@ -1,10 +1,11 @@
 --!strict
--- Placeholder ability templates for UI testing.
+-- Placeholder ability templates for UI + registry. Server/client behavior: Abilities/Scripts/<abilityId>.luau
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
+local AbilityTypes = require(script.Parent:WaitForChild("AbilityTypes"))
 
-local Placeholder = {
+local Placeholder: { AbilityTypes.AbilityConfig } = {
 	{
 		abilityId = "PlaceholderSlash",
 		iconId = "rbxassetid://105340346148425",
@@ -13,6 +14,10 @@ local Placeholder = {
 		isUltimate = false,
 		compatibleTags = { ItemEnums.WeaponTag.Dagger, ItemEnums.WeaponTag.Fists },
 		damageScaling = { adScaling = 1.2, mdScaling = 0 },
+		params = {
+			coneRange = 6,
+			coneHalfAngleDeg = 40,
+		},
 	},
 	{
 		abilityId = "PlaceholderUlt",
@@ -22,6 +27,9 @@ local Placeholder = {
 		isUltimate = true,
 		compatibleTags = { ItemEnums.WeaponTag.Dagger, ItemEnums.WeaponTag.Fists, ItemEnums.WeaponTag.Greatsword },
 		damageScaling = { adScaling = 1.5, mdScaling = 0.5 },
+		params = {
+			blastRadius = 10,
+		},
 	},
 }
 

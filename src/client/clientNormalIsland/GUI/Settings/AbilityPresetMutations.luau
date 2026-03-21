@@ -16,6 +16,21 @@ export type PresetOperation = {
 
 local AbilityPresetMutations = {}
 
+local function presetHasAbilityOnOtherSlot(preset: { [any]: any }?, abilityId: string, exceptSlot: number): boolean
+	if not preset or type(preset) ~= "table" then
+		return false
+	end
+	for j = 1, 5 do
+		if j ~= exceptSlot then
+			local aid = AbilityPresetSlotUtils.readSlot(preset, j)
+			if aid == abilityId then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 function AbilityPresetMutations.buildPresetOperations(
 	source: DragDescriptor,
 	target: DragDescriptor,
@@ -32,6 +47,9 @@ function AbilityPresetMutations.buildPresetOperations(
 	if source.container == "ability_pool" then
 		local poolId = source.slotId
 		if type(poolId) ~= "string" or #poolId == 0 then
+			return nil
+		end
+		if presetHasAbilityOnOtherSlot(presets[tk], poolId, ti) then
 			return nil
 		end
 		return {
@@ -56,6 +74,14 @@ function AbilityPresetMutations.buildPresetOperations(
 			return nil
 		end
 		local b = AbilityPresetSlotUtils.readSlot(presets[tk], ti)
+		if sk ~= tk then
+			if presetHasAbilityOnOtherSlot(presets[tk], a, ti) then
+				return nil
+			end
+			if b and presetHasAbilityOnOtherSlot(presets[sk], b, si) then
+				return nil
+			end
+		end
 		if b then
 			return {
 				{ presetKey = tk, slotIndex = ti, abilityId = a },

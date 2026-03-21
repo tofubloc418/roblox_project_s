@@ -18,6 +18,8 @@ export type AbilityConfig = {
 	compatibleTags: { string },
 	-- Optional: defaults to { adScaling = 1.0, mdScaling = 1.0 }.
 	damageScaling: AbilityDamageScaling?,
+	-- Ability-specific tuning read by that ability's server/client scripts.
+	params: { [string]: any }?,
 }
 
 return AbilityTypes

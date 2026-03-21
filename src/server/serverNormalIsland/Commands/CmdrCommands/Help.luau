@@ -21,6 +21,7 @@ return {
 			"  abilitypresets [target]              Print all ability presets",
 			"  setabilitypreset <id> <tag> <1-5> [target]   Set preset slot (validates tag + ult cap)",
 			"  removeabilityslot <tag> <1-5> [target]       Clear a preset slot",
+			"  learnability <id> [target]                   Unlock ability for loadout pool",
 			"── Player ──",
 			"  stats [target]   Attributes & leaderstats",
 			"  players          List players",

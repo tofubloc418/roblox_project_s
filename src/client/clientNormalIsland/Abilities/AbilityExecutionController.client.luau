@@ -1,13 +1,14 @@
 --!strict
--- Ability client dispatcher: listens for AbilityStarted and runs per-ability OnStarted().
+-- Ability client dispatcher: AbilityStarted is fired to every client with (casterUserId, abilityId, slotIndex).
+-- Each client runs OnStarted using the caster’s replicated Character so local VFX is visible to everyone.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local localPlayer = Players.LocalPlayer
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
 local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
 local KeybindsClient = require(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
+local HudLoadoutDataAdapter = require(script.Parent.Parent:WaitForChild("GUI"):WaitForChild("HudLoadout"):WaitForChild("HudLoadoutDataAdapter"))
 
 export type AbilityClientContext = {
 	player: Player,
@@ -24,14 +25,27 @@ local abilityStarted = remotes:WaitForChild("AbilityStarted") :: RemoteEvent
 local scriptsFolder = script.Parent:WaitForChild("Scripts", 5)
 
 if scriptsFolder then
-	abilityStarted.OnClientEvent:Connect(function(abilityId: string, slotIndex: number)
-		local character = localPlayer.Character
-		if not character then return end
+	abilityStarted.OnClientEvent:Connect(function(casterUserId: unknown, abilityId: unknown, slotIndex: unknown)
+		if type(casterUserId) ~= "number" or type(abilityId) ~= "string" or type(slotIndex) ~= "number" then
+			return
+		end
+		local uid = casterUserId :: number
+		local aid = abilityId :: string
+		local slotN = slotIndex :: number
+
+		local caster = Players:GetPlayerByUserId(uid)
+		if not caster then
+			return
+		end
+		local character = caster.Character
+		if not character then
+			return
+		end
 
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
 		local animator: Animator? = humanoid and humanoid:FindFirstChildOfClass("Animator") or nil
 
-		local abilityModule = scriptsFolder:FindFirstChild(abilityId)
+		local abilityModule = scriptsFolder:FindFirstChild(aid)
 		if not abilityModule or not abilityModule:IsA("ModuleScript") then
 			return
 		end
@@ -44,10 +58,10 @@ if scriptsFolder then
 		local onStarted = abilityScript.OnStarted
 		if type(onStarted) == "function" then
 			local context: AbilityClientContext = {
-				player = localPlayer,
+				player = caster,
 				character = character,
-				abilityId = abilityId,
-				slotIndex = slotIndex,
+				abilityId = aid,
+				slotIndex = slotN,
 				animator = animator,
 			}
 			onStarted(context)
@@ -72,7 +86,8 @@ for slotIndex, actionId in ipairs(SLOT_ACTIONS) do
 				return Enum.ContextActionResult.Sink
 			end
 			if state == Enum.UserInputState.Begin then
-				requestUseAbility:FireServer(slotIndex)
+				local barKey = HudLoadoutDataAdapter.getAbilityBarPresetKey()
+				requestUseAbility:FireServer(slotIndex, barKey)
 			end
 			return Enum.ContextActionResult.Sink
 		end,

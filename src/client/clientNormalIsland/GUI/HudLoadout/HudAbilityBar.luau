@@ -9,6 +9,7 @@ local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("K
 local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
 local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
 local AbilityPresetSlot = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetSlot"))
+local AbilityStateClient = require(script.Parent.Parent.Parent:WaitForChild("Abilities"):WaitForChild("AbilityStateClient"))
 local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
@@ -48,6 +49,12 @@ local function HudAbilityBar(props: HudAbilityBarProps)
 		local aid, isUlt = AbilityPresetSlotUtils.readSlot(preset, i)
 		local actionId = ABILITY_SLOT_IDS[i]
 		local keyText = KeybindsClient.getDisplayString(actionId)
+		local cdRem = 0
+		local cdDur = 0
+		if aid then
+			cdRem, cdDur = AbilityStateClient.getDominantCooldown(aid)
+		end
+		local abilityBlocked = if aid then AbilityStateClient.isAbilityBlocked(aid) else false
 		slotElements["Col" .. i] = React.createElement("Frame", {
 			Name = "HudAbilityColumn_" .. i,
 			Size = UDim2.fromOffset(slotSize, totalHeight),
@@ -82,6 +89,9 @@ local function HudAbilityBar(props: HudAbilityBarProps)
 				pixelSize = slotSize,
 				layoutOrder = 2,
 				zIndex = LayoutConfig.ZIndex.Content,
+				hudCooldownRemaining = cdRem,
+				hudCooldownDuration = cdDur,
+				hudAbilityBlocked = abilityBlocked,
 			}),
 		})
 	end

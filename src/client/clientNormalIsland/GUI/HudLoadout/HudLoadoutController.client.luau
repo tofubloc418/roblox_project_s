@@ -14,6 +14,7 @@ local React = require(Packages:WaitForChild("React")) :: any
 local ReactRoblox = require(Packages:WaitForChild("ReactRoblox")) :: any
 
 local HudLoadoutDataAdapter = require(script.Parent:WaitForChild("HudLoadoutDataAdapter"))
+local AbilityStateClient = require(script.Parent.Parent.Parent:WaitForChild("Abilities"):WaitForChild("AbilityStateClient"))
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))
 local HudLoadoutApp = require(script.Parent:WaitForChild("HudLoadoutApp"))
 local HudRadialDial = require(script.Parent:WaitForChild("HudRadialDial"))
@@ -130,6 +131,16 @@ HudLoadoutDataAdapter.subscribe(function(_state: HudLoadoutState)
 end)
 KeybindsClient.subscribe(function()
 	renderHud()
+end)
+AbilityStateClient.subscribe(function()
+	renderHud()
+end)
+
+-- Cooldown radial + timer use server time each frame while any track is active.
+RunService.Heartbeat:Connect(function()
+	if AbilityStateClient.anyCooldownActive() then
+		renderHud()
+	end
 end)
 
 -- ── Radial dial mouse tracking ───────────────────────────────────────────────

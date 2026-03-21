@@ -8,6 +8,7 @@ local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):W
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 local GradientBorder = require(script.Parent.Parent:WaitForChild("GradientBorder"))
+local RadialCooldownOverlay = require(script.Parent:WaitForChild("RadialCooldownOverlay"))
 
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
@@ -23,9 +24,78 @@ export type AbilityPresetSlotProps = {
 	pixelSize: number,
 	layoutOrder: number?,
 	zIndex: number?,
+	-- HUD only: synced from server AbilityStateRuntime (per abilityId).
+	hudCooldownRemaining: number?,
+	hudCooldownDuration: number?,
+	hudAbilityBlocked: boolean?,
 }
 
 local SETTINGS_BG = Color3.fromRGB(45, 45, 52)
+
+local function buildHudOverlays(
+	zBase: number,
+	innerCornerPx: number,
+	cooldownRemaining: number?,
+	cooldownDuration: number?,
+	abilityBlocked: boolean?
+): { [string]: any }?
+	local rem = cooldownRemaining or 0
+	local dur = cooldownDuration or 0
+	local blocked = abilityBlocked == true
+	local ratio = if dur > 0 then math.clamp(rem / dur, 0, 1) else 0
+	local showCd = ratio > 0.02
+	local unusable = blocked or showCd
+	if not unusable then
+		return nil
+	end
+
+	local grayC = AB.CooldownUnusableOverlayColor
+	local grayT = AB.CooldownUnusableOverlayTransparency
+	local timerSize = AB.CooldownTimerTextSize
+
+	local out: { [string]: any } = {}
+
+	out.UnusableGray = React.createElement("Frame", {
+		Name = "UnusableGray",
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 0.5),
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = grayC,
+		BackgroundTransparency = grayT,
+		BorderSizePixel = 0,
+		ZIndex = zBase + 1,
+	}, if innerCornerPx > 0
+		then {
+			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, innerCornerPx) }),
+		}
+		else nil)
+
+	if showCd then
+		out.RadialCooldown = React.createElement(RadialCooldownOverlay, {
+			remainingFraction = ratio,
+			zIndex = zBase + 2,
+			innerCornerPx = innerCornerPx,
+		})
+		out.CooldownTimer = React.createElement("TextLabel", {
+			Name = "CooldownTimer",
+			Size = UDim2.new(1, -4, 0, timerSize + 4),
+			Position = UDim2.new(0.5, 0, 0, 2),
+			AnchorPoint = Vector2.new(0.5, 0),
+			BackgroundTransparency = 1,
+			Text = tostring(math.ceil(rem)),
+			TextColor3 = C.Text.Primary,
+			Font = F.Family,
+			TextSize = timerSize,
+			TextXAlignment = Enum.TextXAlignment.Center,
+			TextYAlignment = Enum.TextYAlignment.Top,
+			TextStrokeTransparency = 0.5,
+			TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+			ZIndex = zBase + 6,
+		})
+	end
+
+	return out
+end
 
 local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 	local aid = props.aid
@@ -45,6 +115,13 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 		iconTransparency = 0
 	end
 
+	local rem = props.hudCooldownRemaining or 0
+	local dur = props.hudCooldownDuration or 0
+	local ratio = if dur > 0 then math.clamp(rem / dur, 0, 1) else 0
+	local showCd = variant == "hud" and ratio > 0.02
+	local blockedHud = variant == "hud" and props.hudAbilityBlocked == true
+	local unusableHud = blockedHud or showCd
+
 	local iconElement = if hasIcon
 		then React.createElement("ImageLabel", {
 			Size = UDim2.new(1, 0, 1, 0),
@@ -53,7 +130,8 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 			BackgroundTransparency = 1,
 			ClipsDescendants = true,
 			Image = iconId,
-			ImageTransparency = iconTransparency,
+			ImageTransparency = if unusableHud then math.max(iconTransparency, 0.35) else iconTransparency,
+			ImageColor3 = if unusableHud then Color3.fromRGB(140, 140, 150) else Color3.new(1, 1, 1),
 			ScaleType = Enum.ScaleType.Fit,
 			ZIndex = z,
 		}, if variant == "hud"
@@ -70,7 +148,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundTransparency = 1,
 			Text = displayName,
-			TextColor3 = C.Text.Primary,
+			TextColor3 = if unusableHud then Color3.fromRGB(160, 160, 170) else C.Text.Primary,
 			Font = F.FamilySecondary,
 			TextScaled = true,
 			TextWrapped = true,
@@ -87,6 +165,22 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 		local innerCorner = if hudR > 0 then math.max(0, hudR - 1) else 0
 
 		if isUltActive then
+			local bodyChildren: { [string]: any } = {
+				InnerStroke = React.createElement("UIStroke", {
+					Color = innerS.Color,
+					Thickness = innerS.Thickness,
+					Transparency = innerS.Transparency,
+					LineJoinMode = Enum.LineJoinMode.Miter,
+				}),
+				Icon = iconElement,
+				Label = labelElement,
+			}
+			local ov = buildHudOverlays(z, innerCorner, props.hudCooldownRemaining, props.hudCooldownDuration, props.hudAbilityBlocked)
+			if ov then
+				for k, el in pairs(ov) do
+					bodyChildren[k] = el
+				end
+			end
 			return React.createElement(GradientBorder, {
 				size = size,
 				fitWithin = true,
@@ -103,16 +197,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 					BackgroundTransparency = C.SlotTransparency,
 					ClipsDescendants = true,
 					ZIndex = z,
-				}, {
-					InnerStroke = React.createElement("UIStroke", {
-						Color = innerS.Color,
-						Thickness = innerS.Thickness,
-						Transparency = innerS.Transparency,
-						LineJoinMode = Enum.LineJoinMode.Miter,
-					}),
-					Icon = iconElement,
-					Label = labelElement,
-				}),
+				}, bodyChildren),
 			})
 		end
 
@@ -143,19 +228,29 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 				Size = UDim2.new(1, -inset * 2, 1, -inset * 2),
 				BackgroundTransparency = 1,
 				ZIndex = z,
-			}, {
-				InnerCorner = if innerCorner > 0
-					then React.createElement("UICorner", { CornerRadius = UDim.new(0, innerCorner) })
-					else nil,
-				InnerStroke = React.createElement("UIStroke", {
-					Color = innerS.Color,
-					Thickness = innerS.Thickness,
-					Transparency = innerS.Transparency,
-					LineJoinMode = Enum.LineJoinMode.Miter,
-				}),
-				Icon = iconElement,
-				Label = labelElement,
-			}),
+				ClipsDescendants = true,
+			}, (function()
+				local rimChildren: { [string]: any } = {
+					InnerCorner = if innerCorner > 0
+						then React.createElement("UICorner", { CornerRadius = UDim.new(0, innerCorner) })
+						else nil,
+					InnerStroke = React.createElement("UIStroke", {
+						Color = innerS.Color,
+						Thickness = innerS.Thickness,
+						Transparency = innerS.Transparency,
+						LineJoinMode = Enum.LineJoinMode.Miter,
+					}),
+					Icon = iconElement,
+					Label = labelElement,
+				}
+				local ov = buildHudOverlays(z, innerCorner, props.hudCooldownRemaining, props.hudCooldownDuration, props.hudAbilityBlocked)
+				if ov then
+					for k, el in pairs(ov) do
+						rimChildren[k] = el
+					end
+				end
+				return rimChildren
+			end)()),
 		})
 	end
 

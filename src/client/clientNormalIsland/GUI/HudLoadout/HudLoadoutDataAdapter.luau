@@ -98,6 +98,15 @@ function HudLoadoutDataAdapter.getAbilityBarPreset(): SerializedPreset?
 	return if type(raw) == "table" then raw :: SerializedPreset else nil
 end
 
+-- Same preset key as the bottom ability bar (must match server when firing abilities).
+function HudLoadoutDataAdapter.getAbilityBarPresetKey(): string
+	return GetPresetKey.GetAbilityBarPresetKey(
+		_state.activeSlot,
+		_state.expandedWeapon,
+		_lastEquipment
+	)
+end
+
 function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayload)
 	local eq = payload.equipment
 

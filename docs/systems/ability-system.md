@@ -586,12 +586,10 @@ The UI enforces the 1-ultimate limit:
 
 ### Save Behavior
 
-When the player changes an ability assignment:
-1. Client fires `RequestSetAbilityPreset` with `{ presetKey, slotIndex, abilityId, isUltimate }`.
-2. Server validates compatibility and ultimate limit.
-3. Server updates `abilityPresets[presetKey]` in the player's data.
-4. Server marks data as dirty for auto-save.
-5. Server fires sync to client confirming the change.
+When the player changes an ability assignment (Settings Abilities tab drag-and-drop, swaps):
+1. Client builds one or more operations `{ presetKey, slotIndex, abilityId? }` and invokes `RequestApplyAbilityPresetOps` (RemoteFunction).
+2. Server applies all operations to in-memory working presets, then validates: each ability must exist and `compatibleTags` must include that preset key; at most one ultimate per preset.
+3. If validation fails, nothing is written and the client shows the returned `error` string. If it succeeds, server commits each affected preset via DataService and replication updates the client.
 
 ---
 
@@ -604,7 +602,7 @@ When the player changes an ability assignment:
 | `RequestAbility` | Client → Server | `{ weaponSlot, abilitySlotIndex }` | Activate an ability |
 | `AbilityActivated` | Server → Clients | `{ playerId, abilityId, weaponSlot }` | Notify nearby clients for VFX |
 | `AbilityCooldownSync` | Server → Client | `{ abilityId, remainingCooldown }` | Sync cooldown state |
-| `RequestSetAbilityPreset` | Client → Server | `{ presetKey, slotIndex, abilityId?, isUltimate? }` | Set/clear an ability in a preset |
+| `RequestApplyAbilityPresetOps` | Client → Server (invoke) | `{ { presetKey, slotIndex, abilityId? }, ... }` | Atomic multi-op apply; return `{ ok: bool, error?: string }` |
 | `SyncAbilityPresets` | Server → Client | `{ presets: AbilityPresetsData }` | Full preset sync on join |
 | `RequestUseConsumable` | Client → Server | `{ quickSlot }` | Use a consumable from quick bar |
 | `ConsumableActivated` | Server → Clients | `{ playerId, consumableId }` | Notify nearby clients for VFX |

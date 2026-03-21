@@ -1,6 +1,5 @@
 --!strict
--- UnlockedAbilitiesColumn: Column 2 of the Abilities page.
--- Grid of all abilities the player has learned, acting as drag sources.
+-- Abilities page column: unlocked abilities grid (pool drag sources).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -73,7 +72,7 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 			onMouseButton1Down = function()
 				if not props.dragEnabled then return end
 				DragDropManager.prepareDrag({
-					container = "ability_pool" :: any,
+					container = "ability_pool",
 					slotId = capturedId,
 				}, {
 					imageId = iconId or "",

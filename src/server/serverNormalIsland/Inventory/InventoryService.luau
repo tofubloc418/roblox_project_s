@@ -691,6 +691,18 @@ function InventoryService.Initialize()
 		return remote
 	end
 
+	local function ensureRemoteFunction(name: string): RemoteFunction
+		local existing = remoteFolder:FindFirstChild(name)
+		if existing and existing:IsA("RemoteFunction") then
+			return existing :: RemoteFunction
+		end
+		if existing then existing:Destroy() end
+		local rf = Instance.new("RemoteFunction")
+		rf.Name = name
+		rf.Parent = remoteFolder
+		return rf
+	end
+
 	-- Inventory remotes
 	_syncFullState        = ensureRemote("SyncFullState")
 	_syncCurrency         = ensureRemote("SyncCurrency")
@@ -705,8 +717,7 @@ function InventoryService.Initialize()
 	-- Shared slot-update (granular, for future optimisation; created but not fired yet).
 	ensureRemote("SyncSlotUpdate")
 
-	-- Ability preset remote (folder is shared; AbilityDataService handles RequestSetAbilityPreset).
-	ensureRemote("RequestSetAbilityPreset")
+	ensureRemoteFunction("RequestApplyAbilityPresetOps")
 
 	-- Stubbed runtime-behavior remotes (wired in a future milestone).
 	ensureRemote("RequestAbility")

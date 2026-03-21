@@ -1,5 +1,5 @@
 --!strict
--- abilityPresets[presetKey] slots 1–5; persists with string keys "1".."5" for stable JSON replication.
+-- abilityPresets[presetKey]: five slots; stored with string keys "1".."5". Batch updates via TryApplyPresetOperations.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -12,6 +12,12 @@ local DataService = DataServiceBootstrap.GetDataService() :: any
 type AbilityPresetsData = InventoryTypes.AbilityPresetsData
 type SerializedPreset = InventoryTypes.SerializedPreset
 type SerializedPresetSlot = InventoryTypes.SerializedPresetSlot
+
+export type PresetOperation = {
+	presetKey: string,
+	slotIndex: number,
+	abilityId: string?,
+}
 
 local function waitForProfile(player: Player): boolean
 	if not DataService:hasProfile(player) then
@@ -82,7 +88,6 @@ local function countUltimatesWorking(w: WorkingPreset): number
 	return n
 end
 
--- Sparse numeric-key tables can replicate as length-1 arrays; string keys stay a JSON object.
 local function workingToStoredPreset(w: WorkingPreset): SerializedPreset
 	local out: any = {}
 	for i = 1, MAX_PRESET_SLOTS do
@@ -95,6 +100,27 @@ local function workingToStoredPreset(w: WorkingPreset): SerializedPreset
 		end
 	end
 	return out
+end
+
+local function validateWorkingPreset(presetKey: string, w: WorkingPreset): string?
+	for i = 1, MAX_PRESET_SLOTS do
+		local slot = w[i]
+		if not slot then
+			continue
+		end
+		local aid = slot.aid
+		local config = AbilityRegistry.GetAbility(aid)
+		if not config then
+			return string.format("Unknown ability '%s'.", aid)
+		end
+		if not table.find(config.compatibleTags, presetKey) then
+			return string.format("'%s' is not compatible with '%s'.", aid, presetKey)
+		end
+	end
+	if countUltimatesWorking(w) > MAX_ULTIMATE_PER_PRESET then
+		return string.format("Preset '%s' can only have one ultimate ability.", presetKey)
+	end
+	return nil
 end
 
 local AbilityDataService = {}
@@ -111,66 +137,91 @@ function AbilityDataService.GetPresetForKey(player: Player, presetKey: string): 
 	return presets[presetKey] or {}
 end
 
+-- Validates full result (compatibleTags + one ultimate per preset), then writes; no partial commit.
+function AbilityDataService.TryApplyPresetOperations(player: Player, operations: { PresetOperation }): (boolean, string?)
+	if not getAbilityPresets(player) then
+		return false, "Data not loaded."
+	end
+	local presetsAny = rawGetAbilityPresets(player)
+	if type(presetsAny) ~= "table" then
+		return false, "Data not loaded."
+	end
+	if type(operations) ~= "table" or #operations == 0 then
+		return false, "Invalid request."
+	end
+
+	local touchedKeys: { [string]: boolean } = {}
+	for _, op in ipairs(operations) do
+		if type(op) ~= "table" then
+			return false, "Invalid request."
+		end
+		if type((op :: any).presetKey) ~= "string" or #(op :: any).presetKey == 0 then
+			return false, "Invalid preset."
+		end
+		local si = (op :: any).slotIndex
+		if type(si) ~= "number" or si < 1 or si > MAX_PRESET_SLOTS then
+			return false, "Invalid slot."
+		end
+		touchedKeys[(op :: any).presetKey] = true
+	end
+
+	local work: { [string]: WorkingPreset } = {}
+	for key in pairs(touchedKeys) do
+		work[key] = loadWorkingFromRaw((presetsAny :: any)[key])
+	end
+
+	for _, op in ipairs(operations) do
+		local pk = (op :: any).presetKey :: string
+		local si = (op :: any).slotIndex :: number
+		local aid = (op :: any).abilityId
+		if aid ~= nil and (type(aid) ~= "string" or #aid == 0) then
+			return false, "Invalid ability."
+		end
+		local w = work[pk]
+		if not w then
+			return false, "Invalid preset."
+		end
+		if aid == nil then
+			w[si] = nil
+		else
+			local cfg = AbilityRegistry.GetAbility(aid)
+			if not cfg then
+				return false, string.format("Unknown ability '%s'.", aid)
+			end
+			w[si] = ({
+				aid = aid,
+				ult = cfg.isUltimate == true and true or nil,
+			}) :: SerializedPresetSlot
+		end
+	end
+
+	for key in pairs(touchedKeys) do
+		local err = validateWorkingPreset(key, work[key])
+		if err then
+			return false, err
+		end
+	end
+
+	for key in pairs(touchedKeys) do
+		setAbilityPresetKey(player, key, workingToStoredPreset(work[key]))
+	end
+	return true, nil
+end
+
 function AbilityDataService.SetPresetSlot(
 	player: Player,
 	presetKey: string,
 	slotIndex: number,
 	abilityId: string?
 ): boolean
-	local presets = getAbilityPresets(player)
-	if not presets then
-		return false
-	end
-
-	if type(presetKey) ~= "string" or #presetKey == 0 then
-		return false
-	end
-	if type(slotIndex) ~= "number" or slotIndex < 1 or slotIndex > MAX_PRESET_SLOTS then
-		return false
-	end
-	if abilityId ~= nil and (type(abilityId) ~= "string" or #abilityId == 0) then
-		return false
-	end
-
-	local working = loadWorkingFromRaw(presets[presetKey])
-
-	if abilityId == nil then
-		working[slotIndex] = nil
-		setAbilityPresetKey(player, presetKey, workingToStoredPreset(working))
-		return true
-	end
-
-	local config = AbilityRegistry.GetAbility(abilityId)
-	if not config then
-		return false
-	end
-
-	local isActuallyUltimate = config.isUltimate == true
-
-	if isActuallyUltimate then
-		local existingSlot = working[slotIndex]
-		local alreadyUlt = existingSlot and existingSlot.ult
-		if not alreadyUlt then
-			local ultCount = countUltimatesWorking(working)
-			if ultCount >= MAX_ULTIMATE_PER_PRESET then
-				for i = 1, MAX_PRESET_SLOTS do
-					local slot = working[i]
-					if slot and slot.ult then
-						working[i] = nil
-						break
-					end
-				end
-			end
-		end
-	end
-
-	working[slotIndex] = ({
-		aid = abilityId,
-		ult = isActuallyUltimate and true or nil,
-	}) :: SerializedPresetSlot
-
-	setAbilityPresetKey(player, presetKey, workingToStoredPreset(working))
-	return true
+	local ok = AbilityDataService.TryApplyPresetOperations(player, {
+		{
+			presetKey = presetKey,
+			slotIndex = slotIndex,
+			abilityId = abilityId,
+		} :: PresetOperation,
+	})
+	return ok
 end
 
 function AbilityDataService.ClearPreset(player: Player, presetKey: string)
@@ -182,22 +233,38 @@ end
 
 function AbilityDataService.Initialize()
 	local remoteFolder = ReplicatedStorage:WaitForChild("InventoryRemotes")
-	local requestSetPreset = remoteFolder:WaitForChild("RequestSetAbilityPreset") :: RemoteEvent
+	local requestApplyOps = remoteFolder:WaitForChild("RequestApplyAbilityPresetOps") :: RemoteFunction
 
-	requestSetPreset.OnServerEvent:Connect(function(
-		player: Player,
-		presetKey: any,
-		slotIndex: any,
-		abilityId: any
-	)
-		if type(presetKey) ~= "string" or type(slotIndex) ~= "number" then
-			return
+	requestApplyOps.OnServerInvoke = function(player: Player, ops: any): any
+		if type(ops) ~= "table" then
+			return { ok = false, error = "Invalid request." }
 		end
-		if abilityId ~= nil and type(abilityId) ~= "string" then
-			return
+		local normalized: { PresetOperation } = {}
+		for _, op in ipairs(ops) do
+			if type(op) ~= "table" then
+				return { ok = false, error = "Invalid request." }
+			end
+			local pk = op.presetKey
+			local si = op.slotIndex
+			local aid = op.abilityId
+			if type(pk) ~= "string" or type(si) ~= "number" then
+				return { ok = false, error = "Invalid request." }
+			end
+			if aid ~= nil and type(aid) ~= "string" then
+				return { ok = false, error = "Invalid request." }
+			end
+			table.insert(normalized, {
+				presetKey = pk,
+				slotIndex = si,
+				abilityId = aid,
+			})
 		end
-		AbilityDataService.SetPresetSlot(player, presetKey, slotIndex, abilityId)
-	end)
+		local ok, err = AbilityDataService.TryApplyPresetOperations(player, normalized)
+		if ok then
+			return { ok = true }
+		end
+		return { ok = false, error = err or "Failed." }
+	end
 end
 
 return AbilityDataService

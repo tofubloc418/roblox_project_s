@@ -27,6 +27,8 @@ local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForCh
 local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
 local AbilityPresetsBridge = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetsBridge"))
 local DragDropManager = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("DragDropManager"))
+local AbilityPresetMutations = require(script.Parent:WaitForChild("AbilityPresetMutations"))
+local AbilityPresetToast = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetToast"))
 local KeybindConflictTooltipLayer = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("KeybindConflictTooltipLayer"))
 local CursorManager = require(script.Parent.Parent:WaitForChild("Hud"):WaitForChild("CursorManager"))
 local SettingsShellApp = require(script.Parent:WaitForChild("SettingsShellApp"))
@@ -50,9 +52,15 @@ type AbilitySlotData = InventoryTypes.AbilitySlotData
 type SerializedPreset = InventoryTypes.SerializedPreset
 
 type DragDescriptor = {
-	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot" | "ability_pool",
+	container: "backpack" | "equipment" | "quickuse" | "stash" | "loot" | "ability_pool" | "ability_preset",
 	index: number?,
 	slotId: string?,
+}
+
+type AbilityPresetOp = {
+	presetKey: string,
+	slotIndex: number,
+	abilityId: string?,
 }
 
 local function toServerContainer(c: "backpack" | "equipment" | "quickuse" | "stash" | "loot"): string
@@ -191,9 +199,19 @@ settingsScreen.IgnoreGuiInset = true
 settingsScreen.Parent = playerGui
 
 DragDropManager.attachGhostLayer(settingsScreen)
+AbilityPresetToast.attach(settingsScreen)
 KeybindConflictTooltipLayer.attach(settingsScreen)
 
 local settingsRoot = ReactRoblox.createRoot(settingsScreen)
+
+local function applyAbilityPresetOpsAsync(ops: { AbilityPresetOp })
+	task.spawn(function()
+		local ok, err = AbilityPresetMutations.invokeApplyOperations(ops)
+		if not ok and err then
+			AbilityPresetToast.showError(settingsScreen, err)
+		end
+	end)
+end
 
 local function render()
 	settingsRoot:render(React.createElement(SettingsShellApp, {
@@ -280,12 +298,6 @@ local function render()
 		abilityPresets = cachedAbilityPresets,
 		unlockedAbilities = cachedUnlockedAbilities,
 		abilityDragEnabled = settingsOpen and dataReady,
-		onAbilityDragToPreset = function(abilityId: string, weaponTag: string, slotIndex: number)
-			local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
-			if requestSetPreset then
-				requestSetPreset:FireServer(weaponTag, slotIndex, abilityId, false)
-			end
-		end,
 	}))
 end
 
@@ -432,17 +444,10 @@ DragDropManager.subscribeToDrop(function(source: DragDescriptor, target: DragDes
 		fromSlot = source.index
 	end
 
-	-- Ability pool → preset slot drop
-	if source.container == "ability_pool" and target.container == "equipment" and target.slotId then
-		local slotIdStr = target.slotId :: string
-		local weaponTag, indexStr = string.match(slotIdStr, "^(.*)_([^_]+)$")
-		local slotIndex = if indexStr then tonumber(indexStr) else nil
-
-		if weaponTag and slotIndex and source.slotId then
-			local requestSetPreset = remotes:FindFirstChild("RequestSetAbilityPreset") :: RemoteEvent?
-			if requestSetPreset then
-				requestSetPreset:FireServer(weaponTag, slotIndex, source.slotId)
-			end
+	if (source.container == "ability_pool" or source.container == "ability_preset") and target.container == "ability_preset" then
+		local ops = AbilityPresetMutations.buildPresetOperations(source, target, cachedAbilityPresets)
+		if ops and #ops > 0 then
+			applyAbilityPresetOpsAsync(ops :: { AbilityPresetOp })
 		end
 		return
 	end

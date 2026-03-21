@@ -42,7 +42,6 @@ export type SettingsShellAppProps = {
 	abilityPresets: { [string]: any }?,
 	unlockedAbilities: { [string]: boolean }?,
 	abilityDragEnabled: boolean?,
-	onAbilityDragToPreset: ((abilityId: string, weaponTag: string, slotIndex: number) -> ())?,
 }
 
 local P = ThemeConfig.Padding
@@ -102,7 +101,6 @@ local function SettingsShellApp(props: SettingsShellAppProps)
 		abilityPresets = props.abilityPresets or {},
 		unlockedAbilities = props.unlockedAbilities or {},
 		dragEnabled = props.abilityDragEnabled,
-		onAbilityDragToPreset = props.onAbilityDragToPreset or function() end,
 	})
 
 	local activePage = if props.activeTabId == "loadout"

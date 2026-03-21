@@ -108,10 +108,23 @@ local function TagRow(props: TagRowProps)
 						props.onPresetSlotClicked(tag, i)
 					end
 				end,
+				onMouseButton1Down = if props.dragEnabled and abilityId
+					then function()
+						local vis = AbilityPresetSlotUtils.resolveVisual(abilityId)
+						DragDropManager.prepareDrag({
+							container = "ability_preset",
+							slotId = tag .. "_" .. tostring(i),
+						}, {
+							imageId = if vis.hasIcon then vis.iconId else "",
+							labelText = if vis.hasIcon then "" else vis.displayName,
+							stackText = "",
+						})
+					end
+					else nil,
 				onMouseEnter = function()
 					if props.dragEnabled then
 						DragDropManager.notifyHoverEnter({
-							container = "equipment" :: any,
+							container = "ability_preset",
 							slotId = tag .. "_" .. tostring(i),
 						})
 					end
@@ -119,7 +132,7 @@ local function TagRow(props: TagRowProps)
 				onMouseLeave = function()
 					if props.dragEnabled then
 						DragDropManager.notifyHoverLeave({
-							container = "equipment" :: any,
+							container = "ability_preset",
 							slotId = tag .. "_" .. tostring(i),
 						})
 					end

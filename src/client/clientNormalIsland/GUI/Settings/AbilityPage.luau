@@ -17,7 +17,6 @@ export type AbilityPageProps = {
 	abilityPresets: AbilityPresetsData,
 	unlockedAbilities: { [string]: boolean },
 	dragEnabled: boolean?,
-	onAbilityDragToPreset: (abilityId: string, weaponTag: string, slotIndex: number) -> (),
 }
 
 local A = ThemeConfig.AbilitiesPage

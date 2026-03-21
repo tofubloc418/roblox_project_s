@@ -8,6 +8,15 @@ local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitFor
 
 local AbilityPresetSlotUtils = {}
 
+-- `presetKey_slot` with slot 1–5 only (e.g. Unique_Blade_3 → Unique_Blade, 3).
+function AbilityPresetSlotUtils.parsePresetSlotId(slotId: string): (string?, number?)
+	local presetKey, digit = string.match(slotId, "^(.+)_([1-5])$")
+	if not presetKey or not digit then
+		return nil, nil
+	end
+	return presetKey, tonumber(digit)
+end
+
 function AbilityPresetSlotUtils.readSlot(preset: { [any]: any }?, slotIndex: number): (string?, boolean)
 	if not preset or type(preset) ~= "table" then
 		return nil, false

@@ -34,6 +34,8 @@ LayoutConfig.Container = {
 LayoutConfig.ZIndex = {
 	MainFrame   = 0,
 	GradientLayer = 10,
+	-- Full-row background for each weapon tag in Settings → Abilities (left column)
+	AbilitiesTagRowBackground = 9,
 	InnerMask   = 11,
 	Content     = 12, -- slots, labels, and all slot children render here
 	HoverOverlay = 13,
@@ -126,6 +128,10 @@ LayoutConfig.Settings = {
 	TabBarZIndex = 14,
 	TabButtonZIndex = 15,
 	ListeningOverlayZIndex = 20,
+	-- Abilities tab: column headers, search bars, and inputs above scroll areas
+	AbilitiesPage = {
+		ChromeZIndex = LayoutConfig.ZIndex.Content + 1,
+	},
 }
 
 return LayoutConfig

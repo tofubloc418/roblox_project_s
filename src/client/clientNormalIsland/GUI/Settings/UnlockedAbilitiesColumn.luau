@@ -22,6 +22,7 @@ local A = ThemeConfig.AbilitiesPage
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
 local R = ThemeConfig.CornerRadius
+local AZ = LayoutConfig.Settings.AbilitiesPage
 
 local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 	local query, setQuery = React.useState("")
@@ -124,7 +125,7 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 			Name = "PoolHeader",
 			Size = UDim2.new(1, 0, 0, A.TagHeaderHeight),
 			BackgroundTransparency = 1,
-			ZIndex = LayoutConfig.ZIndex.Content + 1,
+			ZIndex = AZ.ChromeZIndex,
 		}, {
 			Title = React.createElement("TextLabel", {
 				Size = UDim2.fromScale(1, 1),
@@ -134,7 +135,7 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 				Font = F.Family,
 				TextSize = F.TitleSize * 0.55,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				ZIndex = LayoutConfig.ZIndex.Content + 1,
+				ZIndex = AZ.ChromeZIndex,
 			}),
 		}),
 		SearchBar = React.createElement("Frame", {
@@ -143,7 +144,7 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 			Position = UDim2.fromOffset(0, A.TagHeaderHeight + A.SearchBarGap),
 			BackgroundColor3 = C.MainFrame,
 			BackgroundTransparency = 0.1,
-			ZIndex = LayoutConfig.ZIndex.Content + 1,
+			ZIndex = AZ.ChromeZIndex,
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 			Stroke = React.createElement("UIStroke", {
@@ -166,7 +167,7 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 				TextSize = 15,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				ClearTextOnFocus = false,
-				ZIndex = LayoutConfig.ZIndex.Content + 1,
+				ZIndex = AZ.ChromeZIndex,
 				[React.Event.Changed] = function(rbx: TextBox)
 					setQuery(rbx.Text)
 				end,

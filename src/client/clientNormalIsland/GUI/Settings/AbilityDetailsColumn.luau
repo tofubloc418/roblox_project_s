@@ -19,6 +19,7 @@ local A = ThemeConfig.AbilitiesPage
 local C = ThemeConfig.Colors
 local F = ThemeConfig.Font
 local R = ThemeConfig.CornerRadius
+local AZ = LayoutConfig.Settings.AbilitiesPage
 
 local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 	local abilityId = props.selectedAbilityId
@@ -35,7 +36,7 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 				Name = "DetailsHeader",
 				Size = UDim2.new(1, 0, 0, A.TagHeaderHeight),
 				BackgroundTransparency = 1,
-				ZIndex = LayoutConfig.ZIndex.Content + 1,
+				ZIndex = AZ.ChromeZIndex,
 			}, {
 				Title = React.createElement("TextLabel", {
 					Size = UDim2.fromScale(1, 1),
@@ -45,7 +46,7 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 					Font = F.Family,
 					TextSize = F.TitleSize * 0.55,
 					TextXAlignment = Enum.TextXAlignment.Left,
-					ZIndex = LayoutConfig.ZIndex.Content + 1,
+					ZIndex = AZ.ChromeZIndex,
 				}),
 			}),
 			Placeholder = React.createElement("TextLabel", {
@@ -111,7 +112,7 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 			Name = "DetailsHeader",
 			Size = UDim2.new(1, 0, 0, A.TagHeaderHeight),
 			BackgroundTransparency = 1,
-			ZIndex = LayoutConfig.ZIndex.Content + 1,
+			ZIndex = AZ.ChromeZIndex,
 		}, {
 			Title = React.createElement("TextLabel", {
 				Size = UDim2.fromScale(1, 1),
@@ -121,7 +122,7 @@ local function AbilityDetailsColumn(props: AbilityDetailsColumnProps)
 				Font = F.Family,
 				TextSize = F.TitleSize * 0.55,
 				TextXAlignment = Enum.TextXAlignment.Left,
-				ZIndex = LayoutConfig.ZIndex.Content + 1,
+				ZIndex = AZ.ChromeZIndex,
 			}),
 		}),
 		Content = React.createElement("Frame", {

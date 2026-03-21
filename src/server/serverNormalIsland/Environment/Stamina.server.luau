@@ -46,19 +46,24 @@ local function stepPlayer(player: Player, dt: number)
 		end
 	end
 
+	local horizontal = 0
+	if character and character.PrimaryPart then
+		local vel = character.PrimaryPart.AssemblyLinearVelocity
+		horizontal = Vector3.new(vel.X, 0, vel.Z).Magnitude
+	end
+
 	-- Drain/regen
 	local drain = 0
 	if movingMode == "run" then
-		drain = (PlayerConfig.staminaRunDrainPerSecond or 15) * dt
+		if horizontal > 1 then
+			drain = (PlayerConfig.staminaRunDrainPerSecond or 15) * dt
+		end
 	elseif movingMode == "swim" then
-		-- Only drain when actually moving in water
-		local vel = character and character.PrimaryPart and character.PrimaryPart.AssemblyLinearVelocity or Vector3.zero
-		local horizontal = Vector3.new(vel.X, 0, vel.Z).Magnitude
 		if horizontal > 1 then
 			drain = (PlayerConfig.staminaSwimDrainPerSecond or 15) * dt
 		end
-	else
-		-- walking: regen
+	end
+	if movingMode == "walk" or (movingMode == "run" and horizontal <= 1) then
 		stamina = math.min(maxStamina, stamina + (PlayerConfig.staminaRegenPerSecond or 12) * dt)
 	end
 	stamina = math.max(0, stamina - drain)

@@ -99,7 +99,7 @@ local function TagRow(props: TagRowProps)
 			pc["Slot" .. i] = React.createElement(GradientBorder, {
 				size = slotSize,
 				fitWithin = true,
-				cornerRadius = R.SlotSmall,
+				cornerRadius = R.Slot,
 				layoutOrder = i,
 				onActivated = function()
 					if abilityId then

@@ -102,7 +102,7 @@ local function WeaponCard(props: WeaponCardProps)
 			size = abilitySlotSize,
 			fitWithin = true,
 			layoutOrder = i,
-			cornerRadius = R.SlotSmall,
+			cornerRadius = R.Slot,
 			onActivated = function()
 				props.onAbilityClick(i)
 			end,

@@ -85,18 +85,22 @@ local function UnlockedAbilitiesColumn(props: UnlockedAbilitiesColumnProps)
 					Name = "AbilitySlot",
 					Size = UDim2.fromScale(1, 1),
 					BackgroundColor3 = C.Slot,
-					BackgroundTransparency = C.SlotTransparency,
+					BackgroundTransparency = if hasIcon then 1 else C.SlotTransparency,
+					ClipsDescendants = true,
 					ZIndex = LayoutConfig.ZIndex.Content,
 				}, {
 					Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 					Icon = if hasIcon then React.createElement("ImageLabel", {
-						Size = UDim2.fromScale(0.85, 0.85),
-						Position = UDim2.fromScale(0.5, 0.5),
-						AnchorPoint = Vector2.new(0.5, 0.5),
+						Size = UDim2.new(1, 0, 1, 0),
+						Position = UDim2.fromScale(0, 0),
+						AnchorPoint = Vector2.new(0, 0),
 						BackgroundTransparency = 1,
+						ClipsDescendants = true,
 						Image = iconId,
 						ScaleType = Enum.ScaleType.Fit,
 						ZIndex = LayoutConfig.ZIndex.Content,
+					}, {
+						Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 					}) else nil,
 					Label = if not hasIcon then React.createElement("TextLabel", {
 						Size = UDim2.fromScale(0.9, 0.9),

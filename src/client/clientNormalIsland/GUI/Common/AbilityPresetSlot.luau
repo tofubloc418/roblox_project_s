@@ -24,7 +24,6 @@ export type AbilityPresetSlotProps = {
 }
 
 local SETTINGS_BG = Color3.fromRGB(45, 45, 52)
-local SETTINGS_STROKE = Color3.fromRGB(80, 80, 88)
 
 local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 	local aid = props.aid
@@ -37,18 +36,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 	local size = props.pixelSize
 	local z = props.zIndex or LayoutConfig.ZIndex.Content
 
-	local bg: Color3
-	local strokeColor: Color3
-	local strokeThick: number
-	if variant == "hud" then
-		bg = C.Slot
-		strokeColor = if props.isUlt and aid then C.Stroke.Active else C.Stroke.Default
-		strokeThick = if props.isUlt and aid then C.Stroke.ActiveThickness else C.Stroke.Thickness
-	else
-		bg = SETTINGS_BG
-		strokeColor = SETTINGS_STROKE
-		strokeThick = 1
-	end
+	local bg = if variant == "hud" then C.Slot else SETTINGS_BG
 
 	local iconTransparency = 1
 	if hasIcon and iconId ~= "" then
@@ -60,25 +48,31 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 		Size = UDim2.fromOffset(size, size),
 		BackgroundColor3 = bg,
 		BackgroundTransparency = if variant == "hud" then C.SlotTransparency else 0,
+		ClipsDescendants = true,
 		LayoutOrder = props.layoutOrder or 0,
 		ZIndex = z,
 	}, {
-		Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.SlotSmall) }),
-		Stroke = React.createElement("UIStroke", {
-			Color = strokeColor,
-			Thickness = strokeThick,
-			Transparency = C.Stroke.Transparency,
-		}),
+		Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
+		Stroke = if variant == "hud"
+			then React.createElement("UIStroke", {
+				Color = if props.isUlt and aid then C.Stroke.Active else C.Stroke.Default,
+				Thickness = if props.isUlt and aid then C.Stroke.ActiveThickness else C.Stroke.Thickness,
+				Transparency = C.Stroke.Transparency,
+			})
+			else nil,
 		Icon = if hasIcon
 			then React.createElement("ImageLabel", {
-				Size = if variant == "settings" then UDim2.fromScale(0.85, 0.85) else UDim2.new(1, 0, 1, 0),
-				Position = if variant == "settings" then UDim2.fromScale(0.5, 0.5) else UDim2.fromScale(0, 0),
-				AnchorPoint = if variant == "settings" then Vector2.new(0.5, 0.5) else Vector2.new(0, 0),
+				Size = UDim2.new(1, 0, 1, 0),
+				Position = UDim2.fromScale(0, 0),
+				AnchorPoint = Vector2.new(0, 0),
 				BackgroundTransparency = 1,
+				ClipsDescendants = true,
 				Image = iconId,
 				ImageTransparency = iconTransparency,
 				ScaleType = Enum.ScaleType.Fit,
 				ZIndex = z,
+			}, {
+				Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, R.Slot) }),
 			})
 			else nil,
 		Label = if aid and not hasIcon

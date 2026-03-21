@@ -1,5 +1,5 @@
 --!strict
--- HUD loadout state: inventory/equipment/quickUse via DataService; ability presets via AbilityPresetsBridge.
+-- HUD loadout state from DataService + AbilityPresetsBridge.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudLoadoutTypes = require(script.Parent:WaitForChild("HudLoadoutTypes"))

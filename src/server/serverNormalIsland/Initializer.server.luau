@@ -1,5 +1,4 @@
--- Initializer
--- Server entry point. Starts all services in dependency order.
+-- Server bootstrap: services in dependency order.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players           = game:GetService("Players")
@@ -47,8 +46,6 @@ local function ensureMatchInfo()
 	end
 end
 ensureMatchInfo()
-
--- Service boot
 
 DataServiceBootstrap.Initialize()
 KeybindsService.Initialize()

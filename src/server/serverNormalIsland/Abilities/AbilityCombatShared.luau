@@ -1,5 +1,5 @@
 --!strict
--- Shared helpers for ability scripts (range checks, LoS, weapon template fallback).
+-- LoS, cone/radius targeting, weapon template fallback for ability scripts.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")

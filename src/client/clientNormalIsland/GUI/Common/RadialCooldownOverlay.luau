@@ -1,6 +1,5 @@
 --!strict
--- Cooldown “pie”: blue is removed via UIGradient (T=1) where time has elapsed, so you see UnusableGray
--- underneath — not a gray mask painted on top of blue (that always picked up a blue tint when transparent).
+-- Cooldown pie: UIGradient clears blue where elapsed so UnusableGray shows through (no gray layer on blue).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
@@ -9,7 +8,6 @@ local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 
 local AB = ThemeConfig.AbilityBar
 
--- Blue visibility: T=0 shows tinted blue, T=1 fully hides blue for that fragment (see gray layer below).
 local BLUE_SWEEP_TRANSPARENCY_RIGHT = NumberSequence.new({
 	NumberSequenceKeypoint.new(0, 1),
 	NumberSequenceKeypoint.new(0.499, 1),

@@ -1,5 +1,5 @@
 --!strict
--- abilityPresets[presetKey]: five slots; stored with string keys "1".."5". Batch updates via TryApplyPresetOperations.
+-- abilityPresets in DataService; slots stored as string keys "1".."5". Batch ops via TryApplyPresetOperations.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -20,7 +20,6 @@ export type PresetOperation = {
 }
 
 local function waitForProfile(player: Player): boolean
-	-- Match InventoryService /dev data: yield until profile is ready (path-based get can fail if we only check hasProfile).
 	DataServiceBootstrap.WaitForPlayerData(player)
 	return true
 end

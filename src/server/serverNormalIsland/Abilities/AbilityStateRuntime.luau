@@ -1,6 +1,5 @@
 --!strict
--- Per-player state keyed by abilityId: named cooldown tracks + optional blocked flag.
--- Ability server scripts use these helpers from CanUse/Execute; state syncs to the client HUD.
+-- Per-player cooldown tracks + blocked flag per abilityId; syncs to clients for HUD.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,7 +15,6 @@ type AbilityState = {
 	tracks: { [string]: TrackState },
 }
 
--- Minimal shape for ability dispatch context (matches AbilityExecutionService.AbilityExecutionContext fields used here).
 export type AbilityExecutionContextLike = {
 	player: Player,
 	abilityId: string,

@@ -1,5 +1,5 @@
 --!strict
--- Drag descriptors → preset ops; InvokeServer(RequestApplyAbilityPresetOps).
+-- Builds preset ops from drag/drop; applies via RequestApplyAbilityPresetOps.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

@@ -1,8 +1,5 @@
 --!strict
---[[
-	HudLoadoutController: HUD loadout ScreenGui, DataAdapter subscription,
-	expandedWeapon rules, quick-use hold→radial behavior, and KeybindsClient binds.
-]]
+-- HUD loadout ScreenGui, quick-use hold→radial, weapon/keybind wiring.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -36,7 +33,6 @@ end
 
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
--- HUD loadout ScreenGui (always visible during gameplay)
 local hudScreen = Instance.new("ScreenGui")
 hudScreen.Name = "HudLoadoutScreen"
 hudScreen.ResetOnSpawn = false
@@ -45,7 +41,6 @@ hudScreen.ZIndexBehavior = Enum.ZIndexBehavior.Global
 hudScreen.IgnoreGuiInset = true
 hudScreen.Parent = playerGui
 
--- Radial dial ScreenGui (shown while quick-use bind is held)
 local radialScreen = Instance.new("ScreenGui")
 radialScreen.Name = "HudRadialScreen"
 radialScreen.ResetOnSpawn = false
@@ -59,20 +54,18 @@ radialScreen.Parent = playerGui
 local hudRoot = ReactRoblox.createRoot(hudScreen)
 local radialRoot = ReactRoblox.createRoot(radialScreen)
 
--- Forward-declared so renderHud closures can reference it before the body is set.
 local handleSlotSwitch: (newSlot: HudActiveSlot) -> ()
 
--- ── Radial state ─────────────────────────────────────────────────────────────
+-- ── Radial dial state ───────────────────────────────────────────────────────
 
 local HOLD_THRESHOLD_SECS = 0.2
 
 local radialVisible = false
 local qPressTime: number? = nil
 local highlightedIndex: number? = nil
--- When dial is open, mouse is center-locked; we use accumulated delta as a "virtual" cursor for sector selection.
 local virtualCursorOffset = Vector2.new(0, 0)
 
--- ── Render helpers ───────────────────────────────────────────────────────────
+-- ── Render ─────────────────────────────────────────────────────────────────
 
 local function renderHud()
 	local state = HudLoadoutDataAdapter.getState()
@@ -106,7 +99,7 @@ local function renderRadial()
 	}))
 end
 
--- ── expandedWeapon logic ─────────────────────────────────────────────────────
+-- ── Weapon bar: expanded weapon ─────────────────────────────────────────────
 
 handleSlotSwitch = function(newSlot: HudActiveSlot)
 	local prevState = HudLoadoutDataAdapter.getState()
@@ -124,8 +117,8 @@ handleSlotSwitch = function(newSlot: HudActiveSlot)
 	end
 end
 
--- ── Data adapter subscription ────────────────────────────────────────────────
--- Re-render HUD whenever adapter state changes (e.g. from external systems).
+-- ── Subscriptions (adapter, keybinds, ability state, cooldown tick) ────────
+
 HudLoadoutDataAdapter.subscribe(function(_state: HudLoadoutState)
 	renderHud()
 end)
@@ -136,18 +129,16 @@ AbilityStateClient.subscribe(function()
 	renderHud()
 end)
 
--- Cooldown radial + timer use server time each frame while any track is active.
 RunService.Heartbeat:Connect(function()
 	if AbilityStateClient.anyCooldownActive() then
 		renderHud()
 	end
 end)
 
--- ── Radial dial mouse tracking ───────────────────────────────────────────────
+-- ── Quick-use radial (virtual cursor, camera, open/close) ─────────────────
 
--- Compute which of the 8 fixed slots an offset-from-center is pointing at.
--- offsetFromCenter: (dx, dy) from screen center. Returns nil when within radial dead zone (Cancel).
-local VIRTUAL_CURSOR_DEADZONE_RADIUS = 70   -- virtual pixels; inside this circle = Cancel (larger = easier to cancel)
+-- 8-way sectors from cursor offset; nil = cancel dead zone.
+local VIRTUAL_CURSOR_DEADZONE_RADIUS = 70
 local VIRTUAL_CURSOR_MAX_RADIUS = 400
 
 local function getHighlightedSlotFromOffset(offsetFromCenter: Vector2): number?
@@ -157,9 +148,8 @@ local function getHighlightedSlotFromOffset(offsetFromCenter: Vector2): number?
 		return nil
 	end
 
-	-- Angle: 0 = right, clockwise. Normalize so 0 = top.
-	local mouseAngle = math.atan2(dy, dx)                          -- [-π, π]
-	local normalized = (mouseAngle + math.pi / 2) % (2 * math.pi)   -- [0, 2π], 0 = top
+	local mouseAngle = math.atan2(dy, dx)
+	local normalized = (mouseAngle + math.pi / 2) % (2 * math.pi)
 
 	local sectorSize = 2 * math.pi / 8
 	local sectorIdx  = math.floor((normalized + sectorSize / 2) / sectorSize) % 8 + 1
@@ -167,14 +157,10 @@ local function getHighlightedSlotFromOffset(offsetFromCenter: Vector2): number?
 	return sectorIdx
 end
 
--- When dial opens: lock mouse, hide cursor/crosshair, take over camera so it follows the
--- character but does not rotate from mouse (Scriptable + manual update each frame).
--- When dial closes: restore camera type and cursor/crosshair visibility.
 local previousCameraType: Enum.CameraType? = nil
 local previousMouseIconEnabled: boolean? = nil
 local GUIsHiddenForRadial: { ScreenGui } = {}
 
--- Saved when radial opens: camera look direction and offset from character root to camera (so we can follow character).
 local radialCameraLookVector: Vector3? = nil
 local radialCameraOffsetFromRoot: Vector3? = nil
 
@@ -245,13 +231,10 @@ local function setRadialDialOpen(open: boolean)
 	end
 end
 
--- Update scriptable camera every frame so it follows the character (RenderStepped = after movement, before render).
 RunService.RenderStepped:Connect(function()
 	if not radialVisible then return end
 
 	local cam = workspace.CurrentCamera
-	-- Scriptable camera: follow character position but keep fixed look direction (no mouse rotation).
-	-- Use localPlayer.Character (CameraSubject can be cleared when camera is Scriptable).
 	if cam and radialCameraLookVector and radialCameraOffsetFromRoot then
 		local character = localPlayer.Character
 		if character then
@@ -267,11 +250,9 @@ end)
 RunService.Heartbeat:Connect(function()
 	if not radialVisible then return end
 
-	-- Mouse is center-locked; use delta to update virtual cursor, then derive sector.
 	local delta = UserInputService:GetMouseDelta()
 	virtualCursorOffset = virtualCursorOffset + Vector2.new(delta.X, delta.Y)
 
-	-- Clamp so we don't overflow and angle stays stable
 	local len = math.sqrt(virtualCursorOffset.X * virtualCursorOffset.X + virtualCursorOffset.Y * virtualCursorOffset.Y)
 	if len > VIRTUAL_CURSOR_MAX_RADIUS then
 		local scale = VIRTUAL_CURSOR_MAX_RADIUS / len
@@ -281,6 +262,8 @@ RunService.Heartbeat:Connect(function()
 	highlightedIndex = getHighlightedSlotFromOffset(virtualCursorOffset)
 	renderRadial()
 end)
+
+-- ── HUD keybinds ────────────────────────────────────────────────────────────
 
 KeybindsClient.bindAction(KeybindIds.HudWeapon1, function(_name, state, _input)
 	if state == Enum.UserInputState.Begin then
@@ -369,7 +352,7 @@ end, {
 	actionName = "HudFlashlight",
 })
 
--- ── Viewport resize ──────────────────────────────────────────────────────────
+-- ── Viewport resize ─────────────────────────────────────────────────────────
 
 local lastViewportSize = getViewportSize()
 RunService.Heartbeat:Connect(function()
@@ -383,6 +366,6 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
--- ── Initial render ───────────────────────────────────────────────────────────
+-- ── Initial render ──────────────────────────────────────────────────────────
 
 renderHud()

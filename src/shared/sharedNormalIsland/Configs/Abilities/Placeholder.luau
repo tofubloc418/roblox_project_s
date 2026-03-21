@@ -1,5 +1,5 @@
 --!strict
--- Placeholder ability templates for UI + registry. Server/client behavior: Abilities/Scripts/<abilityId>.luau
+-- Sample abilities for registry/UI; logic in server Abilities/Scripts/<abilityId>.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))

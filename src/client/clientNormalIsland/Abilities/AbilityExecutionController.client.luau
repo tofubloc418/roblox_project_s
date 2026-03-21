@@ -1,6 +1,5 @@
 --!strict
--- Ability client dispatcher: AbilityStarted is fired to every client with (casterUserId, abilityId, slotIndex).
--- Each client runs OnStarted using the caster’s replicated Character so local VFX is visible to everyone.
+-- Listens for AbilityStarted and runs per-ability client Scripts; binds ability slot keys to RequestUseAbility.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -81,7 +80,6 @@ for slotIndex, actionId in ipairs(SLOT_ACTIONS) do
 	KeybindsClient.bindAction(
 		actionId,
 		function(_name: string, state: Enum.UserInputState, _input: InputObject)
-			-- Keybinds UI capture uses the same keys; avoid firing abilities while rebinding.
 			if KeybindsClient.areGameplayActionsSuppressed() then
 				return Enum.ContextActionResult.Sink
 			end

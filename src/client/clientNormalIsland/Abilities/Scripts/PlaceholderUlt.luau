@@ -1,5 +1,5 @@
 --!strict
--- PlaceholderUlt: omni burst from torso center; staggered waves with rising speed read as an expanding shell.
+-- Client VFX for PlaceholderUlt (staggered omni bursts from torso).
 
 local Debris = game:GetService("Debris")
 

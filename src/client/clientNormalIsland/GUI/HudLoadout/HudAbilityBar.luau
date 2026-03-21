@@ -1,5 +1,5 @@
 --!strict
--- Bottom HUD: five ability preset slots for the active weapon bar preset key.
+-- Bottom-center ability bar (5 slots) for the active weapon preset.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any

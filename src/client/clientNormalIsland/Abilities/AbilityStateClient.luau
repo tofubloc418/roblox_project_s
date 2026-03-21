@@ -1,5 +1,5 @@
 --!strict
--- Replica of server ability state (per abilityId: cooldown tracks + blocked) for HUD.
+-- Client mirror of AbilityStateRuntime for HUD cooldowns / blocked.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -39,9 +39,6 @@ function AbilityStateClient.getAbility(abilityId: string): AbilityStateSync?
 	return _abilities[abilityId]
 end
 
---[[
-	For HUD: remaining seconds and total duration of the track with the longest remaining time.
-]]
 function AbilityStateClient.getDominantCooldown(abilityId: string): (number, number)
 	local st = _abilities[abilityId]
 	if not st then

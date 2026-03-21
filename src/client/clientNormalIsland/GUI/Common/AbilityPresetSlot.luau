@@ -1,5 +1,5 @@
 --!strict
--- One ability preset cell: AbilityRegistry icon or text fallback (`settings` vs `hud` styling).
+-- Ability slot: registry icon or text; settings vs HUD styling.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
@@ -24,7 +24,6 @@ export type AbilityPresetSlotProps = {
 	pixelSize: number,
 	layoutOrder: number?,
 	zIndex: number?,
-	-- HUD only: synced from server AbilityStateRuntime (per abilityId).
 	hudCooldownRemaining: number?,
 	hudCooldownDuration: number?,
 	hudAbilityBlocked: boolean?,

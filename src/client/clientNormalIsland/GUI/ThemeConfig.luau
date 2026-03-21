@@ -201,8 +201,7 @@ ThemeConfig.AbilityBar = {
 		Transparency = 0.55,
 		Thickness = 1,
 	},
-	-- HUD cooldown: full-slot gray when unusable; blue radial is carved with UIGradient so elapsed arc shows
-	-- this gray (not a second gray layer on top of blue).
+	-- Cooldown: unusable gray under slot; blue pie uses gradient cutout so elapsed area shows same gray.
 	CooldownUnusableOverlayColor = Color3.fromRGB(28, 28, 36),
 	CooldownUnusableOverlayTransparency = 0.75,
 	CooldownRadialFillColor = Color3.fromRGB(55, 140, 255),

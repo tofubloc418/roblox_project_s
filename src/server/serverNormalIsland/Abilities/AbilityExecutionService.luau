@@ -1,7 +1,5 @@
 --!strict
--- AbilityExecutionService
--- Dispatches RequestUseAbility → optional CanUse(), then Execute(); fires AbilityStarted to all clients on success (for replicated VFX).
--- Cooldowns and extra gates live in each ability script via AbilityStateRuntime (syncs to HUD).
+-- RequestUseAbility → CanUse/Execute; fires AbilityStarted to all clients. Cooldowns use AbilityStateRuntime.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -29,7 +27,6 @@ local AbilityExecutionService = {}
 local _requestUseAbility: RemoteEvent
 local _abilityStarted: RemoteEvent
 
--- Fallback when client does not send a bar key: first equipped weapon wins (Weapon1, then Weapon2).
 local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): string
 	if not equipment then
 		return ItemEnums.WeaponTag.Fists
@@ -43,7 +40,6 @@ local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): strin
 	return ItemEnums.WeaponTag.Fists
 end
 
--- Keys the player may legally use for ability activation (matches HUD weapon bar).
 local function allowedBarPresetKeys(equipment: StoredEquipmentData?): { [string]: boolean }
 	local allowed: { [string]: boolean } = {}
 	if not equipment then
@@ -75,7 +71,6 @@ local function resolveBarPresetKey(equipment: StoredEquipmentData?, clientKey: a
 	return getPresetKeyFromEquipment(equipment)
 end
 
--- Creates RequestUseAbility + AbilityStarted remotes (must run after InventoryService.Initialize()).
 function AbilityExecutionService.Initialize()
 	local remoteFolder = ReplicatedStorage:WaitForChild("InventoryRemotes")
 
@@ -108,7 +103,6 @@ function AbilityExecutionService.Initialize()
 		local presetKey = resolveBarPresetKey(equipment, clientBarPresetKey)
 
 		local preset = AbilityDataService.GetPresetForKey(player, presetKey)
-		-- Presets persist with string keys "1".."5"; numeric index alone is often nil after JSON.
 		local slotRow = InventoryTypes.getSlotItem(preset, slotIndex)
 		if not slotRow or type(slotRow) ~= "table" then
 			return
@@ -118,7 +112,6 @@ function AbilityExecutionService.Initialize()
 			return
 		end
 
-		-- Resolve weapon template id for the weapon used with this preset (for damage context).
 		local weaponTemplateId: string? = nil
 		if equipment and equipment.Weapon1 and equipment.Weapon1.tid then
 			local key1 = GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")

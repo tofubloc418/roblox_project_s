@@ -1,6 +1,5 @@
 --!strict
--- PlaceholderSlash: particle ball at the face, then slides forward in a straight line.
--- Uses an anchored sphere + LockedToPart emitter so the cloud stays grouped while moving.
+-- Client VFX for PlaceholderSlash (particle ball, slides forward).
 
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")

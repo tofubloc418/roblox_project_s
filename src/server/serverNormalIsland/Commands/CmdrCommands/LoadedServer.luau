@@ -11,5 +11,5 @@ return function(context)
 			context:Reply(("  [NO DATA] %s"):format(p.Name))
 		end
 	end
-	return "Done."
+	return ""
 end

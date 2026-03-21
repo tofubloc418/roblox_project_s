@@ -7,5 +7,5 @@ return function(context, filter: string?)
 	for _, line in ipairs(result.lines) do
 		context:Reply(line)
 	end
-	return result.lines[#result.lines] or "Done."
+	return ""
 end

@@ -6,6 +6,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local DataServiceBootstrap = require(script.Parent.Parent:WaitForChild("Data"):WaitForChild("DataServiceBootstrap"))
 local InventoryService     = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
+local AbilityDataService   = require(script.Parent.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
+local AbilityRegistry      = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("AbilityRegistry"))
 local InventoryTypes       = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes")) :: any
 local ItemRegistry         = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 
@@ -210,6 +212,129 @@ function runInvreport(sender: Player, args: { string }): Result
 	return { lines = lines, isWarning = false }
 end
 
+local MAX_ULTIMATE_PER_PRESET = 1
+
+local function countUltimatesInPreset(preset: { [any]: any }): number
+	local n = 0
+	for _, slot in pairs(preset) do
+		if type(slot) == "table" and slot.ult then
+			n += 1
+		end
+	end
+	return n
+end
+
+function runAbilityPresets(sender: Player, args: { string }): Result
+	local target = resolveTarget(sender, args)
+	if not target then
+		return errResult(string.format("Player '%s' not found.", args[1] or ""))
+	end
+
+	local presets = AbilityDataService.GetAbilityPresets(target)
+	if presets == nil then
+		return errResult(string.format("No ability preset data loaded for '%s'.", target.Name))
+	end
+
+	local keys: { string } = {}
+	for k in pairs(presets) do
+		if type(k) == "string" then
+			table.insert(keys, k)
+		end
+	end
+	table.sort(keys)
+
+	if #keys == 0 then
+		return okResult(string.format("[Dev] No ability presets stored for '%s'.", target.Name))
+	end
+
+	local lines: { string } = { string.format("[Dev] Ability presets for '%s':", target.Name) }
+	for _, presetKey in ipairs(keys) do
+		local preset = presets[presetKey]
+		if type(preset) ~= "table" then
+			table.insert(lines, string.format("  [%s]: (invalid)", presetKey))
+		else
+			local parts: { string } = {}
+			for slot = 1, 5 do
+				local slotData = InventoryTypes.getSlotItem(preset, slot)
+				if slotData and type(slotData) == "table" and type(slotData.aid) == "string" then
+					local ult = slotData.ult and " ult" or ""
+					table.insert(parts, string.format("%d=%s%s", slot, slotData.aid, ult))
+				else
+					table.insert(parts, string.format("%d=(empty)", slot))
+				end
+			end
+			table.insert(lines, string.format("  [%s]: %s", presetKey, table.concat(parts, ", ")))
+		end
+	end
+	return { lines = lines, isWarning = false }
+end
+
+function runSetAbilityPreset(
+	sender: Player,
+	abilityId: string,
+	weaponTag: string,
+	slotIndex: number,
+	target: Player?
+): Result
+	local who = target or sender
+	local config = AbilityRegistry.GetAbility(abilityId)
+	if not config then
+		return errResult(string.format("Unknown ability '%s'.", abilityId))
+	end
+	if not table.find(config.compatibleTags, weaponTag) then
+		return errResult(
+			string.format(
+				"Ability '%s' is not compatible with weapon tag '%s' (allowed: %s).",
+				abilityId,
+				weaponTag,
+				table.concat(config.compatibleTags, ", ")
+			)
+		)
+	end
+
+	local preset = AbilityDataService.GetPresetForKey(who, weaponTag)
+	local isUlt = config.isUltimate == true
+	if isUlt then
+		local existing = InventoryTypes.getSlotItem(preset, slotIndex)
+		local alreadyUlt = type(existing) == "table" and existing.ult == true
+		if not alreadyUlt and countUltimatesInPreset(preset) >= MAX_ULTIMATE_PER_PRESET then
+			return errResult(
+				string.format(
+					"Preset '%s' already has an ultimate in another slot; clear it or replace the existing ultimate slot.",
+					weaponTag
+				)
+			)
+		end
+	end
+
+	local ok = AbilityDataService.SetPresetSlot(who, weaponTag, slotIndex, abilityId)
+	if not ok then
+		return errResult(string.format("Failed to set preset (data not loaded for '%s'?).", who.Name))
+	end
+
+	local label = who == sender and "your" or (who.Name .. "'s")
+	return okResult(
+		string.format(
+			"[Dev] Set %s preset [%s] slot %d to %s%s.",
+			label,
+			weaponTag,
+			slotIndex,
+			abilityId,
+			isUlt and " (ultimate)" or ""
+		)
+	)
+end
+
+function runRemoveAbilityPresetSlot(sender: Player, weaponTag: string, slotIndex: number, target: Player?): Result
+	local who = target or sender
+	local ok = AbilityDataService.SetPresetSlot(who, weaponTag, slotIndex, nil)
+	if not ok then
+		return errResult(string.format("Failed to clear slot (data not loaded for '%s'?).", who.Name))
+	end
+	local label = who == sender and "your" or (who.Name .. "'s")
+	return okResult(string.format("[Dev] Cleared %s preset [%s] slot %d.", label, weaponTag, slotIndex))
+end
+
 function runSave(sender: Player, args: { string }): Result
 	local target = resolveTarget(sender, args)
 	if not target then
@@ -230,4 +355,7 @@ return {
 	runData = runData,
 	runInvreport = runInvreport,
 	runSave = runSave,
+	runAbilityPresets = runAbilityPresets,
+	runSetAbilityPreset = runSetAbilityPreset,
+	runRemoveAbilityPresetSlot = runRemoveAbilityPresetSlot,
 }

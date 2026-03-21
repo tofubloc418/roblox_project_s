@@ -7,5 +7,5 @@ return function(context)
 	for i, p in ipairs(list) do
 		context:Reply(("  %d) %s (UserId=%d)"):format(i, p.Name, p.UserId))
 	end
-	return "Done."
+	return ""
 end

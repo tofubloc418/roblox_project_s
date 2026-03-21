@@ -705,9 +705,8 @@ function InventoryService.Initialize()
 	-- Shared slot-update (granular, for future optimisation; created but not fired yet).
 	ensureRemote("SyncSlotUpdate")
 
-	-- Ability preset remotes (folder is shared; AbilityDataService sets up handlers).
+	-- Ability preset remote (folder is shared; AbilityDataService handles RequestSetAbilityPreset).
 	ensureRemote("RequestSetAbilityPreset")
-	ensureRemote("SyncAbilityPresets")
 
 	-- Stubbed runtime-behavior remotes (wired in a future milestone).
 	ensureRemote("RequestAbility")

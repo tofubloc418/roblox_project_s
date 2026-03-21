@@ -1,0 +1,45 @@
+---
+description: Cmdr dev commands, DevCommandRunner, and DataService usage from server command handlers
+globs: src/server/serverNormalIsland/Commands/**/*.luau
+alwaysApply: false
+---
+
+# Cmdr dev commands & DataService
+
+## DataService method calls (server)
+
+`DataServiceBootstrap.GetDataService()` returns the leifstout **server** object. Its APIs are **methods** with `self` as the service: `(self, player, path, ...)`.
+
+- **Always use colon syntax** so `self` is the service, not the player.
+
+```luau
+-- BAD: `player` becomes `self` inside get → errors like
+-- "_data is not a valid member of Player"
+ds.get(player, { "abilityPresets" })
+ds.set(player, path, value)
+
+-- GOOD: matches InventoryService / KeybindsService
+ds:get(player, { "abilityPresets" })
+ds:set(player, path, value)
+ds:hasProfile(player)
+ds:waitForData(player)
+```
+
+The same rule applies anywhere server code uses `DataServiceBootstrap.GetDataService()` (not only Cmdr handlers).
+
+## Profile readiness
+
+Before reading or mutating paths for a `Player`, follow **`InventoryService.getPlayerData`**: if `hasProfile` exists and is false, **`waitForData` / `WaitForData`** before `get`/`set`. Otherwise `get` can error when `_data[player]` is not ready.
+
+## Cmdr server output (no duplicate lines)
+
+Handlers that emit output with **`context:Reply(line)`** in a loop must **`return ""`** at the end—not the last line or `"Done."`. Cmdr also **`AddLine`s the return value** from the server invoke; repeating the last string duplicates that line in the console.
+
+```luau
+for _, line in ipairs(result.lines) do
+	context:Reply(line)
+end
+return ""
+```
+
+Commands that **only** `return "message"` (no `Reply`) are fine as-is.

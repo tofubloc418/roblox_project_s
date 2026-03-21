@@ -38,17 +38,14 @@ export type HudLoadoutAppProps = {
 local function HudLoadoutApp(props: HudLoadoutAppProps)
 	local state = props.state
 
-	-- Resolve quick-slot current item icon
 	local quickImageId: string = ""
-	if state.currentQuickSlotIndex then
-		local currentItem = state.quickUseItems[state.currentQuickSlotIndex]
-		if currentItem then
-			local icon = ItemIconResolver.getIconForItem(currentItem.itemId)
-			quickImageId = icon or ""
-		end
+	local quickSlotIdx = state.currentQuickSlotIndex or 1
+	local currentItem = state.quickUseItems[quickSlotIdx]
+	if currentItem then
+		local icon = ItemIconResolver.getIconForItem(currentItem.itemId)
+		quickImageId = icon or ""
 	end
 
-	-- Resolve weapon icons
 	local weapon1ImageId = ""
 	local weapon2ImageId = ""
 	if state.weapon1 then

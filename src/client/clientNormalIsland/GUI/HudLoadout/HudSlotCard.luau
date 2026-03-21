@@ -50,6 +50,7 @@ local function HudSlotCard(props: HudSlotCardProps)
 
 		Slot = React.createElement("ImageButton", {
 			Name = "SlotVisual",
+			key = if imageId == "" then "empty" else imageId,
 			Size = UDim2.new(0, size, 0, size),
 			BackgroundColor3 = C.Slot,
 			BackgroundTransparency = C.SlotTransparency,

@@ -26,7 +26,7 @@ local _state: HudLoadoutState = {
 	weapon1               = nil,
 	weapon2               = nil,
 	quickUseItems         = {},
-	currentQuickSlotIndex = nil,
+	currentQuickSlotIndex = 1,
 	flashlightOn          = false,
 }
 
@@ -126,7 +126,7 @@ function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayloa
 		weapon1               = w1,
 		weapon2               = w2,
 		quickUseItems         = quickItems,
-		currentQuickSlotIndex = payload.quickUse.currentSlotIndex or _state.currentQuickSlotIndex,
+		currentQuickSlotIndex = payload.quickUse.currentSlotIndex or _state.currentQuickSlotIndex or 1,
 		flashlightOn          = _state.flashlightOn,
 	}
 	_notify()
@@ -240,9 +240,29 @@ local function refreshFromDataService()
 	end
 end
 
+-- Deferred refresh: multi-path moves replicate in steps; reading next frame avoids stale quick-use icons.
+local refreshDeferred = false
+local function scheduleRefreshFromDataService()
+	if refreshDeferred then
+		return
+	end
+	refreshDeferred = true
+	task.defer(function()
+		refreshDeferred = false
+		refreshFromDataService()
+	end)
+end
+
+local function connectSignal(sig: any?, handler: () -> ())
+	if sig and type(sig.Connect) == "function" then
+		sig:Connect(handler)
+	end
+end
+
 local function connectDataService()
 	local client = DataServiceClient
-	if not (client :: any).networker then
+	local clientAny = client :: any
+	if not clientAny.networker then
 		client:init()
 	end
 	client:waitForData()
@@ -255,10 +275,11 @@ local function connectDataService()
 	refreshFromDataService()
 
 	for _, path in ipairs({ { "inventory" }, { "equipment" }, { "quickUse" } }) do
-		local sig = client:getChangedSignal(path)
-		if sig and type(sig.Connect) == "function" then
-			sig:Connect(refreshFromDataService)
-		end
+		connectSignal(client:getChangedSignal(path), scheduleRefreshFromDataService)
+	end
+
+	if type(clientAny.getIndexChangedSignal) == "function" then
+		connectSignal(clientAny:getIndexChangedSignal({ "quickUse", "slots" }), scheduleRefreshFromDataService)
 	end
 end
 

@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AbilityDataService = require(script.Parent:WaitForChild("AbilityDataService"))
 local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
+local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
 
@@ -29,14 +30,16 @@ local _abilityStarted: RemoteEvent
 
 -- Resolve preset key from equipment.
 local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): string
-	if not equipment then return "Unarmed" end
+	if not equipment then
+		return ItemEnums.WeaponTag.Fists
+	end
 	if equipment.Weapon1 and equipment.Weapon1.tid then
 		return GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")
 	end
 	if equipment.Weapon2 and equipment.Weapon2.tid then
 		return GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon2")
 	end
-	return "Unarmed"
+	return ItemEnums.WeaponTag.Fists
 end
 
 -- Creates RequestUseAbility + AbilityStarted remotes (must run after InventoryService.Initialize()).

@@ -18,7 +18,7 @@
 -- HOW TO QUERY:
 --   local template = ItemRegistry.GetTemplate("IronGreatsword")
 --   local allWeapons = ItemRegistry.GetTemplatesByCategory("Weapon")
---   local greatswords = ItemRegistry.GetTemplatesBySubcategory("Greatsword")
+--   local melee = ItemRegistry.GetTemplatesBySubcategory("MeleeWeapon")
 
 local ItemRegistry = {}
 

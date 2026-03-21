@@ -183,8 +183,24 @@ ThemeConfig.HudLoadout = {
 	ABILITY BAR (bottom-center, 5 ability slots)
 ]]
 ThemeConfig.AbilityBar = {
-	SlotSize = 48,
-	SlotGap  = 6,
+	SlotSize = 56,
+	SlotGap = 8,
+	KeyLabelFontSize = 15,
+	KeyLabelHeight = 20,
+	KeyLabelToSlotGap = 5,
+	-- HUD-only: squared like PlayerStatsHUD bar outlines; inner rim for depth
+	HudCornerRadius = 0,
+	HudInset = 3,
+	HudOuterStroke = {
+		Default = Color3.fromRGB(248, 249, 255),
+		DefaultTransparency = 0.5,
+		DefaultThickness = 2,
+	},
+	HudInnerStroke = {
+		Color = Color3.fromRGB(12, 12, 18),
+		Transparency = 0.55,
+		Thickness = 1,
+	},
 }
 
 --[[

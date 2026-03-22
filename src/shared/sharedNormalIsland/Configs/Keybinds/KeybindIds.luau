@@ -3,6 +3,7 @@
 local KeybindIds = {
 	Sprint = "Sprint",
 	Jump = "Jump",
+	Interact = "Interact",
 
 	AbilitySlot1 = "AbilitySlot1",
 	AbilitySlot2 = "AbilitySlot2",
@@ -12,6 +13,7 @@ local KeybindIds = {
 
 	HudWeapon1 = "HudWeapon1",
 	HudWeapon2 = "HudWeapon2",
+	HudSwapWeapons = "HudSwapWeapons",
 	HudFists = "HudFists",
 	HudQuickUse = "HudQuickUse",
 	HudFlashlight = "HudFlashlight",

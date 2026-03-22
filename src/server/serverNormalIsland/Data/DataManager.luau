@@ -51,7 +51,7 @@ function DataManager.createDefaultData(userId: number): PlayerData
 
 		quickUse = {
 			slots            = {},
-			currentSlotIndex = nil,
+			currentSlotIndex = 1,
 		},
 
 		stash = { maxSlots = 100, slots = {} },

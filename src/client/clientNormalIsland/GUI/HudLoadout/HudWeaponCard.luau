@@ -22,13 +22,17 @@ export type HudWeaponCardProps = {
 	isActive: boolean,
 	showVisual: boolean,
 	width: number?,
+	hudScale: number?,
 	layoutOrder: number?,
 	onActivated: (() -> ())?,
 }
 
 local function HudWeaponCard(props: HudWeaponCardProps)
 	local size = props.width or H.SlotSize
+	local hudScale = props.hudScale or 1
 	local imageId = props.iconImage or ""
+	local scaledSlotHeight = math.round(H.SlotSize * hudScale)
+	local scaledCorner = math.round(R.Slot * hudScale)
 
 	local clipRef = React.useRef(nil :: Frame?)
 	local prevShowVisual = React.useRef(props.showVisual)
@@ -38,7 +42,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 		local frame = clipRef.current
 		if not frame then return end
 
-		local targetHeight = if props.showVisual then H.SlotSize else 0
+		local targetHeight = if props.showVisual then scaledSlotHeight else 0
 		local targetSize = UDim2.new(0, size, 0, targetHeight)
 
 		if isFirstRender.current then
@@ -49,9 +53,9 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 			local tween = TweenService:Create(frame, TWEEN_INFO, { Size = targetSize })
 			tween:Play()
 		end
-	end, { props.showVisual, size } :: { any })
+	end, { props.showVisual, size, scaledSlotHeight } :: { any })
 
-	local initialVisualHeight = if props.showVisual then H.SlotSize else 0
+	local initialVisualHeight = if props.showVisual then scaledSlotHeight else 0
 
 	return React.createElement("Frame", {
 		Name = "HudWeaponCard_" .. props.keybind,
@@ -73,6 +77,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 			label = nil,
 			isActive = props.isActive,
 			width = size,
+			hudScale = hudScale,
 			layoutOrder = 1,
 		}),
 
@@ -86,7 +91,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 		}, {
 			Slot = React.createElement("ImageButton", {
 				Name = "WeaponSlot",
-				Size = UDim2.new(0, size, 0, H.SlotSize),
+				Size = UDim2.new(0, size, 0, scaledSlotHeight),
 				BackgroundColor3 = C.Slot,
 				BackgroundTransparency = C.SlotTransparency,
 				AutoButtonColor = false,
@@ -96,7 +101,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 				[React.Event.Activated] = props.onActivated,
 			}, {
 				Corner = React.createElement("UICorner", {
-					CornerRadius = UDim.new(0, R.Slot),
+					CornerRadius = UDim.new(0, scaledCorner),
 				}),
 				Stroke = React.createElement("UIStroke", {
 					Thickness = C.Stroke.Thickness,

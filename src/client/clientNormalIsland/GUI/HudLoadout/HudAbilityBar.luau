@@ -1,12 +1,16 @@
 --!strict
--- Bottom HUD: five ability preset slots for the active weapon bar preset key.
+-- Bottom-center ability bar (5 slots) for the active weapon preset.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local React = require(ReplicatedStorage:WaitForChild("Packages"):WaitForChild("React")) :: any
 
 local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
+local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
 local AbilityPresetSlotUtils = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("AbilityPresetSlotUtils"))
 local AbilityPresetSlot = require(script.Parent.Parent:WaitForChild("Common"):WaitForChild("AbilityPresetSlot"))
+local AbilityStateClient = require(script.Parent.Parent.Parent:WaitForChild("Abilities"):WaitForChild("AbilityStateClient"))
+local KeybindsClient = require(script.Parent.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 local ThemeConfig = require(script.Parent.Parent:WaitForChild("ThemeConfig"))
 local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 
@@ -17,50 +21,104 @@ local L_AB = LayoutConfig.AbilityBar
 
 local SLOT_COUNT = 5
 
+local ABILITY_SLOT_IDS = {
+	KeybindIds.AbilitySlot1,
+	KeybindIds.AbilitySlot2,
+	KeybindIds.AbilitySlot3,
+	KeybindIds.AbilitySlot4,
+	KeybindIds.AbilitySlot5,
+}
+
 export type HudAbilityBarProps = {
 	preset: SerializedPreset?,
+	hudScale: number?,
 }
 
 local function HudAbilityBar(props: HudAbilityBarProps)
 	local preset = props.preset
-	local slotSize = AB.SlotSize
-	local gap = AB.SlotGap
+	local hudScale = props.hudScale or 1
+	local slotSize = math.round(AB.SlotSize * hudScale)
+	local gap = math.round(AB.SlotGap * hudScale)
+	local keyGap = math.round(AB.KeyLabelToSlotGap * hudScale)
+	local keyH = math.round(AB.KeyLabelHeight * hudScale)
+	local keyFont = math.round(AB.KeyLabelFontSize * hudScale)
+	local offsetY = math.round(L_AB.OffsetY * hudScale)
 
 	local totalWidth = SLOT_COUNT * slotSize + (SLOT_COUNT - 1) * gap
-	local totalHeight = slotSize
+	local totalHeight = keyH + keyGap + slotSize
 
 	local slotElements: { [string]: any } = {}
 	for i = 1, SLOT_COUNT do
 		local aid, isUlt = AbilityPresetSlotUtils.readSlot(preset, i)
-		slotElements["Slot" .. i] = React.createElement(AbilityPresetSlot, {
-			aid = aid,
-			isUlt = isUlt,
-			variant = "hud",
-			pixelSize = slotSize,
-			layoutOrder = i,
-			zIndex = LayoutConfig.ZIndex.Content,
+		local actionId = ABILITY_SLOT_IDS[i]
+		local keyText = KeybindsClient.getDisplayString(actionId)
+		local cdRem = 0
+		local cdDur = 0
+		if aid then
+			cdRem, cdDur = AbilityStateClient.getDominantCooldown(aid)
+		end
+		local abilityBlocked = if aid then AbilityStateClient.isAbilityBlocked(aid) else false
+		slotElements["Col" .. i] = React.createElement("Frame", {
+			Name = "HudAbilityColumn_" .. i,
+			Size = UDim2.fromOffset(slotSize, totalHeight),
+			BackgroundTransparency = 1,
+			LayoutOrder = i,
+		}, {
+			ColLayout = React.createElement("UIListLayout", {
+				FillDirection = Enum.FillDirection.Vertical,
+				HorizontalAlignment = Enum.HorizontalAlignment.Center,
+				VerticalAlignment = Enum.VerticalAlignment.Top,
+				SortOrder = Enum.SortOrder.LayoutOrder,
+				Padding = UDim.new(0, keyGap),
+			}),
+			KeyLabel = React.createElement("TextLabel", {
+				Name = "KeyLabel",
+				Size = UDim2.new(1, 0, 0, keyH),
+				BackgroundTransparency = 1,
+				Text = keyText,
+				TextColor3 = ThemeConfig.Colors.Text.Primary,
+				Font = ThemeConfig.Font.Family,
+				TextSize = keyFont,
+				TextXAlignment = Enum.TextXAlignment.Center,
+				TextYAlignment = Enum.TextYAlignment.Bottom,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				LayoutOrder = 1,
+				ZIndex = LayoutConfig.ZIndex.Content,
+			}),
+			Slot = React.createElement(AbilityPresetSlot, {
+				aid = aid,
+				isUlt = isUlt,
+				variant = "hud",
+				pixelSize = slotSize,
+				hudScale = hudScale,
+				layoutOrder = 2,
+				zIndex = LayoutConfig.ZIndex.Content,
+				hudCooldownRemaining = cdRem,
+				hudCooldownDuration = cdDur,
+				hudAbilityBlocked = abilityBlocked,
+			}),
 		})
 	end
 
 	return React.createElement("Frame", {
 		Name = "HudAbilityBar",
 		AnchorPoint = L_AB.AnchorPoint,
-		Position = UDim2.new(0.5, 0, 1, L_AB.OffsetY),
+		Position = UDim2.new(0.5, 0, 1, offsetY),
 		Size = UDim2.fromOffset(totalWidth, totalHeight),
 		BackgroundTransparency = 1,
 	}, {
 		Layout = React.createElement("UIListLayout", {
 			FillDirection = Enum.FillDirection.Horizontal,
-			VerticalAlignment = Enum.VerticalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Bottom,
 			HorizontalAlignment = Enum.HorizontalAlignment.Center,
 			SortOrder = Enum.SortOrder.LayoutOrder,
 			Padding = UDim.new(0, gap),
 		}),
-		Slot1 = slotElements["Slot1"],
-		Slot2 = slotElements["Slot2"],
-		Slot3 = slotElements["Slot3"],
-		Slot4 = slotElements["Slot4"],
-		Slot5 = slotElements["Slot5"],
+		Col1 = slotElements["Col1"],
+		Col2 = slotElements["Col2"],
+		Col3 = slotElements["Col3"],
+		Col4 = slotElements["Col4"],
+		Col5 = slotElements["Col5"],
 	})
 end
 

@@ -1,6 +1,5 @@
 --!strict
--- AbilityExecutionService
--- Dispatches RequestUseAbility → per-ability Execute() and notifies the client.
+-- RequestUseAbility → CanUse/Execute; fires AbilityStarted to all clients. Cooldowns use AbilityStateRuntime.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -8,7 +7,7 @@ local AbilityDataService = require(script.Parent:WaitForChild("AbilityDataServic
 local GetPresetKey = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("GetPresetKey"))
 local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes")) :: any
 
 type StoredEquipmentData = InventoryTypes.StoredEquipmentData
 
@@ -28,7 +27,6 @@ local AbilityExecutionService = {}
 local _requestUseAbility: RemoteEvent
 local _abilityStarted: RemoteEvent
 
--- Resolve preset key from equipment.
 local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): string
 	if not equipment then
 		return ItemEnums.WeaponTag.Fists
@@ -42,7 +40,37 @@ local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): strin
 	return ItemEnums.WeaponTag.Fists
 end
 
--- Creates RequestUseAbility + AbilityStarted remotes (must run after InventoryService.Initialize()).
+local function allowedBarPresetKeys(equipment: StoredEquipmentData?): { [string]: boolean }
+	local allowed: { [string]: boolean } = {}
+	if not equipment then
+		allowed[ItemEnums.WeaponTag.Fists] = true
+		return allowed
+	end
+	local anyWeapon = false
+	if equipment.Weapon1 and equipment.Weapon1.tid then
+		allowed[GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")] = true
+		anyWeapon = true
+	end
+	if equipment.Weapon2 and equipment.Weapon2.tid then
+		allowed[GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon2")] = true
+		anyWeapon = true
+	end
+	if not anyWeapon then
+		allowed[ItemEnums.WeaponTag.Fists] = true
+	end
+	return allowed
+end
+
+local function resolveBarPresetKey(equipment: StoredEquipmentData?, clientKey: any): string
+	if type(clientKey) == "string" and #clientKey > 0 then
+		local ok = allowedBarPresetKeys(equipment)[clientKey]
+		if ok then
+			return clientKey
+		end
+	end
+	return getPresetKeyFromEquipment(equipment)
+end
+
 function AbilityExecutionService.Initialize()
 	local remoteFolder = ReplicatedStorage:WaitForChild("InventoryRemotes")
 
@@ -60,25 +88,30 @@ function AbilityExecutionService.Initialize()
 	_requestUseAbility = ensureRemote("RequestUseAbility")
 	_abilityStarted = ensureRemote("AbilityStarted")
 
-	_requestUseAbility.OnServerEvent:Connect(function(player: Player, slotIndex: number, _presetKeyOptional: string?)
+	_requestUseAbility.OnServerEvent:Connect(function(player: Player, slotIndex: number, clientBarPresetKey: any?)
+		if type(slotIndex) ~= "number" or slotIndex < 1 or slotIndex > 5 or slotIndex % 1 ~= 0 then
+			return
+		end
 		local character = player.Character
 		if not character then return end
 
 		local humanoid = character:FindFirstChildOfClass("Humanoid")
-		local rootPart = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart
+		local hrp = character:FindFirstChild("HumanoidRootPart")
+		local rootPart: BasePart? = if hrp and hrp:IsA("BasePart") then hrp else character.PrimaryPart
 
 		local equipment = InventoryService.GetEquipment(player)
-		local presetKey = getPresetKeyFromEquipment(equipment)
+		local presetKey = resolveBarPresetKey(equipment, clientBarPresetKey)
 
 		local preset = AbilityDataService.GetPresetForKey(player, presetKey)
-		local slot = preset[slotIndex]
-		if not slot or not slot.aid or #slot.aid == 0 then
+		local slotRow = InventoryTypes.getSlotItem(preset, slotIndex)
+		if not slotRow or type(slotRow) ~= "table" then
+			return
+		end
+		local abilityId = slotRow.aid
+		if type(abilityId) ~= "string" or #abilityId == 0 then
 			return
 		end
 
-		local abilityId = slot.aid
-
-		-- Resolve weapon template id for the weapon used with this preset (for damage context).
 		local weaponTemplateId: string? = nil
 		if equipment and equipment.Weapon1 and equipment.Weapon1.tid then
 			local key1 = GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")
@@ -117,6 +150,14 @@ function AbilityExecutionService.Initialize()
 			return
 		end
 
+		local canUseFn = abilityScript.CanUse
+		if type(canUseFn) == "function" then
+			local okCan, allowed = pcall(canUseFn, player, context)
+			if not okCan or allowed ~= true then
+				return
+			end
+		end
+
 		local executeFn = abilityScript.Execute
 		if type(executeFn) ~= "function" then
 			return
@@ -124,7 +165,7 @@ function AbilityExecutionService.Initialize()
 
 		local success = executeFn(player, context)
 		if success then
-			_abilityStarted:FireClient(player, abilityId, slotIndex)
+			_abilityStarted:FireAllClients(player.UserId, abilityId, slotIndex)
 		end
 	end)
 end

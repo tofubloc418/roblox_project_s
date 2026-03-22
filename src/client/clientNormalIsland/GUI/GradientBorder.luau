@@ -22,6 +22,8 @@ export type GradientBorderProps = {
 	innerColor: Color3?,
 	-- Optional: pass through to content
 	layoutOrder: number?,
+	-- When true, gradient rim stays visible (and animates) without hover — e.g. HUD ultimate slot
+	alwaysShowGradient: boolean?,
 	-- Content children (the slot element)
 	children: { [string]: any }?,
 	-- When set, this ref is assigned the root Frame (same area that receives hover for gradient). Use for drop-target hit-testing so it matches gradient highlight.
@@ -53,6 +55,7 @@ local function GradientBorder(props: GradientBorderProps)
 	local innerColor = props.innerColor or ThemeConfig.Colors.Slot
 
 	local isHovered, setIsHovered = React.useState(false)
+	local alwaysShowGradient = props.alwaysShowGradient == true
 	local gradientRef = React.useRef(nil :: Instance?)
 	local rotationRef = React.useRef(0)
 	local speedRef = React.useRef(ANIMATION_SPEED * (1 + (math.random() - 0.5) * RANDOM_SPEED_VARIANCE))
@@ -102,7 +105,9 @@ local function GradientBorder(props: GradientBorderProps)
 	end
 
 	React.useEffect(function()
-		if not isHovered then return end
+		if not isHovered and not alwaysShowGradient then
+			return
+		end
 
 		local connection = RunService.Heartbeat:Connect(function(dt)
 			local gradient = gradientRef.current
@@ -115,7 +120,7 @@ local function GradientBorder(props: GradientBorderProps)
 		return function()
 			connection:Disconnect()
 		end
-	end, { isHovered })
+	end, { isHovered, alwaysShowGradient } :: { any })
 
 	local function onMouseEnter()
 		setIsHovered(true)
@@ -168,7 +173,7 @@ local function GradientBorder(props: GradientBorderProps)
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-			BackgroundTransparency = isHovered and 0 or 1,
+			BackgroundTransparency = (isHovered or alwaysShowGradient) and 0 or 1,
 			ZIndex = LayoutConfig.ZIndex.GradientLayer,
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, cornerRadius + borderWidth) }),

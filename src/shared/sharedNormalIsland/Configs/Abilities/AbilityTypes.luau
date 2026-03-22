@@ -1,6 +1,5 @@
 --!strict
--- Ability template types used by AbilityRegistry and UI.
--- damageScaling is passed to DamageService options.ability.
+-- AbilityRegistry / UI template types.
 
 local AbilityTypes = {}
 
@@ -16,8 +15,8 @@ export type AbilityConfig = {
 	isUltimate: boolean,
 	description: string?,
 	compatibleTags: { string },
-	-- Optional: defaults to { adScaling = 1.0, mdScaling = 1.0 }.
 	damageScaling: AbilityDamageScaling?,
+	params: { [string]: any }?,
 }
 
 return AbilityTypes

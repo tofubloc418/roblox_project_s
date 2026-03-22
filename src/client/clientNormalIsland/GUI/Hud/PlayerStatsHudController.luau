@@ -9,12 +9,27 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 local HudBuilder = require(script.Parent:WaitForChild("HudBuilder"))
+local LayoutConfig = require(script.Parent.Parent:WaitForChild("LayoutConfig"))
 
 local Controller = {}
 local statsHud
 
+local function getViewportSize(): Vector2
+	local cam = workspace.CurrentCamera
+	return (cam and cam.ViewportSize) or Vector2.new(1920, 1080)
+end
+
+local function applyHudScale()
+	if not statsHud or not statsHud.UIScaleInstance then
+		return
+	end
+
+	statsHud.UIScaleInstance.Scale = LayoutConfig.getHudScale(getViewportSize())
+end
+
 function Controller:Initialize()
 	statsHud = HudBuilder.buildPlayerStatsHud(playerGui)
+	applyHudScale()
 end
 
 function Controller:Start()
@@ -27,6 +42,7 @@ function Controller:Start()
 	end
 	RunService.Heartbeat:Connect(function()
 		if not statsHud then return end
+		applyHudScale()
 		local character = player.Character
 		local hum = character and character:FindFirstChildOfClass("Humanoid")
 		if hum then

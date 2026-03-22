@@ -19,45 +19,55 @@ local entries: { [string]: KeybindEntry } = {
 		category = "Gameplay",
 		description = "Jump",
 	},
+	[KeybindIds.Interact] = {
+		default = { Enum.KeyCode.F },
+		category = "Gameplay",
+		description = "Interact",
+	},
 
 	[KeybindIds.AbilitySlot1] = {
-		default = { Enum.KeyCode.R },
+		default = { Enum.KeyCode.One },
 		category = "Abilities",
 		description = "Use ability slot 1",
 	},
 	[KeybindIds.AbilitySlot2] = {
-		default = { Enum.KeyCode.T },
+		default = { Enum.KeyCode.Two },
 		category = "Abilities",
 		description = "Use ability slot 2",
 	},
 	[KeybindIds.AbilitySlot3] = {
-		default = { Enum.KeyCode.Y },
+		default = { Enum.KeyCode.Three },
 		category = "Abilities",
 		description = "Use ability slot 3",
 	},
 	[KeybindIds.AbilitySlot4] = {
-		default = { Enum.KeyCode.G },
+		default = { Enum.KeyCode.Four },
 		category = "Abilities",
 		description = "Use ability slot 4",
 	},
 	[KeybindIds.AbilitySlot5] = {
-		default = { Enum.KeyCode.H },
+		default = { Enum.KeyCode.Five },
 		category = "Abilities",
 		description = "Use ability slot 5",
 	},
 
 	[KeybindIds.HudWeapon1] = {
-		default = { Enum.KeyCode.One },
+		default = { Enum.KeyCode.Z },
 		category = "HudLoadout",
 		description = "Equip weapon slot 1",
 	},
 	[KeybindIds.HudWeapon2] = {
-		default = { Enum.KeyCode.Two },
+		default = { Enum.KeyCode.C },
 		category = "HudLoadout",
 		description = "Equip weapon slot 2",
 	},
+	[KeybindIds.HudSwapWeapons] = {
+		default = { Enum.KeyCode.E },
+		category = "HudLoadout",
+		description = "Swap between weapon slots / equip primary weapon",
+	},
 	[KeybindIds.HudFists] = {
-		default = { Enum.KeyCode.Three },
+		default = { Enum.KeyCode.X },
 		category = "HudLoadout",
 		description = "Equip fists",
 	},
@@ -67,7 +77,7 @@ local entries: { [string]: KeybindEntry } = {
 		description = "Use quick slot / radial",
 	},
 	[KeybindIds.HudFlashlight] = {
-		default = { Enum.KeyCode.F },
+		default = { Enum.KeyCode.Zero },
 		category = "HudLoadout",
 		description = "Toggle flashlight",
 	},

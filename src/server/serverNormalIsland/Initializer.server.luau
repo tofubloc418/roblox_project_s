@@ -1,5 +1,4 @@
--- Initializer
--- Server entry point. Starts all services in dependency order.
+-- Server bootstrap: services in dependency order.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players           = game:GetService("Players")
@@ -12,6 +11,7 @@ local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
 local DataServiceBootstrap = require(script.Parent:WaitForChild(DATA_FOLDER):WaitForChild(DATA_SERVICE_BOOTSTRAP_NAME))
 local InventoryService  = require(script.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local AbilityDataService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityDataService"))
+local AbilityStateRuntime = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityStateRuntime"))
 local AbilityExecutionService = require(script.Parent:WaitForChild("Abilities"):WaitForChild("AbilityExecutionService"))
 local KeybindsService = require(script.Parent:WaitForChild("Input"):WaitForChild("KeybindsService"))
 
@@ -47,12 +47,11 @@ local function ensureMatchInfo()
 end
 ensureMatchInfo()
 
--- Service boot
-
 DataServiceBootstrap.Initialize()
 KeybindsService.Initialize()
 InventoryService.Initialize()
 AbilityDataService.Initialize()
+AbilityStateRuntime.Initialize()
 AbilityExecutionService.Initialize()
 StatsService:Initialize()
 WeaponService:Initialize()
@@ -159,6 +158,7 @@ _G.Services = {
 	KeybindsService = KeybindsService,
 	InventoryService  = InventoryService,
 	AbilityDataService = AbilityDataService,
+	AbilityStateRuntime = AbilityStateRuntime,
 	AbilityExecutionService = AbilityExecutionService,
 	StatsService      = StatsService,
 	DamageService     = DamageService,

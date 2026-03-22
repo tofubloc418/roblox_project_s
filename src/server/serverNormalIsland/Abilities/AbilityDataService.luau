@@ -1,5 +1,5 @@
 --!strict
--- abilityPresets[presetKey]: five slots; stored with string keys "1".."5". Batch updates via TryApplyPresetOperations.
+-- abilityPresets in DataService; slots stored as string keys "1".."5". Batch ops via TryApplyPresetOperations.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -20,14 +20,31 @@ export type PresetOperation = {
 }
 
 local function waitForProfile(player: Player): boolean
-	if not DataService:hasProfile(player) then
-		DataService:waitForData(player)
-	end
+	DataServiceBootstrap.WaitForPlayerData(player)
 	return true
 end
 
 local function rawGetAbilityPresets(player: Player): AbilityPresetsData?
-	return DataService:get(player, { "abilityPresets" }) :: AbilityPresetsData?
+	local ds: any = DataService
+	local pathGet: any = nil
+	if type(ds.get) == "function" then
+		pathGet = ds:get(player, { "abilityPresets" })
+	elseif type(ds.Get) == "function" then
+		pathGet = ds:Get(player, { "abilityPresets" })
+	end
+	if type(pathGet) == "table" then
+		return pathGet :: AbilityPresetsData?
+	end
+	local root: any = nil
+	if type(ds.get) == "function" then
+		root = ds:get(player, {})
+	elseif type(ds.Get) == "function" then
+		root = ds:Get(player, {})
+	end
+	if type(root) == "table" and type(root.abilityPresets) == "table" then
+		return root.abilityPresets :: AbilityPresetsData?
+	end
+	return nil
 end
 
 local function setAtPath(player: Player, path: { string }, value: any)
@@ -103,6 +120,7 @@ local function workingToStoredPreset(w: WorkingPreset): SerializedPreset
 end
 
 local function validateWorkingPreset(presetKey: string, w: WorkingPreset): string?
+	local seenAid: { [string]: boolean } = {}
 	for i = 1, MAX_PRESET_SLOTS do
 		local slot = w[i]
 		if not slot then
@@ -116,6 +134,10 @@ local function validateWorkingPreset(presetKey: string, w: WorkingPreset): strin
 		if not table.find(config.compatibleTags, presetKey) then
 			return string.format("'%s' is not compatible with '%s'.", aid, presetKey)
 		end
+		if seenAid[aid] then
+			return string.format("Preset '%s' cannot include the same ability more than once ('%s').", presetKey, aid)
+		end
+		seenAid[aid] = true
 	end
 	if countUltimatesWorking(w) > MAX_ULTIMATE_PER_PRESET then
 		return string.format("Preset '%s' can only have one ultimate ability.", presetKey)
@@ -235,29 +257,66 @@ function AbilityDataService.Initialize()
 	local remoteFolder = ReplicatedStorage:WaitForChild("InventoryRemotes")
 	local requestApplyOps = remoteFolder:WaitForChild("RequestApplyAbilityPresetOps") :: RemoteFunction
 
-	requestApplyOps.OnServerInvoke = function(player: Player, ops: any): any
+	local existingBf = remoteFolder:FindFirstChild("ApplyAbilityPresetOpsBindable")
+	if existingBf and not existingBf:IsA("BindableFunction") then
+		existingBf:Destroy()
+		existingBf = nil
+	end
+	local applyBindable = if existingBf
+		then existingBf :: BindableFunction
+		else (function()
+			local bf = Instance.new("BindableFunction")
+			bf.Name = "ApplyAbilityPresetOpsBindable"
+			bf.Parent = remoteFolder
+			return bf
+		end)()
+
+	local function normalizePresetOperations(ops: any): ({ PresetOperation }, string?)
 		if type(ops) ~= "table" then
-			return { ok = false, error = "Invalid request." }
+			return {}, "Invalid request."
 		end
 		local normalized: { PresetOperation } = {}
 		for _, op in ipairs(ops) do
 			if type(op) ~= "table" then
-				return { ok = false, error = "Invalid request." }
+				return {}, "Invalid request."
 			end
 			local pk = op.presetKey
 			local si = op.slotIndex
 			local aid = op.abilityId
 			if type(pk) ~= "string" or type(si) ~= "number" then
-				return { ok = false, error = "Invalid request." }
+				return {}, "Invalid request."
 			end
 			if aid ~= nil and type(aid) ~= "string" then
-				return { ok = false, error = "Invalid request." }
+				return {}, "Invalid request."
 			end
 			table.insert(normalized, {
 				presetKey = pk,
 				slotIndex = si,
 				abilityId = aid,
 			})
+		end
+		return normalized, nil
+	end
+
+	applyBindable.OnInvoke = function(player: Player, ops: any): any
+		if typeof(player) ~= "Instance" or not player:IsA("Player") then
+			return { ok = false, error = "Invalid player." }
+		end
+		local normalized, normErr = normalizePresetOperations(ops)
+		if normErr then
+			return { ok = false, error = normErr }
+		end
+		local ok, err = AbilityDataService.TryApplyPresetOperations(player, normalized)
+		return { ok = ok, error = err }
+	end
+
+	requestApplyOps.OnServerInvoke = function(player: Player, ops: any): any
+		if type(ops) ~= "table" then
+			return { ok = false, error = "Invalid request." }
+		end
+		local normalized, normErr = normalizePresetOperations(ops)
+		if normErr then
+			return { ok = false, error = normErr }
 		end
 		local ok, err = AbilityDataService.TryApplyPresetOperations(player, normalized)
 		if ok then

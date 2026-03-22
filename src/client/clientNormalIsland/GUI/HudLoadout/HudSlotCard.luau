@@ -17,15 +17,19 @@ export type HudSlotCardProps = {
 	iconImage: string?,
 	isActive: boolean,
 	size: number?,
+	hudScale: number?,
 	layoutOrder: number?,
 	onActivated: (() -> ())?,
 }
 
 local function HudSlotCard(props: HudSlotCardProps)
 	local size = props.size or H.SlotSize
+	local hudScale = props.hudScale or 1
 	local imageId = props.iconImage or ""
+	local scaledBarHeight = math.round(H.BarHeight * hudScale)
+	local scaledCorner = math.round(R.Slot * hudScale)
 
-	local totalHeight = H.BarHeight + size
+	local totalHeight = scaledBarHeight + size
 
 	return React.createElement("Frame", {
 		Name = "HudSlotCard_" .. props.keybind,
@@ -45,11 +49,13 @@ local function HudSlotCard(props: HudSlotCardProps)
 			label = nil,
 			isActive = props.isActive,
 			width = size,
+			hudScale = hudScale,
 			layoutOrder = 1,
 		}),
 
 		Slot = React.createElement("ImageButton", {
 			Name = "SlotVisual",
+			key = if imageId == "" then "empty" else imageId,
 			Size = UDim2.new(0, size, 0, size),
 			BackgroundColor3 = C.Slot,
 			BackgroundTransparency = C.SlotTransparency,
@@ -61,7 +67,7 @@ local function HudSlotCard(props: HudSlotCardProps)
 			[React.Event.Activated] = props.onActivated,
 		}, {
 			Corner = React.createElement("UICorner", {
-				CornerRadius = UDim.new(0, R.Slot),
+				CornerRadius = UDim.new(0, scaledCorner),
 			}),
 			Stroke = React.createElement("UIStroke", {
 				Thickness = C.Stroke.Thickness,

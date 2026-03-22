@@ -30,7 +30,7 @@ local L = ThemeConfig.Loadout
 local K = ThemeConfig.KeybindsPage
 
 local SECTION_DEFS: { { title: string, actionIds: { string } } } = {
-	{ title = "GAMEPLAY", actionIds = { KeybindIds.Sprint, KeybindIds.Jump } },
+	{ title = "GAMEPLAY", actionIds = { KeybindIds.Sprint, KeybindIds.Jump, KeybindIds.Interact } },
 	{
 		title = "ABILITIES",
 		actionIds = {
@@ -46,6 +46,7 @@ local SECTION_DEFS: { { title: string, actionIds: { string } } } = {
 		actionIds = {
 			KeybindIds.HudWeapon1,
 			KeybindIds.HudWeapon2,
+			KeybindIds.HudSwapWeapons,
 			KeybindIds.HudFists,
 			KeybindIds.HudQuickUse,
 			KeybindIds.HudFlashlight,

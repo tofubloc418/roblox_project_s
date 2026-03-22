@@ -23,8 +23,6 @@ type HudLoadoutState = HudLoadoutTypes.HudLoadoutState
 local H = ThemeConfig.HudLoadout
 local L = LayoutConfig.HudLoadout
 
-local FISTS_ICON: string? = nil
-
 export type HudLoadoutAppProps = {
 	state: HudLoadoutState,
 	abilityBarPreset: SerializedPreset?,
@@ -47,15 +45,23 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 		quickImageId = icon or ""
 	end
 
+	local fistsIcon = ItemIconResolver.getIconForItem("Fists")
+	local fistsImageId = fistsIcon or ""
+
 	local weapon1ImageId = ""
-	local weapon2ImageId = ""
 	if state.weapon1 then
 		local icon = ItemIconResolver.getIconForItem(state.weapon1.itemId)
 		weapon1ImageId = icon or ""
+	else
+		weapon1ImageId = fistsImageId
 	end
+
+	local weapon2ImageId = ""
 	if state.weapon2 then
 		local icon = ItemIconResolver.getIconForItem(state.weapon2.itemId)
 		weapon2ImageId = icon or ""
+	else
+		weapon2ImageId = fistsImageId
 	end
 
 	-- showVisual: per spec §5, visual is shown for the expandedWeapon slot.
@@ -124,7 +130,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 
 				ColFists = React.createElement(HudSlotCard, {
 					keybind = KeybindsClient.getDisplayString(KeybindIds.HudFists),
-					iconImage = FISTS_ICON,
+					iconImage = fistsImageId ~= "" and fistsImageId or nil,
 					isActive = state.activeSlot == "Fists",
 					size = slotSize,
 					hudScale = hudScale,

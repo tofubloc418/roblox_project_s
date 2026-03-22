@@ -51,6 +51,7 @@ local function HudSlotCard(props: HudSlotCardProps)
 			width = size,
 			hudScale = hudScale,
 			layoutOrder = 1,
+			onActivated = props.onActivated,
 		}),
 
 		Slot = React.createElement("ImageButton", {

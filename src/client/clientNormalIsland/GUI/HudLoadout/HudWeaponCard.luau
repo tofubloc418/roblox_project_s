@@ -79,6 +79,7 @@ local function HudWeaponCard(props: HudWeaponCardProps)
 			width = size,
 			hudScale = hudScale,
 			layoutOrder = 1,
+			onActivated = props.onActivated,
 		}),
 
 		ClipFrame = React.createElement("Frame", {

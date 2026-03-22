@@ -16,6 +16,8 @@ export type HudKeybindBarProps = {
 	width: number,
 	hudScale: number?,
 	layoutOrder: number?,
+	-- When set, bar is clickable (same handler as slot icon below).
+	onActivated: (() -> ())?,
 }
 
 local function HudKeybindBar(props: HudKeybindBarProps)
@@ -31,14 +33,10 @@ local function HudKeybindBar(props: HudKeybindBarProps)
 	local bgTransparency = if isActive then 0 else H.BarInactiveBackgroundTransparency
 	local textColor = if isActive then H.BarActiveText else H.BarInactiveText
 
-	return React.createElement("Frame", {
-		Name = "KeybindBar",
-		Size = UDim2.new(0, props.width, 0, scaledBarHeight),
-		BackgroundColor3 = bgColor,
-		BackgroundTransparency = bgTransparency,
-		LayoutOrder = props.layoutOrder or 1,
-		ZIndex = LayoutConfig.ZIndex.Content,
-	}, {
+	local passClicksToBar = props.onActivated ~= nil
+	local labelActive = not passClicksToBar
+
+	local barChildren: { [string]: any } = {
 		Corner = React.createElement("UICorner", {
 			CornerRadius = UDim.new(0, scaledCorner),
 		}),
@@ -56,24 +54,48 @@ local function HudKeybindBar(props: HudKeybindBarProps)
 			TextSize = scaledFontSize,
 			TextXAlignment = Enum.TextXAlignment.Center,
 			TextYAlignment = Enum.TextYAlignment.Center,
-			ZIndex = LayoutConfig.ZIndex.Content,
+			ZIndex = LayoutConfig.ZIndex.Content + 1,
+			Active = labelActive,
+			Selectable = labelActive,
 		}),
 
-		NameLabel = if useWeaponLayout then React.createElement("TextLabel", {
-			Name = "NameLabel",
-			Size = UDim2.new(1, -nameOffset, 1, 0),
-			Position = UDim2.new(0, nameOffset, 0, 0),
-			BackgroundTransparency = 1,
-			Text = props.label or "",
-			TextColor3 = textColor,
-			Font = ThemeConfig.Font.Family,
-			TextSize = scaledFontSize,
-			TextXAlignment = Enum.TextXAlignment.Right,
-			TextYAlignment = Enum.TextYAlignment.Center,
-			TextTruncate = Enum.TextTruncate.AtEnd,
-			ZIndex = LayoutConfig.ZIndex.Content,
-		}) else nil,
-	})
+		NameLabel = if useWeaponLayout
+			then React.createElement("TextLabel", {
+				Name = "NameLabel",
+				Size = UDim2.new(1, -nameOffset, 1, 0),
+				Position = UDim2.new(0, nameOffset, 0, 0),
+				BackgroundTransparency = 1,
+				Text = props.label or "",
+				TextColor3 = textColor,
+				Font = ThemeConfig.Font.Family,
+				TextSize = scaledFontSize,
+				TextXAlignment = Enum.TextXAlignment.Right,
+				TextYAlignment = Enum.TextYAlignment.Center,
+				TextTruncate = Enum.TextTruncate.AtEnd,
+				ZIndex = LayoutConfig.ZIndex.Content + 1,
+				Active = labelActive,
+				Selectable = labelActive,
+			})
+			else nil,
+	}
+
+	local rootProps: { [string]: any } = {
+		Name = "KeybindBar",
+		Size = UDim2.new(0, props.width, 0, scaledBarHeight),
+		BackgroundColor3 = bgColor,
+		BackgroundTransparency = bgTransparency,
+		LayoutOrder = props.layoutOrder or 1,
+		ZIndex = LayoutConfig.ZIndex.Content,
+	}
+
+	if passClicksToBar then
+		rootProps.AutoButtonColor = false
+		rootProps.Text = ""
+		rootProps[React.Event.Activated] = props.onActivated
+		return React.createElement("TextButton", rootProps, barChildren)
+	end
+
+	return React.createElement("Frame", rootProps, barChildren)
 end
 
 return HudKeybindBar

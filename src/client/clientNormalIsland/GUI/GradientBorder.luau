@@ -20,10 +20,14 @@ export type GradientBorderProps = {
 	cornerRadius: number?,
 	-- Background color for the inner slot (mask)
 	innerColor: Color3?,
+	-- Inner mask transparency (default 0). Use for HUD slots that match semi-transparent Slot fill.
+	innerTransparency: number?,
 	-- Optional: pass through to content
 	layoutOrder: number?,
 	-- When true, gradient rim stays visible (and animates) without hover — e.g. HUD ultimate slot
 	alwaysShowGradient: boolean?,
+	-- When true with alwaysShowGradient: no top HoverOverlay (avoids TextButton hand cursor). Content sits above InnerMask and still receives hover for slot visuals.
+	omitHoverOverlay: boolean?,
 	-- Content children (the slot element)
 	children: { [string]: any }?,
 	-- When set, this ref is assigned the root Frame (same area that receives hover for gradient). Use for drop-target hit-testing so it matches gradient highlight.
@@ -53,9 +57,11 @@ local function GradientBorder(props: GradientBorderProps)
 	local borderWidth = props.borderWidth or ThemeConfig.GradientBorder.BorderWidth or DEFAULT_BORDER_WIDTH
 	local cornerRadius = props.cornerRadius or ThemeConfig.CornerRadius.Slot
 	local innerColor = props.innerColor or ThemeConfig.Colors.Slot
+	local innerTransparency = props.innerTransparency
 
 	local isHovered, setIsHovered = React.useState(false)
 	local alwaysShowGradient = props.alwaysShowGradient == true
+	local omitHoverOverlay = props.omitHoverOverlay == true
 	local gradientRef = React.useRef(nil :: Instance?)
 	local rotationRef = React.useRef(0)
 	local speedRef = React.useRef(ANIMATION_SPEED * (1 + (math.random() - 0.5) * RANDOM_SPEED_VARIANCE))
@@ -136,9 +142,10 @@ local function GradientBorder(props: GradientBorderProps)
 		end
 	end
 
-	-- Inject hover handlers into children so we detect hover when mouse is over the slot
+	-- Inject hover handlers into children so we detect hover when mouse is over the slot (loadout grids).
+	-- Skipped when omitHoverOverlay: top TextButton is omitted too; gradient uses alwaysShowGradient only.
 	local childrenWithHover = props.children
-	if props.children and React.Children and React.Children.map then
+	if not omitHoverOverlay and props.children and React.Children and React.Children.map then
 		local mapped = React.Children.map(props.children, function(child)
 			if React.isValidElement(child :: any) then
 				local el = child :: any
@@ -160,13 +167,7 @@ local function GradientBorder(props: GradientBorderProps)
 		childrenWithHover = mapped or props.children
 	end
 
-	return React.createElement("Frame", {
-		Name = "GradientBorderContainer",
-		Size = containerSize,
-		BackgroundTransparency = 1,
-		LayoutOrder = props.layoutOrder,
-		ref = setContainerRef,
-	}, {
+	local borderChildren: { [string]: any } = {
 		GradientLayer = React.createElement("Frame", {
 			Name = "GradientLayer",
 			Size = UDim2.fromScale(1, 1),
@@ -189,7 +190,7 @@ local function GradientBorder(props: GradientBorderProps)
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = innerColor,
-			BackgroundTransparency = 0,
+			BackgroundTransparency = if type(innerTransparency) == "number" then innerTransparency else 0,
 			ZIndex = LayoutConfig.ZIndex.InnerMask,
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, cornerRadius) }),
@@ -203,8 +204,11 @@ local function GradientBorder(props: GradientBorderProps)
 			ClipsDescendants = false,
 			ZIndex = LayoutConfig.ZIndex.Content,
 		}, childrenWithHover),
-		-- Transparent overlay to catch hover (on top so it receives input)
-		HoverOverlay = (function()
+	}
+
+	if not omitHoverOverlay then
+		-- Transparent overlay on top so hover works when InnerMask/content do not fill the slot; TextButton = hand cursor.
+		borderChildren.HoverOverlay = (function()
 			local overlayProps: { [string]: any } = {
 				Name = "HoverOverlay",
 				Size = UDim2.fromScale(1, 1),
@@ -224,8 +228,16 @@ local function GradientBorder(props: GradientBorderProps)
 				overlayProps[React.Event.Activated] = props.onActivated
 			end
 			return React.createElement("TextButton", overlayProps)
-		end)(),
-	})
+		end)()
+	end
+
+	return React.createElement("Frame", {
+		Name = "GradientBorderContainer",
+		Size = containerSize,
+		BackgroundTransparency = 1,
+		LayoutOrder = props.layoutOrder,
+		ref = setContainerRef,
+	}, borderChildren)
 end
 
 return GradientBorder

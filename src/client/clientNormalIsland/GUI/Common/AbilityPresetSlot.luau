@@ -170,47 +170,58 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 		local outerThickness = math.max(1, math.round(osTheme.DefaultThickness * hudScale))
 		local gradientBorderWidth = math.max(1, math.round(ThemeConfig.GradientBorder.BorderWidth * hudScale))
 
-		if isUltActive then
-			local bodyChildren: { [string]: any } = {
-				InnerStroke = React.createElement("UIStroke", {
-					Color = innerS.Color,
-					Thickness = innerS.Thickness,
-					Transparency = innerS.Transparency,
-					LineJoinMode = Enum.LineJoinMode.Miter,
-				}),
-				Icon = iconElement,
-				Label = labelElement,
-			}
-			local ov = buildHudOverlays(
-				z,
-				innerCorner,
-				hudScale,
-				props.hudCooldownRemaining,
-				props.hudCooldownDuration,
-				props.hudAbilityBlocked
-			)
-			if ov then
-				for k, el in pairs(ov) do
-					bodyChildren[k] = el
-				end
+		local rimInset = if isUltActive then math.max(0, inset - gradientBorderWidth) else inset
+
+		local rimChildren: { [string]: any } = {
+			InnerCorner = if innerCorner > 0
+				then React.createElement("UICorner", { CornerRadius = UDim.new(0, innerCorner) })
+				else nil,
+			InnerStroke = React.createElement("UIStroke", {
+				Color = innerS.Color,
+				Thickness = innerS.Thickness,
+				Transparency = innerS.Transparency,
+				LineJoinMode = Enum.LineJoinMode.Miter,
+			}),
+			Icon = iconElement,
+			Label = labelElement,
+		}
+		local ov = buildHudOverlays(
+			z,
+			innerCorner,
+			hudScale,
+			props.hudCooldownRemaining,
+			props.hudCooldownDuration,
+			props.hudAbilityBlocked
+		)
+		if ov then
+			for k, el in pairs(ov) do
+				rimChildren[k] = el
 			end
+		end
+
+		local rim = React.createElement("Frame", {
+			Name = "HudSlotRim",
+			AnchorPoint = Vector2.new(0.5, 0.5),
+			Position = UDim2.fromScale(0.5, 0.5),
+			Size = UDim2.new(1, -rimInset * 2, 1, -rimInset * 2),
+			BackgroundTransparency = 1,
+			ZIndex = z,
+			ClipsDescendants = true,
+		}, rimChildren)
+
+		if isUltActive then
 			return React.createElement(GradientBorder, {
 				size = size,
 				fitWithin = true,
 				borderWidth = gradientBorderWidth,
 				cornerRadius = hudR,
 				innerColor = C.Slot,
+				innerTransparency = C.SlotTransparency,
 				alwaysShowGradient = true,
+				omitHoverOverlay = true,
 				layoutOrder = props.layoutOrder or 0,
 			}, {
-				Body = React.createElement("Frame", {
-					Name = "AbilityPresetSlot",
-					Size = UDim2.fromScale(1, 1),
-					BackgroundColor3 = C.Slot,
-					BackgroundTransparency = C.SlotTransparency,
-					ClipsDescendants = true,
-					ZIndex = z,
-				}, bodyChildren),
+				Rim = rim,
 			})
 		end
 
@@ -232,44 +243,9 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 				Thickness = outerThickness,
 				Transparency = outerTransparency,
 				LineJoinMode = Enum.LineJoinMode.Miter,
+				BorderStrokePosition = Enum.BorderStrokePosition.Inner,
 			}),
-			Rim = React.createElement("Frame", {
-				Name = "HudSlotRim",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.new(1, -inset * 2, 1, -inset * 2),
-				BackgroundTransparency = 1,
-				ZIndex = z,
-				ClipsDescendants = true,
-			}, (function()
-				local rimChildren: { [string]: any } = {
-					InnerCorner = if innerCorner > 0
-						then React.createElement("UICorner", { CornerRadius = UDim.new(0, innerCorner) })
-						else nil,
-					InnerStroke = React.createElement("UIStroke", {
-						Color = innerS.Color,
-						Thickness = innerS.Thickness,
-						Transparency = innerS.Transparency,
-						LineJoinMode = Enum.LineJoinMode.Miter,
-					}),
-					Icon = iconElement,
-					Label = labelElement,
-				}
-				local ov = buildHudOverlays(
-					z,
-					innerCorner,
-					hudScale,
-					props.hudCooldownRemaining,
-					props.hudCooldownDuration,
-					props.hudAbilityBlocked
-				)
-				if ov then
-					for k, el in pairs(ov) do
-						rimChildren[k] = el
-					end
-				end
-				return rimChildren
-			end)()),
+			Rim = rim,
 		})
 	end
 

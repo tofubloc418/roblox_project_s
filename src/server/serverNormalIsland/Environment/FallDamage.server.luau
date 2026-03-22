@@ -2,7 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
-local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
+local StatsService = require(script.Parent.Parent:WaitForChild("Stats"):WaitForChild("StatsService"))
 
 -- Damage per stud beyond 4 studs, capped at 100
 local fallStartHeight: {[Player]: number} = {}
@@ -31,8 +31,11 @@ local function onCharacter(player: Player, character: Model)
 
 			if fallDistance > minHeight then
 				local damage = math.min((fallDistance - minHeight) * perStud, cap)
-				if damage > 0 then
-					DamageService:ApplyDamage(humanoid, damage, player)
+				local container = StatsService:GetContainer(player)
+				local reduction = if container then container:GetDerivedStat("FallDamageReduction") else 0
+				local finalDamage = damage * (1 - reduction)
+				if finalDamage > 0 then
+					humanoid:TakeDamage(finalDamage)
 				end
 			end
 		end

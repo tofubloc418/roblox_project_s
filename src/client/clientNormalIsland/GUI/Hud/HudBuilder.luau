@@ -144,9 +144,9 @@ function HudBuilder.buildPlayerStatsHud(playerGui: PlayerGui)
 	layout.Padding = UDim.new(0, barGap)
 	layout.Parent = barsContainer
 
-	local _, healthFill, healthCap = makeBar("Health", Color3.fromRGB(220, 70, 70), 1)
-	local _, manaFill, manaCap = makeBar("Mana", Color3.fromRGB(70, 170, 220), 2)
-	local _, energyFill, energyCap = makeBar("Energy", Color3.fromRGB(220, 220, 70), 3)
+	local _, manaFill, manaCap = makeBar("Mana", Color3.fromRGB(70, 170, 220), 1)
+	local _, energyFill, energyCap = makeBar("Energy", Color3.fromRGB(221, 175, 22), 2)
+	local _, healthFill, healthCap = makeBar("Health", Color3.fromRGB(216, 45, 45), 3)
 
 	return {
 		Screen = screen,

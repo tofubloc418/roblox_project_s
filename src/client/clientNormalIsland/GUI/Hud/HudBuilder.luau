@@ -76,6 +76,10 @@ function HudBuilder.buildPlayerStatsHud(playerGui: PlayerGui)
 	container.BackgroundTransparency = 1
 	container.Parent = screen
 
+	local uiScale = Instance.new("UIScale")
+	uiScale.Scale = 1
+	uiScale.Parent = container
+
 	local barsContainer = Instance.new("Frame")
 	barsContainer.Name = "Bars"
 	barsContainer.Size = UDim2.fromOffset(barWidth, container.Size.Y.Offset)
@@ -146,6 +150,7 @@ function HudBuilder.buildPlayerStatsHud(playerGui: PlayerGui)
 
 	return {
 		Screen = screen,
+		UIScaleInstance = uiScale,
 		HealthFill = healthFill,
 		HealthCap = healthCap,
 		EnergyFill = energyFill,

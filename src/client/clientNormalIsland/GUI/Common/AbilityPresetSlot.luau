@@ -22,6 +22,7 @@ export type AbilityPresetSlotProps = {
 	isUlt: boolean,
 	variant: AbilityPresetSlotVariant,
 	pixelSize: number,
+	hudScale: number?,
 	layoutOrder: number?,
 	zIndex: number?,
 	hudCooldownRemaining: number?,
@@ -34,6 +35,7 @@ local SETTINGS_BG = Color3.fromRGB(45, 45, 52)
 local function buildHudOverlays(
 	zBase: number,
 	innerCornerPx: number,
+	hudScale: number,
 	cooldownRemaining: number?,
 	cooldownDuration: number?,
 	abilityBlocked: boolean?
@@ -50,7 +52,9 @@ local function buildHudOverlays(
 
 	local grayC = AB.CooldownUnusableOverlayColor
 	local grayT = AB.CooldownUnusableOverlayTransparency
-	local timerSize = AB.CooldownTimerTextSize
+	local timerSize = math.round(AB.CooldownTimerTextSize * hudScale)
+	local timerInset = math.round(4 * hudScale)
+	local timerTopOffset = math.round(2 * hudScale)
 
 	local out: { [string]: any } = {}
 
@@ -77,8 +81,8 @@ local function buildHudOverlays(
 		})
 		out.CooldownTimer = React.createElement("TextLabel", {
 			Name = "CooldownTimer",
-			Size = UDim2.new(1, -4, 0, timerSize + 4),
-			Position = UDim2.new(0.5, 0, 0, 2),
+			Size = UDim2.new(1, -timerInset, 0, timerSize + timerInset),
+			Position = UDim2.new(0.5, 0, 0, timerTopOffset),
 			AnchorPoint = Vector2.new(0.5, 0),
 			BackgroundTransparency = 1,
 			Text = tostring(math.ceil(rem)),
@@ -106,6 +110,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 	local variant = props.variant
 	local size = props.pixelSize
 	local z = props.zIndex or LayoutConfig.ZIndex.Content
+	local hudScale = props.hudScale or 1
 
 	local bg = if variant == "hud" then C.Slot else SETTINGS_BG
 
@@ -156,12 +161,14 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 		else nil
 
 	if variant == "hud" then
-		local hudR = AB.HudCornerRadius
-		local inset = AB.HudInset
+		local hudR = math.round(AB.HudCornerRadius * hudScale)
+		local inset = math.round(AB.HudInset * hudScale)
 		local osTheme = AB.HudOuterStroke
 		local isUltActive = props.isUlt and aid
 		local innerS = AB.HudInnerStroke
 		local innerCorner = if hudR > 0 then math.max(0, hudR - 1) else 0
+		local outerThickness = math.max(1, math.round(osTheme.DefaultThickness * hudScale))
+		local gradientBorderWidth = math.max(1, math.round(ThemeConfig.GradientBorder.BorderWidth * hudScale))
 
 		if isUltActive then
 			local bodyChildren: { [string]: any } = {
@@ -174,7 +181,14 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 				Icon = iconElement,
 				Label = labelElement,
 			}
-			local ov = buildHudOverlays(z, innerCorner, props.hudCooldownRemaining, props.hudCooldownDuration, props.hudAbilityBlocked)
+			local ov = buildHudOverlays(
+				z,
+				innerCorner,
+				hudScale,
+				props.hudCooldownRemaining,
+				props.hudCooldownDuration,
+				props.hudAbilityBlocked
+			)
 			if ov then
 				for k, el in pairs(ov) do
 					bodyChildren[k] = el
@@ -183,7 +197,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 			return React.createElement(GradientBorder, {
 				size = size,
 				fitWithin = true,
-				borderWidth = ThemeConfig.GradientBorder.BorderWidth,
+				borderWidth = gradientBorderWidth,
 				cornerRadius = hudR,
 				innerColor = C.Slot,
 				alwaysShowGradient = true,
@@ -202,7 +216,6 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 
 		local outerColor = osTheme.Default
 		local outerTransparency = osTheme.DefaultTransparency
-		local outerThickness = osTheme.DefaultThickness
 
 		return React.createElement("Frame", {
 			Name = "AbilityPresetSlot",
@@ -242,7 +255,14 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 					Icon = iconElement,
 					Label = labelElement,
 				}
-				local ov = buildHudOverlays(z, innerCorner, props.hudCooldownRemaining, props.hudCooldownDuration, props.hudAbilityBlocked)
+				local ov = buildHudOverlays(
+					z,
+					innerCorner,
+					hudScale,
+					props.hudCooldownRemaining,
+					props.hudCooldownDuration,
+					props.hudAbilityBlocked
+				)
 				if ov then
 					for k, el in pairs(ov) do
 						rimChildren[k] = el

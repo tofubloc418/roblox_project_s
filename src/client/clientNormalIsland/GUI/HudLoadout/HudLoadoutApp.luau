@@ -37,6 +37,7 @@ export type HudLoadoutAppProps = {
 
 local function HudLoadoutApp(props: HudLoadoutAppProps)
 	local state = props.state
+	local hudScale = LayoutConfig.getHudScale(props.viewportSize)
 
 	local quickImageId: string = ""
 	local quickSlotIdx = state.currentQuickSlotIndex or 1
@@ -63,7 +64,9 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 	local show2 = state.expandedWeapon == "Weapon2"
 
 	-- Weapon slots match quick-use / fists column width
-	local slotSize = H.SlotSize
+	local slotSize = math.round(H.SlotSize * hudScale)
+	local columnGap = math.round(H.ColumnGap * hudScale)
+	local outerGap = math.round(8 * hudScale)
 
 	-- Full-screen root so we can position loadout (right) and ability bar (bottom-center) independently
 	return React.createElement("Frame", {
@@ -83,11 +86,12 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 				FillDirection = Enum.FillDirection.Vertical,
 				HorizontalAlignment = Enum.HorizontalAlignment.Right,
 				SortOrder = Enum.SortOrder.LayoutOrder,
-				Padding = UDim.new(0, 8),
+				Padding = UDim.new(0, outerGap),
 			}),
 
 			ActionRow = React.createElement(HudActionRow, {
 				flashlightOn = state.flashlightOn,
+				hudScale = hudScale,
 				layoutOrder = 1,
 			}),
 
@@ -102,14 +106,15 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 					FillDirection = Enum.FillDirection.Horizontal,
 					VerticalAlignment = Enum.VerticalAlignment.Bottom,
 					SortOrder = Enum.SortOrder.LayoutOrder,
-					Padding = UDim.new(0, H.ColumnGap),
+					Padding = UDim.new(0, columnGap),
 				}),
 
 				ColQuick = React.createElement(HudSlotCard, {
 					keybind = KeybindsClient.getDisplayString(KeybindIds.HudQuickUse),
 					iconImage = quickImageId ~= "" and quickImageId or nil,
 					isActive = state.activeSlot == "QuickUse",
-					size = H.SlotSize,
+					size = slotSize,
+					hudScale = hudScale,
 					layoutOrder = 1,
 					onActivated = props.onQuickUse,
 				}),
@@ -118,7 +123,8 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 					keybind = KeybindsClient.getDisplayString(KeybindIds.HudFists),
 					iconImage = FISTS_ICON,
 					isActive = state.activeSlot == "Fists",
-					size = H.SlotSize,
+					size = slotSize,
+					hudScale = hudScale,
 					layoutOrder = 2,
 					onActivated = props.onSlot3,
 				}),
@@ -135,7 +141,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 						HorizontalAlignment = Enum.HorizontalAlignment.Right,
 						VerticalAlignment = Enum.VerticalAlignment.Bottom,
 						SortOrder = Enum.SortOrder.LayoutOrder,
-						Padding = UDim.new(0, H.ColumnGap),
+						Padding = UDim.new(0, columnGap),
 					}),
 
 					Weapon1Card = React.createElement(HudWeaponCard, {
@@ -145,6 +151,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 						isActive = state.activeSlot == "Weapon1",
 						showVisual = show1,
 						width = slotSize,
+						hudScale = hudScale,
 						layoutOrder = 1,
 						onActivated = props.onSlot1,
 					}),
@@ -156,6 +163,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 						isActive = state.activeSlot == "Weapon2",
 						showVisual = show2,
 						width = slotSize,
+						hudScale = hudScale,
 						layoutOrder = 2,
 						onActivated = props.onSlot2,
 					}),
@@ -166,6 +174,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 		-- ── Bottom-center ability bar (5 slots) ─────────────────────────────
 		AbilityBar = React.createElement(HudAbilityBar, {
 			preset = props.abilityBarPreset,
+			hudScale = hudScale,
 		}),
 	})
 end

@@ -134,4 +134,8 @@ LayoutConfig.Settings = {
 	},
 }
 
+function LayoutConfig.getHudScale(viewportSize: Vector2): number
+	return math.clamp(math.min(viewportSize.X, viewportSize.Y) / 1080, 0.5, 2.0)
+end
+
 return LayoutConfig

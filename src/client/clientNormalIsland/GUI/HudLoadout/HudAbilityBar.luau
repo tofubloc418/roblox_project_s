@@ -31,15 +31,18 @@ local ABILITY_SLOT_IDS = {
 
 export type HudAbilityBarProps = {
 	preset: SerializedPreset?,
+	hudScale: number?,
 }
 
 local function HudAbilityBar(props: HudAbilityBarProps)
 	local preset = props.preset
-	local slotSize = AB.SlotSize
-	local gap = AB.SlotGap
-	local keyGap = AB.KeyLabelToSlotGap
-	local keyH = AB.KeyLabelHeight
-	local keyFont = AB.KeyLabelFontSize
+	local hudScale = props.hudScale or 1
+	local slotSize = math.round(AB.SlotSize * hudScale)
+	local gap = math.round(AB.SlotGap * hudScale)
+	local keyGap = math.round(AB.KeyLabelToSlotGap * hudScale)
+	local keyH = math.round(AB.KeyLabelHeight * hudScale)
+	local keyFont = math.round(AB.KeyLabelFontSize * hudScale)
+	local offsetY = math.round(L_AB.OffsetY * hudScale)
 
 	local totalWidth = SLOT_COUNT * slotSize + (SLOT_COUNT - 1) * gap
 	local totalHeight = keyH + keyGap + slotSize
@@ -87,6 +90,7 @@ local function HudAbilityBar(props: HudAbilityBarProps)
 				isUlt = isUlt,
 				variant = "hud",
 				pixelSize = slotSize,
+				hudScale = hudScale,
 				layoutOrder = 2,
 				zIndex = LayoutConfig.ZIndex.Content,
 				hudCooldownRemaining = cdRem,
@@ -99,7 +103,7 @@ local function HudAbilityBar(props: HudAbilityBarProps)
 	return React.createElement("Frame", {
 		Name = "HudAbilityBar",
 		AnchorPoint = L_AB.AnchorPoint,
-		Position = UDim2.new(0.5, 0, 1, L_AB.OffsetY),
+		Position = UDim2.new(0.5, 0, 1, offsetY),
 		Size = UDim2.fromOffset(totalWidth, totalHeight),
 		BackgroundTransparency = 1,
 	}, {

@@ -20,6 +20,8 @@ export type GradientBorderProps = {
 	cornerRadius: number?,
 	-- Background color for the inner slot (mask)
 	innerColor: Color3?,
+	-- Inner mask transparency (default 0). Use for HUD slots that match semi-transparent Slot fill.
+	innerTransparency: number?,
 	-- Optional: pass through to content
 	layoutOrder: number?,
 	-- When true, gradient rim stays visible (and animates) without hover — e.g. HUD ultimate slot
@@ -53,6 +55,7 @@ local function GradientBorder(props: GradientBorderProps)
 	local borderWidth = props.borderWidth or ThemeConfig.GradientBorder.BorderWidth or DEFAULT_BORDER_WIDTH
 	local cornerRadius = props.cornerRadius or ThemeConfig.CornerRadius.Slot
 	local innerColor = props.innerColor or ThemeConfig.Colors.Slot
+	local innerTransparency = props.innerTransparency
 
 	local isHovered, setIsHovered = React.useState(false)
 	local alwaysShowGradient = props.alwaysShowGradient == true
@@ -189,7 +192,7 @@ local function GradientBorder(props: GradientBorderProps)
 			Position = UDim2.fromScale(0.5, 0.5),
 			AnchorPoint = Vector2.new(0.5, 0.5),
 			BackgroundColor3 = innerColor,
-			BackgroundTransparency = 0,
+			BackgroundTransparency = if type(innerTransparency) == "number" then innerTransparency else 0,
 			ZIndex = LayoutConfig.ZIndex.InnerMask,
 		}, {
 			Corner = React.createElement("UICorner", { CornerRadius = UDim.new(0, cornerRadius) }),

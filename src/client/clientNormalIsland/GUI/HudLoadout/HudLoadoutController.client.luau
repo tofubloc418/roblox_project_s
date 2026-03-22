@@ -168,6 +168,19 @@ RunService.Heartbeat:Connect(function()
 	end
 end)
 
+task.defer(function()
+	local smoothShiftLockModule = script.Parent.Parent.Parent:WaitForChild("CustomShiftLock"):WaitForChild("SmoothShiftLock")
+	local SmoothShiftLock = require(smoothShiftLockModule) :: any
+	while not SmoothShiftLock.MouseLockEvent do
+		task.wait()
+	end
+	local function syncCameraLockHud()
+		HudLoadoutDataAdapter.setThirdPersonCameraLockOn(SmoothShiftLock.IsMouseLocked == true)
+	end
+	SmoothShiftLock.MouseLockEvent:Connect(syncCameraLockHud)
+	syncCameraLockHud()
+end)
+
 -- ── Quick-use radial (virtual cursor, camera, open/close) ─────────────────
 
 -- 8-way sectors from cursor offset; nil = cancel dead zone.

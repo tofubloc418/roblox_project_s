@@ -2,13 +2,10 @@
 --[[
 	HudActionRow
 	============
-	Displays the flashlight action key above the slot columns.
+	Displays action keys (camera lock, flashlight) above the slot columns.
 	Right-aligned to match the weapon column.
 
 	Each entry renders as:   LABEL  |  [KEY]
-
-	Currently only "FLASHLIGHT / [key]" is shown. Additional action keys
-	can be added by extending the entries table in the future.
 ]]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +24,8 @@ local LABEL_FONT_SIZE = 24
 local SEPARATOR_WIDTH = 8
 
 export type HudActionRowProps = {
+	cameraLockKeybind: string,
+	cameraLockOn: boolean,
 	flashlightKeybind: string,
 	flashlightOn: boolean,
 	hudScale: number?,
@@ -126,6 +125,7 @@ local function HudActionRow(props: HudActionRowProps)
 			Padding = UDim.new(0, math.round(4 * hudScale)),
 		}),
 
+		CameraLockEntry = ActionEntry("CAMERA LOCK", props.cameraLockKeybind, props.cameraLockOn, hudScale),
 		FlashlightEntry = ActionEntry("FLASHLIGHT", props.flashlightKeybind, props.flashlightOn, hudScale),
 	})
 end

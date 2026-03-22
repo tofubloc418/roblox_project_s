@@ -24,6 +24,11 @@ local entries: { [string]: KeybindEntry } = {
 		category = "Gameplay",
 		description = "Interact",
 	},
+	[KeybindIds.ThirdPersonCameraLock] = {
+		default = { Enum.KeyCode.V },
+		category = "Gameplay",
+		description = "Toggle third-person camera lock",
+	},
 
 	[KeybindIds.AbilitySlot1] = {
 		default = { Enum.KeyCode.One },

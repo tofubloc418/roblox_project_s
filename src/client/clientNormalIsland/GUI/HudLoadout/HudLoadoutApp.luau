@@ -90,6 +90,8 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 			}),
 
 			ActionRow = React.createElement(HudActionRow, {
+				cameraLockKeybind = KeybindsClient.getDisplayString(KeybindIds.ThirdPersonCameraLock),
+				cameraLockOn = state.thirdPersonCameraLockOn,
 				flashlightKeybind = KeybindsClient.getDisplayString(KeybindIds.HudFlashlight),
 				flashlightOn = state.flashlightOn,
 				hudScale = hudScale,

@@ -45,19 +45,24 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 		quickImageId = icon or ""
 	end
 
+	local fistsIcon = ItemIconResolver.getIconForItem("Fists")
+	local fistsImageId = fistsIcon or ""
+
 	local weapon1ImageId = ""
-	local weapon2ImageId = ""
 	if state.weapon1 then
 		local icon = ItemIconResolver.getIconForItem(state.weapon1.itemId)
 		weapon1ImageId = icon or ""
+	else
+		weapon1ImageId = fistsImageId
 	end
+
+	local weapon2ImageId = ""
 	if state.weapon2 then
 		local icon = ItemIconResolver.getIconForItem(state.weapon2.itemId)
 		weapon2ImageId = icon or ""
+	else
+		weapon2ImageId = fistsImageId
 	end
-
-	local fistsIcon = ItemIconResolver.getIconForItem("Fists")
-	local fistsImageId = fistsIcon or ""
 
 	-- showVisual: per spec §5, visual is shown for the expandedWeapon slot.
 	-- expandedWeapon is only updated when switching between weapon1 and weapon2.

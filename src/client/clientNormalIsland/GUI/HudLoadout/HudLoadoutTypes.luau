@@ -23,6 +23,7 @@ export type HudLoadoutState = {
 	quickUseItems: { [number]: ItemStack? },
 	currentQuickSlotIndex: number?,
 	flashlightOn: boolean,
+	thirdPersonCameraLockOn: boolean,
 }
 
 return {}

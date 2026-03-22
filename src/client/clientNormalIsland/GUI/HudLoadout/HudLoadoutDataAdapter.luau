@@ -28,6 +28,7 @@ local _state: HudLoadoutState = {
 	quickUseItems         = {},
 	currentQuickSlotIndex = 1,
 	flashlightOn          = false,
+	thirdPersonCameraLockOn = false,
 }
 
 local _lastEquipment: StoredEquipmentData = {
@@ -71,6 +72,7 @@ function HudLoadoutDataAdapter.getState(): HudLoadoutState
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 end
 
@@ -137,6 +139,7 @@ function HudLoadoutDataAdapter.receiveServerPayload(payload: InventorySyncPayloa
 		quickUseItems         = quickItems,
 		currentQuickSlotIndex = payload.quickUse.currentSlotIndex or _state.currentQuickSlotIndex or 1,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end
@@ -150,6 +153,7 @@ function HudLoadoutDataAdapter.setActiveSlot(slot: HudActiveSlot)
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end
@@ -164,6 +168,7 @@ function HudLoadoutDataAdapter.setExpandedWeapon(weapon: ("Weapon1" | "Weapon2")
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end
@@ -177,6 +182,7 @@ function HudLoadoutDataAdapter.setCurrentQuickSlotIndex(index: number)
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = index,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end
@@ -190,6 +196,24 @@ function HudLoadoutDataAdapter.toggleFlashlight()
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = not _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
+	}
+	_notify()
+end
+
+function HudLoadoutDataAdapter.setThirdPersonCameraLockOn(on: boolean)
+	if _state.thirdPersonCameraLockOn == on then
+		return
+	end
+	_state = {
+		activeSlot            = _state.activeSlot,
+		expandedWeapon        = _state.expandedWeapon,
+		weapon1               = _state.weapon1,
+		weapon2               = _state.weapon2,
+		quickUseItems         = _state.quickUseItems,
+		currentQuickSlotIndex = _state.currentQuickSlotIndex,
+		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = on,
 	}
 	_notify()
 end
@@ -206,6 +230,7 @@ function HudLoadoutDataAdapter.setWeapons(
 		quickUseItems         = _state.quickUseItems,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end
@@ -219,6 +244,7 @@ function HudLoadoutDataAdapter.setQuickUseItems(items: { [number]: ItemStack? })
 		quickUseItems         = items,
 		currentQuickSlotIndex = _state.currentQuickSlotIndex,
 		flashlightOn          = _state.flashlightOn,
+		thirdPersonCameraLockOn = _state.thirdPersonCameraLockOn,
 	}
 	_notify()
 end

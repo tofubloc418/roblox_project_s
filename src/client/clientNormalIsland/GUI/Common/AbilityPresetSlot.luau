@@ -218,6 +218,7 @@ local function AbilityPresetSlot(props: AbilityPresetSlotProps)
 				innerColor = C.Slot,
 				innerTransparency = C.SlotTransparency,
 				alwaysShowGradient = true,
+				omitHoverOverlay = true,
 				layoutOrder = props.layoutOrder or 0,
 			}, {
 				Rim = rim,

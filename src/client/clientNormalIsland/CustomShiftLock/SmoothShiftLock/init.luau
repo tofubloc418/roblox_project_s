@@ -2,6 +2,7 @@
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
@@ -24,6 +25,11 @@ local Constants = require(script:WaitForChild("Constants"))
 local _character: Model?
 local HumanoidRootPart: BasePart?
 local Humanoid: Humanoid?
+
+local function isCursorUiOpen(): boolean
+	local cursorFlag = ReplicatedStorage:FindFirstChild("UICursorEnabled")
+	return cursorFlag ~= nil and cursorFlag:IsA("BoolValue") and cursorFlag.Value
+end
 
 local function refreshCharacterVariables()
 	local ch = LocalPlayer.Character
@@ -203,6 +209,11 @@ function SmoothShiftLock:MouseLock(enable: boolean?)
 
 		SmoothShiftLock._mouseLockMaid:GiveTask(RunService.RenderStepped:Connect(function(deltaTime: number)
 			if not HumanoidRootPart or not Humanoid then
+				return
+			end
+
+			if isCursorUiOpen() then
+				Humanoid.AutoRotate = true
 				return
 			end
 

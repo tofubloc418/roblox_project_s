@@ -13,6 +13,15 @@ local DEFAULT_PRESET_KEY = ItemEnums.WeaponTag.Fists
 
 local GetPresetKey = {}
 
+function GetPresetKey.GetPresetKeyForTemplateId(templateId: string): string
+	local template = ItemRegistry.GetTemplate(templateId)
+	if not template then
+		return DEFAULT_PRESET_KEY
+	end
+	local key = (template :: any).abilityPresetKey or (template :: any).weaponTag
+	return (type(key) == "string" and #key > 0) and key or DEFAULT_PRESET_KEY
+end
+
 --[[
 	GetPresetKeyForEquipmentSlot(equipment, slotId)
 	Returns the ability preset key for a weapon slot (Weapon1 or Weapon2).
@@ -26,12 +35,7 @@ function GetPresetKey.GetPresetKeyForEquipmentSlot(
 	if not item or not item.tid then
 		return DEFAULT_PRESET_KEY
 	end
-	local template = ItemRegistry.GetTemplate(item.tid)
-	if not template then
-		return DEFAULT_PRESET_KEY
-	end
-	local key = (template :: any).abilityPresetKey or (template :: any).weaponTag
-	return (type(key) == "string" and #key > 0) and key or DEFAULT_PRESET_KEY
+	return GetPresetKey.GetPresetKeyForTemplateId(item.tid)
 end
 
 --[[
@@ -43,6 +47,9 @@ function GetPresetKey.GetAbilityBarPresetKey(
 	expandedWeapon: string?,
 	equipment: StoredEquipmentData
 ): string
+	if activeSlot == "Fists" then
+		return GetPresetKey.GetPresetKeyForTemplateId("Fists")
+	end
 	if activeSlot == "Weapon1" then
 		return GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")
 	end

@@ -42,21 +42,16 @@ end
 
 local function allowedBarPresetKeys(equipment: StoredEquipmentData?): { [string]: boolean }
 	local allowed: { [string]: boolean } = {}
+	-- HUD fists slot uses the Fists weapon preset even when Weapon1/Weapon2 are filled.
+	allowed[GetPresetKey.GetPresetKeyForTemplateId("Fists")] = true
 	if not equipment then
-		allowed[ItemEnums.WeaponTag.Fists] = true
 		return allowed
 	end
-	local anyWeapon = false
 	if equipment.Weapon1 and equipment.Weapon1.tid then
 		allowed[GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon1")] = true
-		anyWeapon = true
 	end
 	if equipment.Weapon2 and equipment.Weapon2.tid then
 		allowed[GetPresetKey.GetPresetKeyForEquipmentSlot(equipment, "Weapon2")] = true
-		anyWeapon = true
-	end
-	if not anyWeapon then
-		allowed[ItemEnums.WeaponTag.Fists] = true
 	end
 	return allowed
 end
@@ -124,6 +119,9 @@ function AbilityExecutionService.Initialize()
 			if key2 == presetKey then
 				weaponTemplateId = equipment.Weapon2.tid
 			end
+		end
+		if not weaponTemplateId and presetKey == GetPresetKey.GetPresetKeyForTemplateId("Fists") then
+			weaponTemplateId = "Fists"
 		end
 
 		local context: AbilityExecutionContext = {

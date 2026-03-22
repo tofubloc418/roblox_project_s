@@ -57,13 +57,9 @@ function SmoothShiftLock:Start()
 	SmoothShiftLock.IsFirstPerson = false
 
 	SmoothShiftLock._maid:GiveTask(GameSettings.Changed:Connect(function(property)
-		if property ~= "ControlMode" and property ~= "ComputerMovementMode" then
+		if property ~= "ComputerMovementMode" then
 			return
 		end
-		SmoothShiftLock:_updateMouseLockAvailability()
-	end))
-
-	SmoothShiftLock._maid:GiveTask(LocalPlayer:GetPropertyChangedSignal("DevEnableMouseLock"):Connect(function()
 		SmoothShiftLock:_updateMouseLockAvailability()
 	end))
 
@@ -72,18 +68,6 @@ function SmoothShiftLock:Start()
 	end))
 
 	SmoothShiftLock:_updateMouseLockAvailability()
-
-	local PlayerModule = LocalPlayer.PlayerScripts:WaitForChild("PlayerModule")
-	local boundKeys = PlayerModule:FindFirstChild("BoundKeys", true) :: StringValue?
-
-	if boundKeys then
-		local previousBoundKeys = boundKeys.Value
-		boundKeys.Value = ""
-
-		SmoothShiftLock._maid:GiveTask(function()
-			boundKeys.Value = previousBoundKeys
-		end)
-	end
 
 	SmoothShiftLock:Enable()
 	SmoothShiftLock._maid:GiveTask(function()
@@ -181,13 +165,9 @@ function SmoothShiftLock:_updateMouseLockEnabledState()
 end
 
 function SmoothShiftLock:_updateMouseLockAvailability()
-	local DevAllowsMouseLock = LocalPlayer.DevEnableMouseLock
 	local DevMovementModeIsScriptable = LocalPlayer.DevComputerMovementMode == Enum.DevComputerMovementMode.Scriptable
-	local UserHasMouseLockModeEnabled = GameSettings.ControlMode == Enum.ControlMode.MouseLockSwitch
 	local UserHasClickToMoveEnabled = GameSettings.ComputerMovementMode == Enum.ComputerMovementMode.ClickToMove
-	local MouseLockAvailable = DevAllowsMouseLock
-		and UserHasMouseLockModeEnabled
-		and not UserHasClickToMoveEnabled
+	local MouseLockAvailable = not UserHasClickToMoveEnabled
 		and not DevMovementModeIsScriptable
 
 	SmoothShiftLock.IsAvailable = MouseLockAvailable

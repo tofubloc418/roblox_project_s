@@ -49,7 +49,7 @@ return {
 	CAMERA_TRANSITION_OUT_SPEED = 25,
 
 	LOCKED_CAMERA_OFFSET = Vector3.new(1.75, 0.25, 0),
-	LOCKED_MOUSE_ICON = "rbxasset://textures/MouseLockedCursor.png",
+	LOCKED_MOUSE_ICON = "rbxassetid://119467672467307",
 	MOUSE_LOCK_KEYBINDS = MOUSE_LOCK_KEYBINDS,
 	syncMouseLockKeybinds = syncMouseLockKeybinds,
 }

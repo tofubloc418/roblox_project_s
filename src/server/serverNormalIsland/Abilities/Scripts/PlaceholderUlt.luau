@@ -6,7 +6,7 @@ local AbilityStateRuntime = require(script.Parent.Parent:WaitForChild("AbilitySt
 type ExecutionContext = AbilityStateRuntime.AbilityExecutionContextLike
 
 local MAIN_TRACK = "main"
-local MAIN_COOLDOWN_SECONDS = 2
+local MAIN_COOLDOWN_SECONDS = 5
 
 local PlaceholderUlt = {}
 

@@ -4,6 +4,7 @@ local KeybindIds = {
 	Sprint = "Sprint",
 	Jump = "Jump",
 	Interact = "Interact",
+	ThirdPersonCameraLock = "ThirdPersonCameraLock",
 
 	AbilitySlot1 = "AbilitySlot1",
 	AbilitySlot2 = "AbilitySlot2",

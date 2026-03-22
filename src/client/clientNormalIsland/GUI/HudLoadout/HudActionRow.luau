@@ -7,7 +7,7 @@
 
 	Each entry renders as:   LABEL  |  [KEY]
 
-	Currently only "FLASHLIGHT / F" is shown. Additional action keys
+	Currently only "FLASHLIGHT / [key]" is shown. Additional action keys
 	can be added by extending the entries table in the future.
 ]]
 
@@ -27,6 +27,7 @@ local LABEL_FONT_SIZE = 24
 local SEPARATOR_WIDTH = 8
 
 export type HudActionRowProps = {
+	flashlightKeybind: string,
 	flashlightOn: boolean,
 	hudScale: number?,
 	layoutOrder: number?,
@@ -125,7 +126,7 @@ local function HudActionRow(props: HudActionRowProps)
 			Padding = UDim.new(0, math.round(4 * hudScale)),
 		}),
 
-		FlashlightEntry = ActionEntry("FLASHLIGHT", "F", props.flashlightOn, hudScale),
+		FlashlightEntry = ActionEntry("FLASHLIGHT", props.flashlightKeybind, props.flashlightOn, hudScale),
 	})
 end
 

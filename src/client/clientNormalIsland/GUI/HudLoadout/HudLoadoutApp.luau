@@ -90,6 +90,7 @@ local function HudLoadoutApp(props: HudLoadoutAppProps)
 			}),
 
 			ActionRow = React.createElement(HudActionRow, {
+				flashlightKeybind = KeybindsClient.getDisplayString(KeybindIds.HudFlashlight),
 				flashlightOn = state.flashlightOn,
 				hudScale = hudScale,
 				layoutOrder = 1,

@@ -117,6 +117,39 @@ handleSlotSwitch = function(newSlot: HudActiveSlot)
 	end
 end
 
+-- E: toggle Weapon1 <-> Weapon2 when already on a weapon; otherwise pick best weapon or fists.
+local function handleWeaponSwap()
+	local state = HudLoadoutDataAdapter.getState()
+	local hasW1 = state.weapon1 ~= nil
+	local hasW2 = state.weapon2 ~= nil
+
+	if state.activeSlot == "Weapon1" then
+		if hasW2 then
+			handleSlotSwitch("Weapon2")
+		else
+			HudLoadoutDataAdapter.setActiveSlot("Fists")
+		end
+		return
+	end
+
+	if state.activeSlot == "Weapon2" then
+		if hasW1 then
+			handleSlotSwitch("Weapon1")
+		else
+			HudLoadoutDataAdapter.setActiveSlot("Fists")
+		end
+		return
+	end
+
+	if hasW1 then
+		handleSlotSwitch("Weapon1")
+	elseif hasW2 then
+		handleSlotSwitch("Weapon2")
+	else
+		HudLoadoutDataAdapter.setActiveSlot("Fists")
+	end
+end
+
 -- ── Subscriptions (adapter, keybinds, ability state, cooldown tick) ────────
 
 HudLoadoutDataAdapter.subscribe(function(_state: HudLoadoutState)
@@ -281,6 +314,15 @@ KeybindsClient.bindAction(KeybindIds.HudWeapon2, function(_name, state, _input)
 	return Enum.ContextActionResult.Sink
 end, {
 	actionName = "HudWeapon2",
+})
+
+KeybindsClient.bindAction(KeybindIds.HudSwapWeapons, function(_name, state, _input)
+	if state == Enum.UserInputState.Begin then
+		handleWeaponSwap()
+	end
+	return Enum.ContextActionResult.Sink
+end, {
+	actionName = "HudSwapWeapons",
 })
 
 KeybindsClient.bindAction(KeybindIds.HudFists, function(_name, state, _input)

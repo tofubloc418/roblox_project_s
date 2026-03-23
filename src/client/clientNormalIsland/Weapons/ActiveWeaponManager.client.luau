@@ -55,6 +55,26 @@ local function getLogicModuleForTemplateId(templateId: string): any?
 	return LogicModule
 end
 
+local function waitForMatchingWeaponModel(character: Model, templateId: string, desiredSeq: number): Model?
+	local deadline = os.clock() + 2
+	while os.clock() <= deadline do
+		if equipRequestSeq ~= desiredSeq then
+			return nil
+		end
+
+		local weaponModel = character:FindFirstChild(WEAPON_VISUAL_MODEL_NAME)
+		if weaponModel and weaponModel:IsA("Model") then
+			if weaponModel:GetAttribute(WEAPON_TEMPLATE_ATTR_ON_MODEL) == templateId then
+				return weaponModel
+			end
+		end
+
+		task.wait()
+	end
+
+	return nil
+end
+
 local function equipWeaponByTemplateId(templateId: string)
 	local character = localPlayer.Character
 	if not character then return end
@@ -63,17 +83,8 @@ local function equipWeaponByTemplateId(templateId: string)
 	local LogicModule = getLogicModuleForTemplateId(templateId)
 	if not LogicModule then return end
 
-	-- Wait for the server to attach the replicated weapon model to this character.
-	local weaponModel = character:WaitForChild(WEAPON_VISUAL_MODEL_NAME, 2)
-	if equipRequestSeq ~= desiredSeq then
-		return -- slot changed while we were waiting
-	end
-	if not weaponModel or not weaponModel:IsA("Model") then
-		return
-	end
-	if weaponModel:GetAttribute(WEAPON_TEMPLATE_ATTR_ON_MODEL) ~= templateId then
-		return -- stale weapon (rapid slot switching)
-	end
+	local weaponModel = waitForMatchingWeaponModel(character, templateId, desiredSeq)
+	if not weaponModel then return end
 
 	currentWeaponLogic = LogicModule
 	LogicModule.Equip(weaponModel :: Model, localPlayer, WeaponController)

@@ -10,6 +10,7 @@ local Daggers = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Dagger,
+		modelAssetId = "rbxassetid://99179217155391",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 50,

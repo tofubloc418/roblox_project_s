@@ -31,6 +31,15 @@ local weaponAttackRemote = weaponRemotes:WaitForChild("WeaponAttackRequest") :: 
 local WeaponController = {}
 WeaponController.__index = WeaponController
 
+local debugEnabled = false
+
+local function debugLog(templateId: string, message: string)
+	if not debugEnabled then
+		return
+	end
+	print(string.format("[WeaponDebug][%s] %s", templateId, message))
+end
+
 export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	weaponModel: Model,
 	player: Player,
@@ -111,6 +120,11 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self._connections = {}
 
 	return self :: any
+end
+
+function WeaponController.SetDebugEnabled(enabled: boolean)
+	debugEnabled = enabled
+	print(string.format("[Dev] Weapon debug logs: %s", enabled and "ON" or "OFF"))
 end
 
 -- ── Private helpers ─────────────────────────────────────────────────────────
@@ -198,12 +212,14 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 
 	-- Play equip animation ---------------------------------------------------
 	if self.equipTrack then
+		debugLog(self.templateId, "equip anim")
 		self.equipTrack:Play()
 	end
 
 	-- Play idle animation (looped) -------------------------------------------
 	if self.idleTrack then
 		self.idleTrack.Looped = true
+		debugLog(self.templateId, "idle start")
 		self.idleTrack:Play()
 	end
 
@@ -255,6 +271,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	-- Play animation
 	local track = self.attackTracks[attackIndex]
 	if track then
+		debugLog(self.templateId, string.format("attack anim %d", attackIndex))
 		track:Play()
 	end
 
@@ -309,11 +326,13 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 
 	-- Play unequip animation (fire-and-forget)
 	if self.unequipTrack then
+		debugLog(self.templateId, "unequip anim")
 		self.unequipTrack:Play()
 	end
 
 	-- Stop idle animation
 	if self.idleTrack then
+		debugLog(self.templateId, "idle end")
 		self.idleTrack:Stop()
 	end
 

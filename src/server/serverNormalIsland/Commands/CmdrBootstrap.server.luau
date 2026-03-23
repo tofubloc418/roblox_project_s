@@ -26,6 +26,7 @@ end
 
 local devRemotes = ensureFolder(ReplicatedStorage, "DevRemotes")
 ensureRemote(devRemotes, "SetHitboxDebug")
+ensureRemote(devRemotes, "SetWeaponDebug")
 
 local Cmdr = require(ReplicatedStorage:WaitForChild("Cmdr"))
 

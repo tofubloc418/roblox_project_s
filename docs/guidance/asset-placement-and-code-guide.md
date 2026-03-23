@@ -21,10 +21,10 @@ Rojo maps `src/shared/sharedNormalIsland/` to **`ReplicatedStorage`**. Configs l
 `Items.Weapons.<weaponTag>.<templateId>/`
 
 - **`weaponTag`** must match the template’s `weaponTag` string (usually `ItemEnums.WeaponTag.*`). For one-off weapons, `ItemEnums` documents a convention like `Unique_<templateId>`; folder name must still match that tag.
-- **`Model`**: either named exactly `<templateId>`, or the first `Model` in the folder. The server clones it for the equipped visual (`WeaponService`).
+- **`modelAssetId`**: Roblox **Model** asset id in the same string form as other asset fields, e.g. **`"rbxassetid://1234567890"`**. Use **`"rbxassetid://0"`** when the mesh comes from a **`Model`** in the item folder instead. The server loads non-zero ids with `InsertService:LoadAsset` and clones the result for the equipped visual (`WeaponService`). With `"rbxassetid://0"`, the server uses a **`Model`** in the same folder named `<templateId>` or the first `Model` found.
 - **`Logic`** (ModuleScript): required. The client requires it and calls `Equip(weaponModel, player, WeaponController)` / `Unequip()`. Use any existing weapon’s `Logic.luau` as a template.
 
-Repo layout mirrors Studio: e.g. `src/shared/sharedNormalIsland/Items/Weapons/Axe/IronAxe/` with `IronAxe.rbxmx` and `Logic.luau`.
+Repo layout mirrors Studio: e.g. `src/shared/sharedNormalIsland/Items/Weapons/Axe/IronAxe/` with `Logic.luau` (and, only when `modelAssetId` is not set, a `Model` for the mesh).
 
 **New weapon type (tag)**  
 If abilities and folders should key off a new tag, add it to **`ItemEnums.WeaponTag`** and **`ItemEnums.WeaponTagDisplayName`**.
@@ -72,7 +72,7 @@ Templates use **`iconId`**. **`ItemIconResolver`** treats `nil`, `""`, and `rbxa
 - [ ] Template in `Configs/Items/Weapons/<Module>.luau` (match fields to an existing weapon).
 - [ ] `ItemEnums` updated if this is a **new** `weaponTag`.
 - [ ] `registerFile(...)` for that module in **`ItemRegistry.luau`**.
-- [ ] Folder **`Items.Weapons.<weaponTag>.<templateId>/`** with equip **Model** + **`Logic`** ModuleScript.
+- [ ] Folder **`Items.Weapons.<weaponTag>.<templateId>/`** with **`Logic`** ModuleScript plus **`modelAssetId`** on the template or an equip **Model** in that folder.
 
 ### Armor, backpack, or other equipment item
 

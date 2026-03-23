@@ -10,6 +10,7 @@ local Axes = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Axe,
+		modelAssetId = "rbxassetid://115321453925433",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 80,

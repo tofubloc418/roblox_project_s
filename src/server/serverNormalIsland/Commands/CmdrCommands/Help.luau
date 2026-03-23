@@ -28,6 +28,7 @@ return {
 			"  loaded            Data-load status",
 			"── Debug ──",
 			"  hitbox [target] [on|off]   ShapecastHitbox visuals",
+			"  weapondebug [target] [on|off]   Weapon animation debug logs",
 			"  help               Show this list",
 			"━━━━━━━━━━━━━━━━━━━━━━━━━━━",
 		}

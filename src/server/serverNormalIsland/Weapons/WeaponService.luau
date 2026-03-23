@@ -16,6 +16,7 @@ local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitFo
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout"))
+local WeaponModelAssetLoader = require(script.Parent:WaitForChild("WeaponModelAssetLoader"))
 
 local Items = ReplicatedStorage:WaitForChild("Items")
 local Weapons = Items:WaitForChild("Weapons")
@@ -61,6 +62,20 @@ local function getWeaponModelTemplate(templateId: string): Model?
 	local cached = _weaponModelTemplateCache[templateId]
 	if cached then
 		return cached
+	end
+
+	local registryTemplate = ItemRegistry.GetTemplate(templateId)
+	if not registryTemplate then
+		return nil
+	end
+
+	local modelAssetId = (registryTemplate :: any).modelAssetId
+	if WeaponModelAssetLoader.ParseAssetId(modelAssetId) then
+		local fromRoblox = WeaponModelAssetLoader.LoadTemplateModel(templateId, modelAssetId)
+		if fromRoblox then
+			_weaponModelTemplateCache[templateId] = fromRoblox
+		end
+		return fromRoblox
 	end
 
 	local itemFolder = WeaponAssetLayout.GetWeaponItemFolder(Weapons, templateId)

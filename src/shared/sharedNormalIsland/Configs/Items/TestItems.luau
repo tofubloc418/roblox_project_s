@@ -2,7 +2,7 @@
 -- TestItems config module for testing the item and data systems
 -- These are "dummy" items that require no visual assets or ability scripts to load correctly
 
-local ItemEnums = require(script.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent:WaitForChild("ItemEnums")) :: any
 
 local TestItems = {
 	["TestSword"] = {
@@ -12,6 +12,7 @@ local TestItems = {
 		category = ItemEnums.Category.Weapon,
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		weaponTag = ItemEnums.WeaponTag.Greatsword,
+		modelAssetId = "rbxassetid://0",
 		rarity = ItemEnums.Rarity.Common,
 		iconId = "rbxassetid://0", -- Empty or generic UI icon
 		stackMax = 1,

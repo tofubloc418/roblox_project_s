@@ -10,6 +10,7 @@ local Greatswords = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Greatsword,
+		modelAssetId = "rbxassetid://0",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 150,

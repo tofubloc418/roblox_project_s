@@ -21,6 +21,7 @@ local SHAPECAST_HITBOX_MODULE_NAME = "shapecasthitbox"
 local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NAME)) :: any
 
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
+local MovementLock = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock")) :: any
 
 -- Remotes are created by the server in WeaponService.Initialize().
 local weaponRemotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
@@ -64,6 +65,7 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	comboExpireTime: number,
 	attacking: boolean,
 	equipped: boolean,
+	_attackLockTags: { [string]: boolean },
 	-- Connections to clean up
 	_connections: { RBXScriptConnection },
 }, WeaponController))
@@ -117,6 +119,7 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.attacking = false
 	self.equipped = false
 
+	self._attackLockTags = {}
 	self._connections = {}
 
 	return self :: any
@@ -146,6 +149,17 @@ end
 
 local function connect(self: WeaponControllerInstance, conn: RBXScriptConnection)
 	table.insert(self._connections, conn)
+end
+
+local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, attackEntry: any)
+	local movementLocks = attackEntry.movementLocks
+	if type(movementLocks) ~= "table" or next(movementLocks) == nil then
+		return
+	end
+
+	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
+	self._attackLockTags[lockTag] = true
+	MovementLock.Lock(lockTag, movementLocks, attackEntry.hitDuration)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -267,6 +281,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 
 	self.nextAttackTime = now + attackEntry.hitDuration
 	self.comboExpireTime = now + (attackEntry.comboTimeLimit or attackEntry.hitDuration)
+	lockAttackMovement(self, attackIndex, attackEntry)
 
 	-- Play animation
 	local track = self.attackTracks[attackIndex]
@@ -347,6 +362,11 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 		conn:Disconnect()
 	end
 	table.clear(self._connections)
+
+	for lockTag in pairs(self._attackLockTags) do
+		MovementLock.Unlock(lockTag)
+	end
+	table.clear(self._attackLockTags)
 
 	-- Destroy runtime sounds
 	if self.swingSound then self.swingSound:Destroy(); self.swingSound = nil end

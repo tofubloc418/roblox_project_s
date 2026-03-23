@@ -1,28 +1,46 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local requireAny = require :: any
+
 local inputRemotes = ReplicatedStorage:WaitForChild("InputRemotes")
 local setSprintRemote: RemoteEvent = inputRemotes:WaitForChild("SetSprint")
 local jumpPressedRemote: RemoteEvent = inputRemotes:WaitForChild("JumpPressed")
 
 local player = Players.LocalPlayer
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
-local KeybindIds = require(keybindsFolder:WaitForChild("KeybindIds"))
-local KeybindsClient = require(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
+local KeybindIds = requireAny(keybindsFolder:WaitForChild("KeybindIds"))
+local KeybindsClient = requireAny(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
+local MovementLock = requireAny(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock"))
+local PlayerConfig = requireAny(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
+
+local function isSprintLocked(): boolean
+	return player:GetAttribute("SprintLocked") == true
+		or MovementLock.IsLocked("Sprint")
+		or MovementLock.IsLocked("Walk")
+end
+
+local function isJumpLocked(): boolean
+	return MovementLock.IsLocked("Jump")
+end
 
 -- Toggle sprint desire and adjust walkspeed locally for responsiveness
 local function setSprint(desired: boolean)
+	if desired and isSprintLocked() then
+		desired = false
+	end
+
 	player:SetAttribute("WantsSprint", desired)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 	if humanoid and PlayerConfig then
 		local stamina = player:GetAttribute("Stamina") or (PlayerConfig.baseMaxStamina or 100)
 		local canRun = stamina > 0
 		local want = desired and canRun
 		humanoid.WalkSpeed = want and (PlayerConfig.runSpeed or 20) or (PlayerConfig.walkSpeed or 14)
 	end
-    setSprintRemote:FireServer(desired)
+	setSprintRemote:FireServer(desired)
 end
 
 UserInputService.InputBegan:Connect(function(input, gp)
@@ -31,7 +49,9 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	if KeybindsClient.isInputForAction(KeybindIds.Sprint, input) then
 		setSprint(true)
 	elseif KeybindsClient.isInputForAction(KeybindIds.Jump, input) then
-		jumpPressedRemote:FireServer()
+		if not isJumpLocked() then
+			jumpPressedRemote:FireServer()
+		end
 	end
 end)
 
@@ -39,6 +59,12 @@ UserInputService.InputEnded:Connect(function(input, gp)
 	if gp then return end
 	if not input.KeyCode or input.KeyCode == Enum.KeyCode.Unknown then return end
 	if KeybindsClient.isInputForAction(KeybindIds.Sprint, input) then
+		setSprint(false)
+	end
+end)
+
+MovementLock.Changed:Connect(function(lockedFlags)
+	if lockedFlags.Walk or lockedFlags.Sprint then
 		setSprint(false)
 	end
 end)
@@ -52,7 +78,6 @@ player:GetAttributeChangedSignal("Stamina"):Connect(function()
 	-- Client jump gating for immediate UX: mirror server
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
-		local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 		local cost = PlayerConfig.jumpStaminaCost or 20
 		local allow = stamina >= cost
 		humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
@@ -60,15 +85,18 @@ player:GetAttributeChangedSignal("Stamina"):Connect(function()
 end)
 
 local function blockJump(_, state, input)
-    if state == Enum.UserInputState.Begin then
-        local stamina = player:GetAttribute("Stamina") or 0
-        local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
-        local cost = PlayerConfig.jumpStaminaCost or 20
-        if stamina < cost then
-            return Enum.ContextActionResult.Sink
-        end
-    end
-    return Enum.ContextActionResult.Pass
+	if state == Enum.UserInputState.Begin then
+		if isJumpLocked() then
+			return Enum.ContextActionResult.Sink
+		end
+
+		local stamina = player:GetAttribute("Stamina") or 0
+		local cost = PlayerConfig.jumpStaminaCost or 20
+		if stamina < cost then
+			return Enum.ContextActionResult.Sink
+		end
+	end
+	return Enum.ContextActionResult.Pass
 end
 KeybindsClient.bindAction(KeybindIds.Jump, blockJump, {
 	actionName = "BlockJumpOnLowStamina",

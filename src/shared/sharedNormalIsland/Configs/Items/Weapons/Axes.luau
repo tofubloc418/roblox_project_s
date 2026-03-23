@@ -33,9 +33,24 @@ local Axes = {
 		equipAnimationId = "rbxassetid://79058443592728",
 		unequipAnimationId = "rbxassetid://83081513554352",
 		attackSequence = {
-			{ animationId = "rbxassetid://107791038673413", hitDuration = 28 / 60, comboTimeLimit = 43 / 60 },
-			{ animationId = "rbxassetid://75612209059589", hitDuration = 28 / 60, comboTimeLimit = 43 / 60 },
-			{ animationId = "rbxassetid://82850857726878", hitDuration = 45 / 60, comboTimeLimit = 60 / 60 },
+			{
+				animationId = "rbxassetid://107791038673413",
+				hitDuration = 28 / 60,
+				comboTimeLimit = 43 / 60,
+				movementLocks = { "All" },
+			},
+			{
+				animationId = "rbxassetid://75612209059589",
+				hitDuration = 28 / 60,
+				comboTimeLimit = 43 / 60,
+				movementLocks = { "All" },
+			},
+			{
+				animationId = "rbxassetid://82850857726878",
+				hitDuration = 45 / 60,
+				comboTimeLimit = 60 / 60,
+				movementLocks = { "All" },
+			},
 		},
 		blockAnimationId = "rbxassetid://0",
 

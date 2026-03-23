@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
 
 local ThrustingSwords = {
 	["Rapier"] = {

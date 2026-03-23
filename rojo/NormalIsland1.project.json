@@ -5,17 +5,17 @@
     "$className": "DataModel",
     "$ignoreUnknownInstances": true,
     "ReplicatedStorage": {
-      "$path": "src/shared/sharedNormalIsland",
+      "$path": "../src/shared/sharedNormalIsland",
       "$ignoreUnknownInstances": true,
       "Packages": {
-        "$path": "Packages"
+        "$path": "../Packages"
       },
       "Cmdr": {
-        "$path": "Cmdr/Cmdr"
+        "$path": "../Cmdr/Cmdr"
       }
     },
     "ServerScriptService": {
-      "$path": "src/server/serverNormalIsland",
+      "$path": "../src/server/serverNormalIsland",
       "$ignoreUnknownInstances": true
     },
     "StarterPlayer": {
@@ -26,7 +26,7 @@
         "CameraMaxZoomDistance": 24
       },
       "StarterPlayerScripts": {
-        "$path": "src/client/clientNormalIsland",
+        "$path": "../src/client/clientNormalIsland",
         "$ignoreUnknownInstances": true
       }
     }

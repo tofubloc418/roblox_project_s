@@ -5,6 +5,7 @@ local Players           = game:GetService("Players")
 local RunService        = game:GetService("RunService")
 local RoundState   = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
+local MovementAnimationConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MovementAnimationConfig"))
 
 local DATA_FOLDER = "Data"
 local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
@@ -82,6 +83,7 @@ local function applyCharacterConfig(character: Model)
 				dc.DepthScale     = 1
 				dc.BodyTypeScale  = 0
 				dc.ProportionScale = 0
+				MovementAnimationConfig.ApplyHumanoidDescriptionOverrides(dc)
 				pcall(function() humanoid:ApplyDescription(dc) end)
 
 				local scale = PlayerConfig.scale

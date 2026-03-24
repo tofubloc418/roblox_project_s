@@ -2,10 +2,9 @@
 -- Sample abilities for registry/UI; logic in server Abilities/Scripts/<abilityId>.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
-local AbilityTypes = require(script.Parent:WaitForChild("AbilityTypes"))
+local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums")) :: any
 
-local Placeholder: { AbilityTypes.AbilityConfig } = {
+local Placeholder = {
 	{
 		abilityId = "PlaceholderSlash",
 		iconId = "rbxassetid://105340346148425",
@@ -14,10 +13,10 @@ local Placeholder: { AbilityTypes.AbilityConfig } = {
 		isUltimate = false,
 		compatibleTags = { ItemEnums.WeaponTag.Dagger, ItemEnums.WeaponTag.Fists },
 		damageScaling = { adScaling = 1.2, mdScaling = 0 },
-		params = {
+		params = ({
 			coneRange = 6,
 			coneHalfAngleDeg = 40,
-		},
+		}) :: { [string]: any },
 	},
 	{
 		abilityId = "PlaceholderUlt",
@@ -27,9 +26,9 @@ local Placeholder: { AbilityTypes.AbilityConfig } = {
 		isUltimate = true,
 		compatibleTags = { ItemEnums.WeaponTag.Dagger, ItemEnums.WeaponTag.Fists, ItemEnums.WeaponTag.Greatsword },
 		damageScaling = { adScaling = 1.5, mdScaling = 0.5 },
-		params = {
+		params = ({
 			blastRadius = 10,
-		},
+		}) :: { [string]: any },
 	},
 }
 

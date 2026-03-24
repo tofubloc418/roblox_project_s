@@ -3,11 +3,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
-local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums"))
-local InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes"))
+local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
+local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemEnums")) :: any
+local _InventoryTypes = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Data"):WaitForChild("PlayerDataTypes")) :: any
 
-type StoredEquipmentData = InventoryTypes.StoredEquipmentData
+type StoredEquipmentData = _InventoryTypes.StoredEquipmentData
 
 local DEFAULT_PRESET_KEY = ItemEnums.WeaponTag.Fists
 

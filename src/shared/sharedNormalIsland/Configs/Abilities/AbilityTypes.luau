@@ -17,6 +17,8 @@ export type AbilityConfig = {
 	compatibleTags: { string },
 	damageScaling: AbilityDamageScaling?,
 	params: { [string]: any }?,
+	-- Optional string map: animation ids, rbxassetid VFX/SFX, etc. Reference keys from a local `Asset` table in ability scripts.
+	assets: { [string]: string }?,
 }
 
 return AbilityTypes

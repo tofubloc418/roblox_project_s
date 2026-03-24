@@ -6,6 +6,8 @@
 ]]
 
 return {
-	PrayerSurge = "rbxassetid://119567762929429",
+	PrayerSurge = "rbxassetid://102206279788504",
+	FireSurge = "rbxassetid://119567762929429",
 	MagicCircle = "rbxassetid://133872987940774",
+	MediumImpact = "rbxassetid://83561234568264",
 }

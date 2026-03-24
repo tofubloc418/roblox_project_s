@@ -1,0 +1,17 @@
+---
+description: Ability tuning and visual customization must live in shared ability config params, not hardcoded in scripts
+globs: src/**/Configs/Abilities/**/*.luau,src/**/Abilities/**/*.luau
+alwaysApply: false
+---
+
+# Ability customization belongs in config
+
+When adding or changing **designer-tunable** behavior for an ability—anything a designer would reasonably tweak without touching code logic—**put it in the shared ability config** under `src/shared/sharedNormalIsland/Configs/Abilities/<Ability>.luau` in the **`params`** table (and **`assets`** for animation / VFX nameIDs / SFX nameIDs per existing guides).
+
+**Must live in `params` (examples):** durations, radii, offsets, marker names, damage multipliers tied to tuning, **colors**, materials, light brightness/range, scale curves, cooldowns mirrored from server expectations, and any other **presentation or balance knobs** that vary per ability or per iteration.
+
+**May stay in scripts:** pure implementation detail with no reasonable per-ability override (e.g. internal easing constants shared across all uses of a helper), wiring only, or one-off technical constraints—**only when the same value would never differ per ability**.
+
+**Do not** introduce new hardcoded tunables in `serverNormalIsland/Abilities/Scripts/` or `clientNormalIsland/Abilities/Scripts/` when they are ability-specific customization; add a `params` field and read it via `AbilityRegistry.GetAbility(abilityId)` with safe defaults in code.
+
+**Pattern:** config row defines `params.<name> = …` → client/server ability script reads registry and applies defaults if missing or invalid.

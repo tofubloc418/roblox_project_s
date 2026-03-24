@@ -5,7 +5,6 @@ local Players           = game:GetService("Players")
 local RunService        = game:GetService("RunService")
 local RoundState   = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RoundState"))
 local PlayerConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
-local MovementAnimationConfig = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("MovementAnimationConfig"))
 
 local DATA_FOLDER = "Data"
 local DATA_SERVICE_BOOTSTRAP_NAME = "DataServiceBootstrap"
@@ -19,6 +18,8 @@ local KeybindsService = require(script.Parent:WaitForChild("Input"):WaitForChild
 local DamageService = require(script.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local WeaponService = require(script.Parent:WaitForChild("Weapons"):WaitForChild("WeaponService"))
 local StatsService = require(script.Parent:WaitForChild("Stats"):WaitForChild("StatsService"))
+local BlockyCharacterSetup = require(script.Parent:WaitForChild("Player"):WaitForChild("BlockyCharacterSetup"))
+local CharacterAttachmentSetup = require(script.Parent:WaitForChild("Player"):WaitForChild("CharacterAttachmentSetup"))
 
 local isStudio = RunService:IsStudio()
 print(string.format("[Initializer] Starting... (Studio=%s)", tostring(isStudio)))
@@ -61,57 +62,24 @@ WeaponService:Initialize()
 -- Character config
 local function applyCharacterConfig(character: Model)
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then return end
+	if not humanoid then
+		return
+	end
 
-	local player    = Players:GetPlayerFromCharacter(character)
+	local player = Players:GetPlayerFromCharacter(character)
 	local maxHealth = player and player:GetAttribute("MaxHP") or PlayerConfig.maxHealth
 	local walkSpeed = player and player:GetAttribute("WalkSpeed") or PlayerConfig.walkSpeed
 
-	if PlayerConfig.humanoidRigType == "R15" then
-		humanoid.RigType = Enum.HumanoidRigType.R15
+	BlockyCharacterSetup.Apply(character)
 
-		task.defer(function()
-			local ok, dc = pcall(function() return humanoid:GetAppliedDescription() end)
-			if ok and dc then
-				dc.Head      = 0; dc.Torso      = 0
-				dc.LeftArm   = 0; dc.RightArm   = 0
-				dc.LeftLeg   = 0; dc.RightLeg   = 0
-				-- Force default blocky R15 proportions
-				dc.HeadScale      = 1
-				dc.HeightScale    = 1
-				dc.WidthScale     = 1
-				dc.DepthScale     = 1
-				dc.BodyTypeScale  = 0
-				dc.ProportionScale = 0
-				MovementAnimationConfig.ApplyHumanoidDescriptionOverrides(dc)
-				pcall(function() humanoid:ApplyDescription(dc) end)
+	humanoid.WalkSpeed = walkSpeed
+	humanoid.JumpPower = PlayerConfig.jumpPower
+	humanoid.MaxHealth = maxHealth
+	humanoid.Health = maxHealth
 
-				local scale = PlayerConfig.scale
-				if scale then
-					local function setScale(name: string, value: number)
-						local s = humanoid:FindFirstChild(name)
-						if not s then
-							s = Instance.new("NumberValue")
-							s.Name   = name
-							s.Parent = humanoid
-						end
-						s.Value = value
-					end
-					setScale("BodyHeightScale", scale.height)
-					setScale("BodyWidthScale",  scale.width)
-					setScale("BodyDepthScale",  scale.depth)
-					setScale("HeadScale",       scale.head)
-				end
-			end
-		end)
-	else
-		humanoid.RigType = Enum.HumanoidRigType.R6
+	if PlayerConfig.humanoidRigType ~= "R15" then
+		CharacterAttachmentSetup.Apply(character)
 	end
-
-	humanoid.WalkSpeed  = walkSpeed
-	humanoid.JumpPower  = PlayerConfig.jumpPower
-	humanoid.MaxHealth  = maxHealth
-	humanoid.Health     = maxHealth
 end
 
 -- Player lifecycle
@@ -143,6 +111,16 @@ local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(function(character)
 		applyCharacterConfig(character)
 	end)
+	-- CharacterAdded only fires for spawns *after* this connection. If the character
+	-- already exists (common when onPlayerAdded runs late), apply once now.
+	local existing = player.Character
+	if existing then
+		task.defer(function()
+			if player.Character == existing and existing.Parent then
+				applyCharacterConfig(existing)
+			end
+		end)
+	end
 end
 
 -- Handle players who join after the server is already running.

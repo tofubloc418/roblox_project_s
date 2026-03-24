@@ -1,0 +1,21 @@
+---
+description: Ability/effect playback — VFX and SFX are independent; gate on markers/events only, not on each other
+globs:
+  - "**/Abilities/**/*.luau"
+  - "**/Effects/**/*.luau"
+  - "**/Utils/EffectAssets.luau"
+alwaysApply: false
+---
+
+# VFX and SFX playback are separate
+
+When an ability or effect responds to a **timeline event** (e.g. animation **marker**, server **visual relay** event, or a single logical “phase”):
+
+1. **Decide whether to play SFX** from that event and from **SFX config** (non-empty nameID, template exists, valid parent). **Do not** require VFX clone/setup to succeed first.
+2. **Decide whether to play VFX** from the same event and from **VFX config** (non-empty nameID, clone succeeds). **Do not** require SFX to play first.
+
+**Anti-pattern:** Nesting `EffectAssets.PlaySound(...)` (or equivalent) inside `if clonedVfx then` / `if im then` when `im` comes from `CloneVfx`. An empty or missing **Vfx** slot in registry/config must **not** silence **Sfx**.
+
+**Do instead:** At the same marker/event handler, run two clear branches (order optional): spawn VFX when configured; play SFX when configured. Share attachment/parent resolution if needed, but keep the **checks** independent.
+
+**Rationale:** Registry rows often set `VfxImpact = ""` while `SfxImpact` is still set (or the reverse). Coupling breaks one medium when the other is intentionally absent.

@@ -26,6 +26,7 @@ local AbilityExecutionService = {}
 
 local _requestUseAbility: RemoteEvent
 local _abilityStarted: RemoteEvent
+local _abilityAnimationMarker: RemoteEvent
 
 local function getPresetKeyFromEquipment(equipment: StoredEquipmentData?): string
 	if not equipment then
@@ -82,6 +83,30 @@ function AbilityExecutionService.Initialize()
 
 	_requestUseAbility = ensureRemote("RequestUseAbility")
 	_abilityStarted = ensureRemote("AbilityStarted")
+	_abilityAnimationMarker = ensureRemote("AbilityAnimationMarker")
+
+	local scriptsFolder = script.Parent:FindFirstChild("Scripts")
+	_abilityAnimationMarker.OnServerEvent:Connect(function(player: Player, abilityId: unknown, markerName: unknown)
+		if type(abilityId) ~= "string" or type(markerName) ~= "string" then
+			return
+		end
+		if not scriptsFolder then
+			return
+		end
+		local mod = scriptsFolder:FindFirstChild(abilityId)
+		if not mod or not mod:IsA("ModuleScript") then
+			return
+		end
+		local ok, abilityScript = pcall(require, mod :: ModuleScript)
+		if not ok or type(abilityScript) ~= "table" then
+			return
+		end
+		local fn = abilityScript.OnAnimationMarker
+		if type(fn) ~= "function" then
+			return
+		end
+		pcall(fn, player, markerName)
+	end)
 
 	_requestUseAbility.OnServerEvent:Connect(function(player: Player, slotIndex: number, clientBarPresetKey: any?)
 		if type(slotIndex) ~= "number" or slotIndex < 1 or slotIndex > 5 or slotIndex % 1 ~= 0 then

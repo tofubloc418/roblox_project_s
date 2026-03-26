@@ -1,0 +1,63 @@
+--!strict
+return {
+	Name = "rmhelp",
+	Aliases = { "rootmotion_help" },
+	Description = "RootMotion dev commands: full parameter reference.",
+	Group = "Dev",
+	Args = {},
+
+	ClientRun = function(context)
+		local lines = {
+			"━━━━ RootMotion dev commands ━━━━",
+			"Args are left-to-right in Cmdr. [brackets] = optional. Last [target] = player (default: you).",
+			"",
+			"v3 = vector3: three numbers X Y Z in world studs (same as other Cmdr vector3 args).",
+			" dur = seconds. dist = studs. speed = studs/sec. rad/s = radians per second.",
+			"",
+			"rmsmoke [target]",
+			"  Runs translate, dash, knockback, pull, launch, slam, float, slide, lunge,",
+			"  teleport (no path validate), orbit, springTo with built-in safe values.",
+			"",
+			"rm_translate <dir v3> <distance> <duration> [target]",
+			"  Fixed-axis move along dir (need not be unit).",
+			"",
+			"rm_dash <dir v3> <distance> <duration> [easing] [target]",
+			"  easing: linear | quadOut | quadIn | cubicOut | cubicIn — default quadOut.",
+			"",
+			"rm_knockback <origin v3> <distance> <duration> [target]",
+			"  origin = world point to be knocked away from.",
+			"",
+			"rm_pull <pullTo v3> <speed> <maxDuration> [arrivalRadius] [target]",
+			"  arrivalRadius: stop within this many studs of pullTo (default 1).",
+			"",
+			"rm_launch <height> [target]",
+			"  height = vertical target offset (see RootMotion Launch).",
+			"",
+			"rm_slam <speed> [maxDuration] [target]",
+			"  Downward slam; maxDuration caps how long it can run.",
+			"",
+			"rm_float <duration> [targetY] [target]",
+			"  Counter-gravity for duration. targetY optional: hold near this world Y (enables hover gain).",
+			"",
+			"rm_slide <dir v3> <speed> <duration> [target]",
+			"  Needs solid ground under the character.",
+			"",
+			"rm_lunge <dir v3> [distance] [duration] [target]",
+			"  Short burst; distance/duration fall back to module defaults if omitted.",
+			"",
+			"rm_teleport <position v3> [validatePath] [target]",
+			"  Teleports HRP to position; keeps current facing. validatePath default false.",
+			"",
+			"rm_orbit <center v3> <radius> <angularSpeed> <duration> [target]",
+			"  Orbit in XZ around center; axis is world up (Y). angularSpeed in rad/s.",
+			"",
+			"rm_springto <destination v3> [maxDuration] [target]",
+			"  AlignPosition spring toward point; maxDuration default 4s.",
+			"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+		}
+		for _, line in ipairs(lines) do
+			context:Reply(line)
+		end
+		return "RootMotion parameter reference."
+	end,
+}

@@ -1,9 +1,9 @@
 --!strict
--- ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId> (Model, Logic, …)
+-- ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId> 
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
+local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
 
 local WeaponAssetLayout = {}
 

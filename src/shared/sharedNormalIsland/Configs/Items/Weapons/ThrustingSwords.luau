@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums"))
+local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
 
 local ThrustingSwords = {
 	["Rapier"] = {
@@ -10,6 +10,7 @@ local ThrustingSwords = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.ThrustingSword,
+		modelAssetId = "rbxassetid://0",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 120,

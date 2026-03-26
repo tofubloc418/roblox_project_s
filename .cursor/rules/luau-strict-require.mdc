@@ -1,0 +1,23 @@
+---
+description: Luau --!strict — require() vs WaitForChild chains and type checker
+globs: src/**/*.luau
+alwaysApply: false
+---
+
+# Strict mode: `require()` and `WaitForChild`
+
+In **`--!strict`**, Luau only type-checks `require(...)` when the argument has a **supported structure** the analyzer can resolve (e.g. certain `script`/`game` paths). If the argument is not supported, you get a type error; Roblox documents silencing that with **`:: any` on the `require` result**.
+
+**Why chained `WaitForChild` fails:** each `WaitForChild` is typed as returning **`Instance`**, not `ModuleScript`. After chaining, the checker cannot prove the value is a module, so `require(ReplicatedStorage:WaitForChild(...):WaitForChild(...))` is rejected even though it works at runtime.
+
+**Do this instead (pick one):**
+
+1. **Cast the module instance** so `require` sees a `ModuleScript`, then annotate the binding if inference is weak:
+   - `local m = path:WaitForChild("SfxIndex") :: ModuleScript`
+   - `local SfxIndex = require(m)`
+2. **Silence strict require on dynamic paths** (documented escape hatch):  
+   `local SfxIndex = require(...) :: any`  
+   If you need a real type, add an `export type` in the module and annotate the local binding.
+3. **Prefer `require(script...)`** (relative under known hierarchy) when the module lives under the same tree — those paths are usually analyzable.
+
+Avoid adding long `WaitForChild` chains directly inside `require(...)` in new `!strict` code unless you also apply (1) or (2).

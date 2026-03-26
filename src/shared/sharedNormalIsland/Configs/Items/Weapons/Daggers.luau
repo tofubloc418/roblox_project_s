@@ -10,6 +10,7 @@ local Daggers = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Dagger,
+		modelAssetId = "rbxassetid://99179217155391",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 50,
@@ -32,8 +33,18 @@ local Daggers = {
 		equipAnimationId   = "rbxassetid://0",
 		unequipAnimationId = "rbxassetid://0",
 		attackSequence = {
-			{ animationId = "rbxassetid://120794561550510", hitDuration = 12/60, comboTimeLimit = 30/60 },
-			{ animationId = "rbxassetid://96019133363181", hitDuration = 12/60, comboTimeLimit = 30/60 },
+			{
+				animationId = "rbxassetid://120794561550510",
+				hitDuration = 12 / 60,
+				comboTimeLimit = 30 / 60,
+				movementLocks = { "All" },
+			},
+			{
+				animationId = "rbxassetid://96019133363181",
+				hitDuration = 12 / 60,
+				comboTimeLimit = 30 / 60,
+				movementLocks = { "All" },
+			},
 		},
 		blockAnimationId = "rbxassetid://0",
 

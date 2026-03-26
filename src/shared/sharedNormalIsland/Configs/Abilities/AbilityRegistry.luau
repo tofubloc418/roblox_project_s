@@ -2,9 +2,9 @@
 -- AbilityRegistry
 -- Single in-memory registry for ability templates (UI + compatibility lookup).
 
-local AbilityTypes = require(script.Parent:WaitForChild("AbilityTypes"))
+local _AbilityTypes = require(script.Parent:WaitForChild("AbilityTypes")) :: any
 
-export type AbilityConfig = AbilityTypes.AbilityConfig
+export type AbilityConfig = _AbilityTypes.AbilityConfig
 
 local AbilityRegistry = {}
 
@@ -100,5 +100,6 @@ local function registerFile(moduleScript: Instance)
 end
 
 registerFile(script.Parent:WaitForChild("Placeholder"))
+registerFile(script.Parent:WaitForChild("PrayerfulStrike"))
 
 return AbilityRegistry

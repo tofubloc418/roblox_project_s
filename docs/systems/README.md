@@ -11,6 +11,7 @@ Technical specifications for the core backend systems of Project S. These docs d
 | [Modifier System](./modifier-system.md) | Bonus stat modifiers on items, modifier pools, RNG rolling algorithm, tier system, integration with StatsService, rerolling mechanics |
 | [Data Persistence](./data-persistence.md) | PlayerData schema (including ability presets), serialized item format, DataStore architecture, session locking, save/load pipeline, InventoryService API, client-server sync remotes, stash system |
 | [ReplicatedStorage Layout](./replicated-storage.md) | Full folder tree (items, abilities, consumables), asset specs, asset resolver API, Rojo sync mapping, naming conventions, performance considerations |
+| [Movement Lock](./movement-lock.md) | Client-side movement interruption (walk/sprint/jump/swim), `MovementLock` registry, enforcer, weapon `movementLocks`, ability usage |
 
 ## Reading Order
 

@@ -1,0 +1,14 @@
+---
+description: Follow docs/guidance/asset-placement-and-code-guide.md when adding items, weapons, equipment, consumables, abilities, or RS item assets
+alwaysApply: true
+---
+
+# New assets & item-related work
+
+Whenever the user asks to **add or change** a game **asset** in the sense of **items, weapons, armor, backpacks, consumables, abilities**, or **ReplicatedStorage** layouts under **`Items/`** (models, `Logic`, registries):
+
+1. **Read and follow** `docs/guidance/asset-placement-and-code-guide.md` end-to-end for that task.
+2. Use the **checklists** in that doc (weapon vs equipment vs consumable vs ability).
+3. **Do not** use alternate paths or registration patterns that contradict that doc (e.g. old `Assets.Items...` layouts, per-file `ItemRegistry.Register` instead of `registerFile`, or ability folders under `ReplicatedStorage.Assets`).
+
+If the doc is silent on something, match **existing code** in the same category (e.g. copy an existing weapon module and `Items.Weapons` folder structure).

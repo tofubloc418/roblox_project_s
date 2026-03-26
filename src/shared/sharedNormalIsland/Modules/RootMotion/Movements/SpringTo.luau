@@ -1,12 +1,11 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type SpringToParams = Types.SpringToParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: SpringToParams): ActiveMovement.ActiveMovement
+local function run(mover: any, params: any): any
 	local target = params.target
 	local responsiveness = params.frequency or 10
 	local maxVel = params.maxVelocity or params.damping or 40
@@ -14,7 +13,7 @@ local function run(mover: Mover, params: SpringToParams): ActiveMovement.ActiveM
 	local applyCom = if params.applyAtCenterOfMass == nil then true else params.applyAtCenterOfMass
 	local maxDur = params.maxDuration or 4
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
 		mover:releaseAlignPosition(token)

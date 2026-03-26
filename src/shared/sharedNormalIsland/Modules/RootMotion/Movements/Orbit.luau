@@ -1,13 +1,11 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type OrbitParams = Types.OrbitParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: OrbitParams): ActiveMovement.ActiveMovement
-	local center = params.center
+local function run(mover: any, params: any): any
 	local radius = math.max(params.radius, 1e-3)
 	local w = params.angularSpeed
 	local duration = math.max(params.duration, 1e-3)
@@ -20,7 +18,7 @@ local function run(mover: Mover, params: OrbitParams): ActiveMovement.ActiveMove
 	local elapsed = 0
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
 		mover:unregisterFrameUpdate(token)

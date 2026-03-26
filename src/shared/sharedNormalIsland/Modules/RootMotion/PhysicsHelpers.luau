@@ -29,8 +29,10 @@ local function isGrounded(rootPart: BasePart, rayLength: number?, raycastParams:
 	local len = rayLength or 3.5
 	local origin = rootPart.Position
 	local direction = Vector3.new(0, -len, 0)
-	local p = raycastParams
-	if not p then
+	local p: RaycastParams
+	if raycastParams then
+		p = raycastParams
+	else
 		p = RaycastParams.new()
 		p.FilterType = Enum.RaycastFilterType.Exclude
 		local parent = rootPart.Parent

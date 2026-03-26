@@ -1,13 +1,12 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type PullParams = Types.PullParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: PullParams): ActiveMovement.ActiveMovement
-	local root = mover:getRoot()
+local function run(mover: any, params: any): any
+	local rootPart = mover:getRoot()
 	local target = params.target
 	local speed = params.speed
 	local maxDur = math.max(params.maxDuration, 1e-3)
@@ -15,7 +14,7 @@ local function run(mover: Mover, params: PullParams): ActiveMovement.ActiveMovem
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
 
 	local elapsed = 0
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
@@ -25,7 +24,7 @@ local function run(mover: Mover, params: PullParams): ActiveMovement.ActiveMovem
 
 	local function step(dt: number)
 		elapsed += dt
-		local toT = target - root.Position
+		local toT = target - rootPart.Position
 		if toT.Magnitude <= arrival then
 			if token:IsActive() then
 				ActiveMovement.finish(token)

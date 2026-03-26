@@ -1,10 +1,10 @@
 --!strict
 
-local MoverModule = require(script.Parent.Mover)
+local req = require :: any
+local s = script.Parent :: any
+local MoverModule = req(s.Mover)
 
-type MoverLike = { getCachedMass: (MoverLike) -> number }
-
-local function maxForceFor(mover: MoverLike, accelerationMultiplier: number?): number
+local function maxForceFor(mover: any, accelerationMultiplier: number?): number
 	local mult = accelerationMultiplier or MoverModule.DEFAULT_ACCEL_MULT
 	return mover:getCachedMass() * mult
 end

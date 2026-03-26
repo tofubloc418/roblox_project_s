@@ -16,9 +16,13 @@ export type SimpleConnection = {
 
 type Callback = (didComplete: boolean) -> ()
 
-local function createSignal(): CompletedSignal & { _Fire: (self: any, didComplete: boolean) -> () }
+type CompletedSignalInstance = CompletedSignal & {
+	_Fire: (self: CompletedSignalInstance, didComplete: boolean) -> (),
+}
+
+local function createSignal(): CompletedSignalInstance
 	local listeners: { Callback } = {}
-	local signal = {} :: any
+	local signal = {} :: CompletedSignalInstance
 	function signal:Connect(cb: Callback): SimpleConnection
 		table.insert(listeners, cb)
 		local alive = true
@@ -49,7 +53,11 @@ end
 
 type CancelFn = () -> ()
 
-export type ActiveMovementOptions = {
+type ActiveMovementWithFinish = ActiveMovement & {
+	_finish: (() -> ())?,
+}
+
+type ActiveMovementOptions = {
 	onCancel: CancelFn?,
 }
 
@@ -65,7 +73,7 @@ function ActiveMovementModule.new(
 	local active = true
 	local cancelFn: CancelFn = if options and options.onCancel then options.onCancel else noop
 
-	local token: ActiveMovement
+	local token: ActiveMovementWithFinish
 	token = {
 		Completed = signal,
 		IsActive = function(_self: ActiveMovement): boolean
@@ -78,24 +86,25 @@ function ActiveMovementModule.new(
 			active = false
 			cancelFn()
 			onCompleteCleanup(token)
-			(signal :: any):_Fire(false)
+			signal:_Fire(false)
 		end,
-	} :: any
+		_finish = nil,
+	}
 
-	;(token :: any)._finish = function()
+	token._finish = function()
 		if not active then
 			return
 		end
 		active = false
 		onCompleteCleanup(token)
-		(signal :: any):_Fire(true)
+		signal:_Fire(true)
 	end
 
 	return token
 end
 
 function ActiveMovementModule.finish(token: ActiveMovement)
-	local fn = (token :: any)._finish
+	local fn = (token :: ActiveMovementWithFinish)._finish
 	if fn then
 		fn()
 	end

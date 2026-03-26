@@ -1,20 +1,19 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local PhysicsHelpers = require(script.Parent.Parent.PhysicsHelpers)
-local Types = require(script.Parent.Parent.Types)
-type Mover = Types.MoverInternal
-type FloatParams = Types.FloatParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local PhysicsHelpers = req(root.PhysicsHelpers)
 
-local function run(mover: Mover, params: FloatParams): ActiveMovement.ActiveMovement
-	local root = mover:getRoot()
+local function run(mover: any, params: any): any
+	local rootPart = mover:getRoot()
 	local mass = mover:getCachedMass()
-	local counter = PhysicsHelpers.getCounterGravityForceVector(root)
+	local counter = PhysicsHelpers.getCounterGravityForceVector(rootPart)
 	local duration = math.max(params.duration, 1e-3)
 	local targetY = params.targetY
 	local gain = params.hoverHeightGain or 0
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 
 	local function cleanup()
 		mover:untrackActive(token)
@@ -26,7 +25,7 @@ local function run(mover: Mover, params: FloatParams): ActiveMovement.ActiveMove
 
 	if targetY ~= nil and gain > 0 then
 		local function step(_dt: number)
-			local err = targetY - root.Position.Y
+			local err = targetY - rootPart.Position.Y
 			local boost = Vector3.new(0, err * gain * mass, 0)
 			mover:acquireVectorForce(token, counter + boost)
 		end

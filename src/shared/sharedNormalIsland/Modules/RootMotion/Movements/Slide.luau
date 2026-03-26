@@ -1,14 +1,13 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local PhysicsHelpers = require(script.Parent.Parent.PhysicsHelpers)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type SlideParams = Types.SlideParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local PhysicsHelpers = req(root.PhysicsHelpers)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: SlideParams): ActiveMovement.ActiveMovement
-	local root = mover:getRoot()
+local function run(mover: any, params: any): any
+	local rootPart = mover:getRoot()
 	local horiz = params.direction
 	horiz = Vector3.new(horiz.X, 0, horiz.Z)
 	if horiz.Magnitude < 1e-5 then
@@ -24,7 +23,7 @@ local function run(mover: Mover, params: SlideParams): ActiveMovement.ActiveMove
 	local speed = params.speed
 	local elapsed = 0
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
@@ -34,7 +33,7 @@ local function run(mover: Mover, params: SlideParams): ActiveMovement.ActiveMove
 
 	local function step(dt: number)
 		elapsed += dt
-		local n = PhysicsHelpers.getGroundNormal(root, rayLen, nil) or Vector3.yAxis
+		local n = PhysicsHelpers.getGroundNormal(rootPart, rayLen, nil) or Vector3.yAxis
 		local along = (horiz - n * horiz:Dot(n))
 		local slideDir: Vector3
 		if along.Magnitude < 1e-4 then

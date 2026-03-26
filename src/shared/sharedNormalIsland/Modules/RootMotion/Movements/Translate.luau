@@ -1,12 +1,11 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type TranslateParams = Types.TranslateParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: TranslateParams): ActiveMovement.ActiveMovement
+local function run(mover: any, params: any): any
 	local dir = params.direction
 	if dir.Magnitude < 1e-5 then
 		error("[RootMotion.translate] direction must be non-zero")
@@ -17,7 +16,7 @@ local function run(mover: Mover, params: TranslateParams): ActiveMovement.Active
 	local speed = params.distance / duration
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
 		mover:releaseLinearVelocity(token)

@@ -2,9 +2,6 @@
 
 local Workspace = game:GetService("Workspace")
 
-local Types = require(script.Parent.Types)
-type ShapecastPathParams = Types.ShapecastPathParams
-
 export type PathResult = {
 	safeCFrame: CFrame,
 	hitSomething: boolean,
@@ -13,7 +10,7 @@ export type PathResult = {
 
 local Validation = {}
 
-local function rayParamsFrom(pathParams: ShapecastPathParams?, rootModel: Model): RaycastParams
+local function rayParamsFrom(pathParams: any?, rootModel: Model): RaycastParams
 	local p = RaycastParams.new()
 	p.FilterType = Enum.RaycastFilterType.Exclude
 	local exclude = if pathParams and pathParams.exclude then pathParams.exclude else { rootModel }
@@ -32,7 +29,7 @@ function Validation.shapecastPath(
 	originCFrame: CFrame,
 	displacement: Vector3,
 	rootSize: Vector3,
-	pathParams: ShapecastPathParams?,
+	pathParams: any?,
 	rootModel: Model
 ): PathResult
 	local dist = displacement.Magnitude

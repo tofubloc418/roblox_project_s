@@ -1,8 +1,5 @@
 --!strict
 
-local Types = require(script.Parent.Types)
-export type EasingId = Types.EasingId
-
 local function linear(t: number): number
 	return t
 end
@@ -32,7 +29,7 @@ local registry: { [string]: (number) -> number } = {
 	cubicIn = cubicIn,
 }
 
-local function byId(id: EasingId?): (number) -> number
+local function byId(id: string?): (number) -> number
 	if not id then
 		return linear
 	end

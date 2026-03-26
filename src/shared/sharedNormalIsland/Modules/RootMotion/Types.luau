@@ -102,39 +102,4 @@ export type ShapecastPathParams = {
 	collisionGroup: string?,
 }
 
--- Internal mover handle (see Mover.luau)
-export type MoverInternal = {
-	destroy: (self: MoverInternal) -> (),
-	cancelAll: (self: MoverInternal) -> (),
-	getRoot: (self: MoverInternal) -> BasePart,
-	getCharacter: (self: MoverInternal) -> Model,
-	getCachedMass: (self: MoverInternal) -> number,
-	acquireLinearVelocity: (self: MoverInternal, owner: any, vectorVelocity: Vector3, maxForce: number) -> (),
-	releaseLinearVelocity: (self: MoverInternal, owner: any) -> (),
-	acquireVectorForce: (self: MoverInternal, owner: any, force: Vector3) -> (),
-	releaseVectorForce: (self: MoverInternal, owner: any) -> (),
-	acquireAlignPosition: (
-		self: MoverInternal,
-		owner: any,
-		targetWorldPosition: Vector3,
-		maxForce: number,
-		maxVelocity: number,
-		responsiveness: number,
-		applyAtCenterOfMass: boolean
-	) -> (),
-	releaseAlignPosition: (self: MoverInternal, owner: any) -> (),
-	registerFrameUpdate: (self: MoverInternal, owner: any, fn: (dt: number) -> ()) -> (),
-	unregisterFrameUpdate: (self: MoverInternal, owner: any) -> (),
-	trackActive: (self: MoverInternal, token: any) -> (),
-	untrackActive: (self: MoverInternal, token: any) -> (),
-}
-
-export type ActiveMovement = {
-	Cancel: (self: ActiveMovement) -> (),
-	IsActive: (self: ActiveMovement) -> boolean,
-	Completed: {
-		Connect: (self: any, cb: (didComplete: boolean) -> ()) -> { Disconnect: () -> () },
-	},
-}
-
 return {}

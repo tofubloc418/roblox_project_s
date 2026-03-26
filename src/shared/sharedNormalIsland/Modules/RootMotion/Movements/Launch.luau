@@ -2,13 +2,12 @@
 
 local Workspace = game:GetService("Workspace")
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type LaunchParams = Types.LaunchParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Util = req(root.Util)
 
-local function run(mover: Mover, params: LaunchParams): ActiveMovement.ActiveMovement
+local function run(mover: any, params: any): any
 	local g = Workspace.Gravity
 	if g < 1e-5 then
 		g = 196.2
@@ -19,7 +18,7 @@ local function run(mover: Mover, params: LaunchParams): ActiveMovement.ActiveMov
 	local riseTime = vy / g
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
 
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
 		mover:releaseLinearVelocity(token)

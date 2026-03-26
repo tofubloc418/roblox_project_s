@@ -1,15 +1,14 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Easing = require(script.Parent.Parent.Easing)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type DashParams = Types.DashParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Easing = req(root.Easing)
+local Util = req(root.Util)
 
 local SPEED_SHARPNESS = 2
 
-local function run(mover: Mover, params: DashParams): ActiveMovement.ActiveMovement
+local function run(mover: any, params: any): any
 	local dir = params.direction
 	if dir.Magnitude < 1e-5 then
 		error("[RootMotion.dash] direction must be non-zero")
@@ -22,7 +21,7 @@ local function run(mover: Mover, params: DashParams): ActiveMovement.ActiveMovem
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
 
 	local elapsed = 0
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)
 		mover:unregisterFrameUpdate(token)

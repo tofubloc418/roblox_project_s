@@ -1,20 +1,19 @@
 --!strict
 
-local ActiveMovement = require(script.Parent.Parent.ActiveMovement)
-local Easing = require(script.Parent.Parent.Easing)
-local Types = require(script.Parent.Parent.Types)
-local Util = require(script.Parent.Parent.Util)
-type Mover = Types.MoverInternal
-type KnockbackParams = Types.KnockbackParams
+local req = require :: any
+local root = script.Parent.Parent :: any
+local ActiveMovement = req(root.ActiveMovement)
+local Easing = req(root.Easing)
+local Util = req(root.Util)
 
 local SPEED_SHARPNESS = 2
 
-local function run(mover: Mover, params: KnockbackParams): ActiveMovement.ActiveMovement
-	local root = mover:getRoot()
-	local flat = root.Position - params.origin
+local function run(mover: any, params: any): any
+	local rootPart = mover:getRoot()
+	local flat = rootPart.Position - params.origin
 	flat = Vector3.new(flat.X, 0, flat.Z)
 	if flat.Magnitude < 1e-5 then
-		local look = root.CFrame.LookVector
+		local look = rootPart.CFrame.LookVector
 		flat = Vector3.new(look.X, 0, look.Z)
 		if flat.Magnitude < 1e-5 then
 			flat = Vector3.new(0, 0, -1)
@@ -35,7 +34,7 @@ local function run(mover: Mover, params: KnockbackParams): ActiveMovement.Active
 	local ease = Easing.byId(params.easing)
 
 	local elapsed = 0
-	local token: ActiveMovement.ActiveMovement
+	local token: any
 
 	token = ActiveMovement.new(function()
 		mover:untrackActive(token)

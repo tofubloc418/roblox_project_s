@@ -2,24 +2,27 @@
 
 local RunService = game:GetService("RunService")
 
-local ActiveMovementModule = require(script.Parent.ActiveMovement)
+local req = require :: any
+local s = script.Parent :: any
+local ActiveMovementModule = req(s.ActiveMovement)
+local Types = req(s.Types)
 type ActiveMovement = ActiveMovementModule.ActiveMovement
 
 export type Mover = {
 	destroy: (self: Mover) -> (),
 	cancelAll: (self: Mover) -> (),
-	translate: (self: Mover, params: any) -> ActiveMovement,
-	dash: (self: Mover, params: any) -> ActiveMovement,
-	knockback: (self: Mover, params: any) -> ActiveMovement,
-	pull: (self: Mover, params: any) -> ActiveMovement,
-	launch: (self: Mover, params: any) -> ActiveMovement,
-	slam: (self: Mover, params: any) -> ActiveMovement,
-	float: (self: Mover, params: any) -> ActiveMovement,
-	slide: (self: Mover, params: any) -> ActiveMovement,
-	lunge: (self: Mover, params: any) -> ActiveMovement,
-	teleport: (self: Mover, params: any) -> ActiveMovement,
-	orbit: (self: Mover, params: any) -> ActiveMovement,
-	springTo: (self: Mover, params: any) -> ActiveMovement,
+	translate: (self: Mover, params: Types.TranslateParams) -> ActiveMovement,
+	dash: (self: Mover, params: Types.DashParams) -> ActiveMovement,
+	knockback: (self: Mover, params: Types.KnockbackParams) -> ActiveMovement,
+	pull: (self: Mover, params: Types.PullParams) -> ActiveMovement,
+	launch: (self: Mover, params: Types.LaunchParams) -> ActiveMovement,
+	slam: (self: Mover, params: Types.SlamParams) -> ActiveMovement,
+	float: (self: Mover, params: Types.FloatParams) -> ActiveMovement,
+	slide: (self: Mover, params: Types.SlideParams) -> ActiveMovement,
+	lunge: (self: Mover, params: Types.LungeParams) -> ActiveMovement,
+	teleport: (self: Mover, params: Types.TeleportParams) -> ActiveMovement,
+	orbit: (self: Mover, params: Types.OrbitParams) -> ActiveMovement,
+	springTo: (self: Mover, params: Types.SpringToParams) -> ActiveMovement,
 	getRoot: (self: Mover) -> BasePart,
 	getCharacter: (self: Mover) -> Model,
 	getCachedMass: (self: Mover) -> number,
@@ -43,12 +46,27 @@ export type Mover = {
 	untrackActive: (self: Mover, token: ActiveMovement) -> (),
 }
 
+type MovementBinders = {
+	translate: (Mover, Types.TranslateParams) -> ActiveMovement,
+	dash: (Mover, Types.DashParams) -> ActiveMovement,
+	knockback: (Mover, Types.KnockbackParams) -> ActiveMovement,
+	pull: (Mover, Types.PullParams) -> ActiveMovement,
+	launch: (Mover, Types.LaunchParams) -> ActiveMovement,
+	slam: (Mover, Types.SlamParams) -> ActiveMovement,
+	float: (Mover, Types.FloatParams) -> ActiveMovement,
+	slide: (Mover, Types.SlideParams) -> ActiveMovement,
+	lunge: (Mover, Types.LungeParams) -> ActiveMovement,
+	teleport: (Mover, Types.TeleportParams) -> ActiveMovement,
+	orbit: (Mover, Types.OrbitParams) -> ActiveMovement,
+	springTo: (Mover, Types.SpringToParams) -> ActiveMovement,
+}
+
 type FrameRow = {
 	owner: ActiveMovement,
 	fn: (dt: number) -> (),
 }
 
-export type MoverState = {
+type MoverState = {
 	_character: Model,
 	_root: BasePart,
 	_mass: number,
@@ -246,7 +264,7 @@ function MT.destroy(self: MoverState)
 	self._attachment:Destroy()
 end
 
-local function createMover(character: Model, movementBinders: { [string]: (Mover, any) -> ActiveMovement }): Mover
+local function createMover(character: Model, movementBinders: MovementBinders): Mover
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		error('[RootMotion] Model must contain a BasePart named "HumanoidRootPart"')
@@ -306,11 +324,44 @@ local function createMover(character: Model, movementBinders: { [string]: (Mover
 
 	setmetatable(self, { __index = MT })
 
-	local moverAny = self :: any
-	for name, binder in movementBinders do
-		moverAny[name] = function(_m: Mover, params: any): ActiveMovement
-			return binder(self :: Mover, params)
-		end
+	local mover = self :: Mover
+	-- Methods are stored on the state table; it is widened only for these assignments.
+	local withMovements = self :: any
+	withMovements.translate = function(_: Mover, params: Types.TranslateParams): ActiveMovement
+		return movementBinders.translate(mover, params)
+	end
+	withMovements.dash = function(_: Mover, params: Types.DashParams): ActiveMovement
+		return movementBinders.dash(mover, params)
+	end
+	withMovements.knockback = function(_: Mover, params: Types.KnockbackParams): ActiveMovement
+		return movementBinders.knockback(mover, params)
+	end
+	withMovements.pull = function(_: Mover, params: Types.PullParams): ActiveMovement
+		return movementBinders.pull(mover, params)
+	end
+	withMovements.launch = function(_: Mover, params: Types.LaunchParams): ActiveMovement
+		return movementBinders.launch(mover, params)
+	end
+	withMovements.slam = function(_: Mover, params: Types.SlamParams): ActiveMovement
+		return movementBinders.slam(mover, params)
+	end
+	withMovements.float = function(_: Mover, params: Types.FloatParams): ActiveMovement
+		return movementBinders.float(mover, params)
+	end
+	withMovements.slide = function(_: Mover, params: Types.SlideParams): ActiveMovement
+		return movementBinders.slide(mover, params)
+	end
+	withMovements.lunge = function(_: Mover, params: Types.LungeParams): ActiveMovement
+		return movementBinders.lunge(mover, params)
+	end
+	withMovements.teleport = function(_: Mover, params: Types.TeleportParams): ActiveMovement
+		return movementBinders.teleport(mover, params)
+	end
+	withMovements.orbit = function(_: Mover, params: Types.OrbitParams): ActiveMovement
+		return movementBinders.orbit(mover, params)
+	end
+	withMovements.springTo = function(_: Mover, params: Types.SpringToParams): ActiveMovement
+		return movementBinders.springTo(mover, params)
 	end
 
 	return self :: Mover

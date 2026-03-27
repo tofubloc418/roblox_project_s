@@ -19,6 +19,7 @@ local function run(mover: any, params: any): any
 	local base = params.distance / duration
 	local ease = Easing.byId(params.easing)
 	local mf = Util.maxForceFor(mover, params.accelerationMultiplier)
+	local extraVelocityFn = if type(params.additionalVelocity) == "function" then params.additionalVelocity else nil
 
 	local elapsed = 0
 	local token: any
@@ -33,7 +34,14 @@ local function run(mover: any, params: any): any
 		local u = math.clamp(elapsed / duration, 0, 1)
 		local factor = 1 - ease(u)
 		local speed = base * SPEED_SHARPNESS * factor
-		mover:acquireLinearVelocity(token, dir * speed, mf, true)
+		local extraVelocity = Vector3.zero
+		if extraVelocityFn then
+			local extra = extraVelocityFn()
+			if typeof(extra) == "Vector3" then
+				extraVelocity = Vector3.new(extra.X, 0, extra.Z)
+			end
+		end
+		mover:acquireLinearVelocity(token, dir * speed + extraVelocity, mf, true)
 		if elapsed >= duration and token:IsActive() then
 			ActiveMovement.finish(token)
 		end

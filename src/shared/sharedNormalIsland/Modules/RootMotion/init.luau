@@ -20,7 +20,7 @@ local Teleport = req(s.Movements.Teleport)
 local Orbit = req(s.Movements.Orbit)
 local SpringTo = req(s.Movements.SpringTo)
 
-local function createMover(character: Model, options: Types.CreateMoverOptions?)
+local function createMover(character: Model)
 	return MoverLib.create(character, {
 		translate = function(m, p)
 			return Translate.run(m, p)
@@ -58,7 +58,7 @@ local function createMover(character: Model, options: Types.CreateMoverOptions?)
 		springTo = function(m, p)
 			return SpringTo.run(m, p)
 		end,
-	}, options)
+	})
 end
 
 return {

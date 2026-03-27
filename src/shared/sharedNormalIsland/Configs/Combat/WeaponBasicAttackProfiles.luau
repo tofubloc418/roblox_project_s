@@ -1,0 +1,219 @@
+--!strict
+-- Shared library: basic attack profile id → animation + RootMotion motion spec (or none).
+-- Consumed by client WeaponController + WeaponAttackRootMotion. Do not duplicate animationId on weapon entries.
+
+export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
+
+export type DirectionRef = "HumanoidRootPartLookFlat" | "HumanoidRootPartLook" | "HumanoidMoveDirection"
+
+export type OriginRef = {
+	ref: "BehindRootFlat",
+	behindStuds: number,
+}
+
+export type WorldTargetRef = {
+	ref: "InFrontOfRootFlat",
+	forwardStuds: number,
+}
+
+export type WorldCenterRef = {
+	ref: "HumanoidRootPartWorldPosition",
+	offset: Vector3?,
+}
+
+export type TeleportTargetRef = {
+	ref: "RootForwardFlat",
+	forwardStuds: number,
+	preserveCharacterYaw: boolean?,
+}
+
+export type MotionNone = {
+	kind: "none",
+}
+
+export type MotionTranslate = {
+	kind: "translate",
+	direction: DirectionRef,
+	distance: number,
+	duration: number,
+	accelerationMultiplier: number?,
+}
+
+export type MotionDash = {
+	kind: "dash",
+	direction: DirectionRef,
+	distance: number,
+	duration: number,
+	easing: MotionEasingId?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionLunge = {
+	kind: "lunge",
+	direction: DirectionRef,
+	distance: number?,
+	duration: number?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionKnockback = {
+	kind: "knockback",
+	origin: OriginRef,
+	distance: number,
+	duration: number,
+	arcAngleDegrees: number?,
+	accelerationMultiplier: number?,
+	decay: boolean?,
+	easing: MotionEasingId?,
+}
+
+export type MotionPull = {
+	kind: "pull",
+	target: WorldTargetRef,
+	speed: number,
+	maxDuration: number,
+	arrivalRadius: number?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionLaunch = {
+	kind: "launch",
+	height: number,
+	accelerationMultiplier: number?,
+}
+
+export type MotionSlam = {
+	kind: "slam",
+	speed: number,
+	maxDuration: number?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionFloat = {
+	kind: "float",
+	duration: number,
+	accelerationMultiplier: number?,
+	hoverHeightGain: number?,
+	targetY: number?,
+}
+
+export type MotionSlide = {
+	kind: "slide",
+	direction: DirectionRef,
+	speed: number,
+	duration: number,
+	friction: number?,
+	groundRayLength: number?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionTeleport = {
+	kind: "teleport",
+	target: TeleportTargetRef,
+	validatePath: boolean?,
+	collisionGroup: string?,
+}
+
+export type MotionOrbit = {
+	kind: "orbit",
+	center: WorldCenterRef,
+	radius: number,
+	angularSpeed: number,
+	duration: number,
+	axis: Vector3?,
+	startAngle: number?,
+	accelerationMultiplier: number?,
+}
+
+export type MotionSpringTo = {
+	kind: "springTo",
+	target: WorldTargetRef,
+	frequency: number?,
+	damping: number?,
+	maxDuration: number?,
+	maxForce: number?,
+	maxVelocity: number?,
+	accelerationMultiplier: number?,
+	applyAtCenterOfMass: boolean?,
+}
+
+export type WeaponBasicAttackMotionSpec =
+	MotionNone
+	| MotionTranslate
+	| MotionDash
+	| MotionLunge
+	| MotionKnockback
+	| MotionPull
+	| MotionLaunch
+	| MotionSlam
+	| MotionFloat
+	| MotionSlide
+	| MotionTeleport
+	| MotionOrbit
+	| MotionSpringTo
+
+export type WeaponBasicAttackProfile = {
+	animationId: string,
+	motion: WeaponBasicAttackMotionSpec,
+	--- When true, motion duration-like fields are overridden by the weapon step's hitDuration when running the attack.
+	syncMotionDurationFromHit: boolean?,
+}
+
+-- Keys: <WeaponTag>_Attack_<NN> (NN = 01, 02, …) — aligns with ItemEnums.WeaponTag for shared basic attacks.
+local profiles: { [string]: WeaponBasicAttackProfile } = {
+	["Dagger_Attack_01"] = {
+		animationId = "rbxassetid://120794561550510",
+		motion = { kind = "none" },
+	},
+	["Dagger_Attack_02"] = {
+		animationId = "rbxassetid://96019133363181",
+		motion = { kind = "none" },
+	},
+	["Axe_Attack_01"] = {
+		animationId = "rbxassetid://107791038673413",
+		motion = { kind = "none" },
+	},
+	["Axe_Attack_02"] = {
+		animationId = "rbxassetid://75612209059589",
+		motion = { kind = "none" },
+	},
+	["Axe_Attack_03"] = {
+		animationId = "rbxassetid://82850857726878",
+		motion = { kind = "none" },
+	},
+	["Fists_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = { kind = "none" },
+	},
+	["Greatsword_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = { kind = "none" },
+	},
+	["Greatsword_Attack_02"] = {
+		animationId = "rbxassetid://0",
+		motion = { kind = "none" },
+	},
+	["ThrustingSword_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = { kind = "none" },
+	},
+	["ThrustingSword_Attack_02"] = {
+		animationId = "rbxassetid://0",
+		motion = { kind = "none" },
+	},
+}
+
+local WeaponBasicAttackProfiles = {}
+
+function WeaponBasicAttackProfiles.GetProfile(attackMotionId: string): WeaponBasicAttackProfile?
+	if type(attackMotionId) ~= "string" or attackMotionId == "" then
+		return nil
+	end
+	return profiles[attackMotionId]
+end
+
+function WeaponBasicAttackProfiles.GetAll(): { [string]: WeaponBasicAttackProfile }
+	return profiles
+end
+
+return WeaponBasicAttackProfiles

@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
+local ItemEnums = require(((script.Parent :: any).Parent :: any):WaitForChild("ItemEnums")) :: any
 
 local Axes = {
 	["IronAxe"] = {
@@ -34,19 +34,19 @@ local Axes = {
 		unequipAnimationId = "rbxassetid://83081513554352",
 		attackSequence = {
 			{
-				animationId = "rbxassetid://107791038673413",
+				attackMotionId = "Axe_Attack_01",
 				hitDuration = 28 / 60,
 				comboTimeLimit = 43 / 60,
 				movementLocks = { "All" },
 			},
 			{
-				animationId = "rbxassetid://75612209059589",
+				attackMotionId = "Axe_Attack_02",
 				hitDuration = 28 / 60,
 				comboTimeLimit = 43 / 60,
 				movementLocks = { "All" },
 			},
 			{
-				animationId = "rbxassetid://82850857726878",
+				attackMotionId = "Axe_Attack_03",
 				hitDuration = 45 / 60,
 				comboTimeLimit = 60 / 60,
 				movementLocks = { "All" },

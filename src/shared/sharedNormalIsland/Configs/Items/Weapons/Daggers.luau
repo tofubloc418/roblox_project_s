@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
+local ItemEnums = require(((script.Parent :: any).Parent :: any):WaitForChild("ItemEnums")) :: any
 
 local Daggers = {
 	["Knife"] = {
@@ -34,13 +34,13 @@ local Daggers = {
 		unequipAnimationId = "rbxassetid://0",
 		attackSequence = {
 			{
-				animationId = "rbxassetid://120794561550510",
+				attackMotionId = "Dagger_Attack_01",
 				hitDuration = 12 / 60,
 				comboTimeLimit = 30 / 60,
 				movementLocks = { "All" },
 			},
 			{
-				animationId = "rbxassetid://96019133363181",
+				attackMotionId = "Dagger_Attack_02",
 				hitDuration = 12 / 60,
 				comboTimeLimit = 30 / 60,
 				movementLocks = { "All" },

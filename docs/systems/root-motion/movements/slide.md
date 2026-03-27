@@ -4,14 +4,16 @@ Ground-aware **horizontal slide**: projects a flat **direction** onto the **grou
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `direction` | `Vector3` | Yes | XZ component must be non-zero after flattening; normalized on XZ. |
-| `speed` | `number` | Yes | Initial slide speed magnitude along **slide direction** (updated each frame after decay). |
-| `duration` | `number` | Yes | Max slide time; clamped to a small minimum. |
-| `friction` | `number?` | No | Per-second decay base; default **`0.92`**. Each step: `speed *= friction ^ (dt * 60)` (frame-rate scaled exponential). |
-| `groundRayLength` | `number?` | No | Downward ray for ground normal; default **`4`**. |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` for `LinearVelocity`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `direction` | `Vector3` | Yes | — | XZ must be non-zero after flattening; normalized on XZ. |
+| `speed` | `number` | Yes | — | Initial slide speed along slide direction; decayed each step. |
+| `duration` | `number` | Yes | — | Max slide time; clamped to a small minimum. |
+| `friction` | `number?` | No | **0.92** | Per-step decay: `speed *= friction ^ (dt * 60)`. |
+| `groundRayLength` | `number?` | No | **4** | Studs; downward ray for ground normal. |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
+
+Also ends when **`speed < 0.35`** (hard-coded).
 
 ## Behavior
 

@@ -4,16 +4,18 @@ Drives the root toward a **target** world position using **`AlignPosition`** (on
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `target` | `Vector3` | Yes | World position for `AlignPosition.Position`. |
-| `frequency` | `number?` | No | Mapped to `AlignPosition.Responsiveness`; default **`10`**. |
-| `maxVelocity` | `number?` | No | `AlignPosition.MaxVelocity`; default **`40`**. |
-| `damping` | `number?` | No | If **`maxVelocity`** is omitted, **`damping`** is used **as** `MaxVelocity` (naming quirk in `Types.SpringToParams`). |
-| `maxDuration` | `number?` | No | Default **`4`** seconds, then token finishes even if not fully converged. |
-| `maxForce` | `number?` | No | If omitted, uses `Util.maxForceFor(mover, accelerationMultiplier)` (mass × multiplier). |
-| `accelerationMultiplier` | `number?` | No | Used only when **`maxForce`** is nil. |
-| `applyAtCenterOfMass` | `boolean?` | No | `AlignPosition.ApplyAtCenterOfMass`; default **`true`**. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `target` | `Vector3` | Yes | — | `AlignPosition.Position`. |
+| `frequency` | `number?` | No | **10** | `AlignPosition.Responsiveness`. |
+| `maxVelocity` | `number?` | No | **40*** | `AlignPosition.MaxVelocity`. |
+| `damping` | `number?` | No | — | If **`maxVelocity`** is omitted, **`damping`** is used **as** `MaxVelocity` (types quirk). |
+| `maxDuration` | `number?` | No | **4** (s) | Then token finishes even if not converged. |
+| `maxForce` | `number?` | No | **derived** | If omitted: `AssemblyMass × accelerationMultiplier`. |
+| `accelerationMultiplier` | `number?` | No | **1000** | Used **only when `maxForce` is nil** (`mass ×` this). |
+| `applyAtCenterOfMass` | `boolean?` | No | **true** | `AlignPosition.ApplyAtCenterOfMass`; pass **false** to disable. |
+
+\*Effective `MaxVelocity` = `params.maxVelocity or params.damping or 40`.
 
 ## Behavior
 

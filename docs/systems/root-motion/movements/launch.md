@@ -4,10 +4,12 @@ Brief **upward impulse** implemented as a single `LinearVelocity` with vertical 
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `height` | `number` | Yes | Clamped **≥ 0**. Interpreted as vertical height in the idealized rise formula. |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` for `LinearVelocity`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `height` | `number` | Yes | — | Clamped **≥ 0**; peak height in the idealized rise formula. |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
+
+If `Workspace.Gravity < 1e-5`, implementation uses **196.2** for \(v_y\) and timing. Token completes after **`riseTime * 0.985`** (`riseTime = vy / g`).
 
 ## Behavior
 

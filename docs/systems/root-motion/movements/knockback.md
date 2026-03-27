@@ -4,23 +4,23 @@ Displacement **away from an `origin` point** in the horizontal plane, combined w
 
 ## Parameters
 
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `origin` | `Vector3` | Yes | — | Horizontal push from `(root.Position - origin)` flattened to XZ; degenerate → look / `-Z` fallback. |
+| `distance` | `number` | Yes | — | Baseline speed `distance / duration` (or decay curve). |
+| `duration` | `number` | Yes | — | Seconds. |
+| `arcAngleDegrees` | `number?` | No | **35** | Tilt above horizontal (degrees). |
+| `decay` | `boolean?` | No | **false** | **true** → per-frame decay (like `dash`); else constant velocity for full duration. |
+| `easing` | `EasingId?` | No | **linear** | Only when `decay == true`. |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
 
-| Parameter                | Type        | Required | Notes                                                                                                                                                                                 |
-| ------------------------ | ----------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `origin`                 | `Vector3`   | Yes      | Horizontal push direction is `(root.Position - origin)` flattened to XZ. If that vector is ~zero, falls back to opposite of HRP look (XZ), then `-Z`.                                 |
-| `distance`               | `number`    | Yes      | Used with duration for baseline speed `distance / duration` (or decay curve).                                                                                                         |
-| `duration`               | `number`    | Yes      | Seconds.                                                                                                                                                                              |
-| `arcAngleDegrees`        | `number?`   | No       | Tilt of knockback above horizontal; default `**35`**°. Larger = more vertical component.                                                                                              |
-| `decay`                  | `boolean?`  | No       | If `**true**`, per-frame speed uses `1 - ease(elapsed/duration)` × `base * SPEED_SHARPNESS` (see `dash`). If **false/omitted**, **constant** `LinearVelocity` for the whole duration. |
-| `easing`                 | `EasingId?` | No       | Used when `decay == true`; if omitted, **linear** via `Easing.byId`.                                                                                                                  |
-| `accelerationMultiplier` | `number?`   | No       | Scales `maxForce`.                                                                                                                                                                    |
-
+When `decay == true`, implementation uses **`SPEED_SHARPNESS = 2`** (same as `dash`).
 
 ## Behavior
 
 - Knockback direction: horizontal unit away from origin, rotated up by `arcAngleDegrees`, then normalized (`knockDir`).
-- `**decay == false`**: single `acquireLinearVelocity` with `knockDir * base`, completes after `task.delay(duration)`.
-- `**decay == true**`: frame updates reapply velocity with shrinking magnitude until time elapsed.
+- **`decay` not true**: single `acquireLinearVelocity` with `knockDir * base`, completes after `task.delay(duration)`.
+- **`decay == true`**: frame updates reapply velocity with shrinking magnitude until time elapsed.
 
 ## Limitations
 
@@ -29,5 +29,4 @@ Displacement **away from an `origin` point** in the horizontal plane, combined w
 
 ## See also
 
-- `[dash](./dash.md)` — decayed speed profile details.
-
+- [`dash`](./dash.md) — decayed speed profile details.

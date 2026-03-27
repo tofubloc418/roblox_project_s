@@ -4,13 +4,13 @@ Steers the character toward a fixed **world target** at a constant **speed** unt
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `target` | `Vector3` | Yes | World position to approach. |
-| `speed` | `number` | Yes | Speed magnitude along `toTarget.Unit` (3D). |
-| `maxDuration` | `number` | Yes | Hard cap on pull time; clamped to a small minimum. |
-| `arrivalRadius` | `number?` | No | Default **`1`** stud: finish when `||target - position|| <= arrivalRadius`. |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` for `LinearVelocity`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `target` | `Vector3` | Yes | — | World position to approach. |
+| `speed` | `number` | Yes | — | Speed along `toTarget.Unit` (3D). |
+| `maxDuration` | `number` | Yes | — | Hard cap on pull time; clamped to a small minimum. |
+| `arrivalRadius` | `number?` | No | **1** | Finish when ‖target − position‖ ≤ this (studs). |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
 
 ## Behavior
 

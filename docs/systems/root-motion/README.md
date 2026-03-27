@@ -14,6 +14,8 @@ local mover = RootMotion.createMover(character)
 local mover = RootMotion.createMover(character, { suppressDefaultLocomotion = false })
 ```
 
+`createMover` options: **`suppressDefaultLocomotion`** defaults to **`true`** when omitted (`Types.CreateMoverOptions`).
+
 **Exports**
 
 | Export | Role |
@@ -25,7 +27,7 @@ local mover = RootMotion.createMover(character, { suppressDefaultLocomotion = fa
 | `PhysicsHelpers` | Small shared helpers for movement implementations. |
 | `ActiveMovement` | Factory for cancellable movement tokens. |
 | `Util` | Miscellaneous helpers. |
-| `DEFAULT_ACCEL_MULT` | Default `accelerationMultiplier` scale used inside `Mover` force derivation (see `Mover.luau`). |
+| `DEFAULT_ACCEL_MULT` | **`1000`** — applied when a move omits `accelerationMultiplier` (`MaxForce` baseline is `AssemblyMass ×` this value unless overridden per call). |
 
 ---
 
@@ -81,7 +83,7 @@ Parameter shapes are defined in `Types.luau`. Summaries and per-movement docs:
 | **`orbit`** | Circular path around **center** with **radius**, **angularSpeed**, **duration**; optional **axis**, **startAngle**. | [orbit](./movements/orbit.md) |
 | **`springTo`** | `AlignPosition`-driven chase of **target** with frequency/damping caps, optional **maxDuration** / force limits. | [springTo](./movements/spring-to.md) |
 
-Many params accept **`accelerationMultiplier`** to scale derived forces (default baseline is `DEFAULT_ACCEL_MULT` inside the mover). Exception: **`float`** does not use it in the current implementation (see [float](./movements/float.md)).
+**`accelerationMultiplier`** (on moves that use `Util.maxForceFor`): if omitted, **`1000`** — i.e. `RootMotion.DEFAULT_ACCEL_MULT` from `Mover.luau` — so `LinearVelocity.MaxForce` / derived `AlignPosition.MaxForce` is **`AssemblyMass × 1000`** unless you override. **`float`** and **`teleport`** do not use this path (see their movement docs).
 
 ---
 

@@ -4,12 +4,12 @@ Thin wrapper around **`translate`**: same physics and completion rules, but supp
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `direction` | `Vector3` | Yes | Passed through to `translate` (must be non-zero). |
-| `distance` | `number?` | No | Default **`6`** studs. |
-| `duration` | `number?` | No | Default **`0.18`** seconds. |
-| `accelerationMultiplier` | `number?` | No | Passed through to `translate`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `direction` | `Vector3` | Yes | — | Passed through to `translate` (must be non-zero). |
+| `distance` | `number?` | No | **6** | Studs (`translate` param). |
+| `duration` | `number?` | No | **0.18** | Seconds (`translate` param). |
+| `accelerationMultiplier` | `number?` | No | **1000** | Passed through; `MaxForce = AssemblyMass ×` this value via `translate`. |
 
 ## Behavior
 

@@ -4,15 +4,15 @@
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `center` | `Vector3` | Yes | World-space orbit center. |
-| `radius` | `number` | Yes | Clamped **> 0** (minimum `1e-3`). |
-| `angularSpeed` | `number` | Yes | Radians per second; sign sets direction around **axis** (right-hand rule). |
-| `duration` | `number` | Yes | Seconds; clamped to a small minimum. |
-| `axis` | `Vector3?` | No | Orbit normal; default **`Vector3.yAxis`** (horizontal orbit). If non-zero, normalized. |
-| `startAngle` | `number?` | No | Initial phase in radians; default **`0`**. |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` for `LinearVelocity`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `center` | `Vector3` | Yes | — | World-space orbit center. |
+| `radius` | `number` | Yes | — | Clamped to **≥ `1e-3`** in code. |
+| `angularSpeed` | `number` | Yes | — | Rad/s; sign = direction around **axis** (right-hand rule). |
+| `duration` | `number` | Yes | — | Seconds; clamped to a small minimum. |
+| `axis` | `Vector3?` | No | **`Vector3.yAxis`** | Orbit normal; non-zero vectors normalized. |
+| `startAngle` | `number?` | No | **0** | Initial phase (radians). |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
 
 ## Behavior
 

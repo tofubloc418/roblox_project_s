@@ -4,12 +4,12 @@ Constant-speed **linear** displacement along a world-space direction for a fixed
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `direction` | `Vector3` | Yes | Must be non-zero; normalized internally. |
-| `distance` | `number` | Yes | Studs to travel over the window. |
-| `duration` | `number` | Yes | Seconds; clamped to a small minimum (~`1e-3`). |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` as `mass * multiplier` (see `Util.maxForceFor` / `DEFAULT_ACCEL_MULT`). |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `direction` | `Vector3` | Yes | — | Must be non-zero; normalized internally. |
+| `distance` | `number` | Yes | — | Studs to travel over the window. |
+| `duration` | `number` | Yes | — | Seconds; clamped to a small minimum (~`1e-3`). |
+| `accelerationMultiplier` | `number?` | No | **1000** | `LinearVelocity.MaxForce = AssemblyMass ×` this value (`RootMotion.DEFAULT_ACCEL_MULT`). |
 
 ## Behavior
 

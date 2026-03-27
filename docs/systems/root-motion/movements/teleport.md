@@ -2,13 +2,15 @@
 
 **Instant** `CFrame` placement of `HumanoidRootPart`. Optionally **blockcasts** from current pose toward the target position and snaps to a **safe** location short of the first obstruction, preserving the target’s **orientation**.
 
+No `accelerationMultiplier` — this move does not use mover force constraints.
+
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `target` | `CFrame` | Yes | Desired pose. |
-| `validatePath` | `boolean?` | No | **`true`** or omitted: run `Validation.shapecastPath` along displacement with character excluded. Set explicitly to **`false`** to assign `target` with no cast. |
-| `collisionGroup` | `string?` | No | If set, passed into cast `RaycastParams.CollisionGroup` (you must configure collision groups in Workspace for this to matter). |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `target` | `CFrame` | Yes | — | Desired pose. |
+| `validatePath` | `boolean?` | No | **on** (`~= false`) | Blockcast along displacement; pass **`false`** to skip and set `target` directly. |
+| `collisionGroup` | `string?` | No | **nil** | If set, `RaycastParams.CollisionGroup` for the cast (configure groups in Workspace). |
 
 ## Behavior
 

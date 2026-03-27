@@ -2,17 +2,19 @@
 
 **Eased** horizontal-style dash: applies `LinearVelocity` updated every frame so apparent **speed ramps down** over the duration (stronger at the start, weaker at the end), using a configurable easing curve.
 
+`EasingId` is defined on `RootMotion.Types`.
+
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `direction` | `Vector3` | Yes | Must be non-zero; normalized internally. |
-| `distance` | `number` | Yes | Used with duration to derive a baseline speed (`distance / duration`). |
-| `duration` | `number` | Yes | Seconds; clamped to a small minimum. |
-| `easing` | `EasingId?` | No | `linear` \| `quadOut` \| `quadIn` \| `cubicOut` \| `cubicIn`. If omitted, **linear**. |
-| `accelerationMultiplier` | `number?` | No | Scales `maxForce` for `LinearVelocity`. |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `direction` | `Vector3` | Yes | — | Must be non-zero; normalized internally. |
+| `distance` | `number` | Yes | — | With `duration`, sets `base = distance / duration` for the speed curve. |
+| `duration` | `number` | Yes | — | Seconds; clamped to a small minimum. |
+| `easing` | `EasingId?` | No | **linear** | `linear` \| `quadOut` \| `quadIn` \| `cubicOut` \| `cubicIn` (`Easing.byId`). |
+| `accelerationMultiplier` | `number?` | No | **1000** | `MaxForce = AssemblyMass ×` this value. |
 
-`EasingId` is defined on `RootMotion.Types`.
+Implementation constant (not a param): **`SPEED_SHARPNESS = 2`** scales per-frame `speed`.
 
 ## Behavior
 

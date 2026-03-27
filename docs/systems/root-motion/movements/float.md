@@ -4,12 +4,12 @@
 
 ## Parameters
 
-| Parameter | Type | Required | Notes |
-|-----------|------|----------|--------|
-| `duration` | `number` | Yes | How long the float lasts; clamped to a small minimum. |
-| `targetY` | `number?` | No | If set **and** `hoverHeightGain > 0`, adds vertical “spring” toward this Y. |
-| `hoverHeightGain` | `number?` | No | Default **`0`**. When `> 0` and `targetY` is set, each frame adds `Vector3.new(0, (targetY - pos.Y) * gain * mass, 0)` to the counter-gravity vector. |
-| `accelerationMultiplier` | `number?` | No | Present on `Types.FloatParams` but **not read** by the current implementation (VectorForce magnitude does not use `Util.maxForceFor`). |
+| Parameter | Type | Required | Default | Notes |
+|-----------|------|----------|---------|--------|
+| `duration` | `number` | Yes | — | Float length; clamped to a small minimum. |
+| `targetY` | `number?` | No | **nil** | With `hoverHeightGain > 0`, steers toward this world Y. |
+| `hoverHeightGain` | `number?` | No | **0** | `> 0` and `targetY` set → per-frame `(targetY - pos.Y) * gain * mass` added to counter-gravity. |
+| `accelerationMultiplier` | `number?` | No | *(unused)* | On `Types.FloatParams` only; **not read** — no `maxForce`-style cap in current implementation. |
 
 ## Behavior
 
@@ -21,7 +21,7 @@
 
 - **Not true hover at arbitrary `targetY` without tuning**: large `gain` can oscillate; small `gain` sags. No derivative damping term in code.
 - Horizontal drift is **not** canceled; wind and residual velocity still apply.
-- `accelerationMultiplier` in the type bundle does not affect this mover path today—ignore it or extend the implementation if you need capped force.
+- `accelerationMultiplier` does not affect this mover path today—ignore it or extend the implementation if you need capped force.
 
 ## See also
 

@@ -2,6 +2,11 @@
 
 export type EasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
 
+export type CreateMoverOptions = {
+	--- Default true. While false, Humanoid walk/jump and core locomotion states are not toggled.
+	suppressDefaultLocomotion: boolean?,
+}
+
 export type TranslateParams = {
 	direction: Vector3,
 	distance: number,

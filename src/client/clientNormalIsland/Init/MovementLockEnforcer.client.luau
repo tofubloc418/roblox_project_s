@@ -23,11 +23,52 @@ local Configs = ReplicatedStorage:WaitForChild("Configs")
 local MovementLock = require(Modules:WaitForChild("MovementLock")) :: MovementLockModule
 local PlayerConfig = require(Configs:WaitForChild("PlayerConfig")) :: any
 
+type MovementAnimCfg = {
+	LocomotionIdSet: { [number]: boolean },
+	ParseAssetIdNumber: (string?) -> number?,
+}
+local MovementAnimationConfig = require(Configs:WaitForChild("MovementAnimationConfig")) :: MovementAnimCfg
+
 local localPlayer = Players.LocalPlayer
 local activeHumanoid: Humanoid? = nil
 local activeConnections: { RBXScriptConnection } = {}
 
+local RENDER_STEP_BIND_NAME = "NormalIsland_MovementLockEnforcer"
+local ROOT_MOTION_LOCOMOTION_ATTR = "RootMotion_LocomotionLock"
+
+local function isRootMotionLocomotionLocked(humanoid: Humanoid): boolean
+	if localPlayer:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true then
+		return true
+	end
+	local ch = humanoid.Parent
+	return ch ~= nil and ch:IsA("Model") and ch:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true
+end
+
+local function suppressRootMotionLocomotionTracks(humanoid: Humanoid)
+	if not isRootMotionLocomotionLocked(humanoid) then
+		return
+	end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return
+	end
+	local bumpSet = MovementAnimationConfig.LocomotionIdSet
+	local parse = MovementAnimationConfig.ParseAssetIdNumber
+	for _, track in animator:GetPlayingAnimationTracks() do
+		local anim = track.Animation
+		if anim then
+			local num = parse(anim.AnimationId)
+			if num and bumpSet[num] then
+				track:AdjustWeight(0, 0)
+			end
+		end
+	end
+end
+
 local function disconnectActiveConnections()
+	pcall(function()
+		RunService:UnbindFromRenderStep(RENDER_STEP_BIND_NAME)
+	end)
 	for _, connection in ipairs(activeConnections) do
 		connection:Disconnect()
 	end
@@ -53,6 +94,10 @@ local function hasJumpStamina(): boolean
 end
 
 local function computeDesiredWalkSpeed(humanoid: Humanoid): number
+	if isRootMotionLocomotionLocked(humanoid) then
+		return 0
+	end
+
 	if MovementLock.IsLocked("Walk") then
 		return 0
 	end
@@ -86,8 +131,9 @@ local function applyLockState()
 	end
 
 	local lockedFlags = MovementLock.GetLockedFlags()
-	local sprintLocked = lockedFlags.Sprint or lockedFlags.Walk
-	local jumpAllowed = not lockedFlags.Jump and hasJumpStamina()
+	local rootMotionLock = isRootMotionLocomotionLocked(humanoid)
+	local sprintLocked = lockedFlags.Sprint or lockedFlags.Walk or rootMotionLock
+	local jumpAllowed = not lockedFlags.Jump and hasJumpStamina() and not rootMotionLock
 
 	localPlayer:SetAttribute("SprintLocked", sprintLocked)
 
@@ -122,14 +168,21 @@ local function bindCharacter(character: Model)
 		applyLockState()
 	end))
 
-	-- Re-apply while a lock is active so local interruption wins over replicated
-	-- walk speed and jump updates from the server.
-	table.insert(activeConnections, RunService.RenderStepped:Connect(function()
+	RunService:BindToRenderStep(RENDER_STEP_BIND_NAME, Enum.RenderPriority.Last.Value, function()
+		local h = activeHumanoid
+		if not h then
+			return
+		end
 		local lockedFlags = MovementLock.GetLockedFlags()
-		if hasAnyLocks(lockedFlags) then
+		if hasAnyLocks(lockedFlags) or isRootMotionLocomotionLocked(h) then
 			applyLockState()
 		end
-	end))
+		if isRootMotionLocomotionLocked(h) then
+			suppressRootMotionLocomotionTracks(h)
+		end
+	end)
+
+	table.insert(activeConnections, localPlayer:GetAttributeChangedSignal(ROOT_MOTION_LOCOMOTION_ATTR):Connect(applyLockState))
 end
 
 MovementLock.Changed:Connect(function()

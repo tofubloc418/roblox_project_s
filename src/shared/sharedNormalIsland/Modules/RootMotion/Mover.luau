@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local req = require :: any
 local s = script.Parent :: any
 local ActiveMovementModule = req(s.ActiveMovement)
+local LocomotionSuppress = req(s.LocomotionSuppress)
 local Types = req(s.Types)
 type ActiveMovement = ActiveMovementModule.ActiveMovement
 
@@ -81,6 +82,8 @@ type MoverState = {
 	_heartbeat: RBXScriptConnection?,
 	_tracked: { ActiveMovement },
 	_destroyed: boolean,
+	_suppressDefaultLocomotion: boolean,
+	_locomotionRestore: (() -> ())?,
 }
 
 local DEFAULT_ACCEL_MULT = 1000
@@ -228,12 +231,25 @@ end
 
 function MT.trackActive(self: MoverState, token: ActiveMovement)
 	table.insert(self._tracked, token)
+	if self._suppressDefaultLocomotion and #self._tracked == 1 and self._locomotionRestore == nil then
+		local hum = self._character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			self._locomotionRestore = LocomotionSuppress.begin(hum)
+		end
+	end
 end
 
 function MT.untrackActive(self: MoverState, token: ActiveMovement)
 	for i = #self._tracked, 1, -1 do
 		if self._tracked[i] == token then
 			table.remove(self._tracked, i)
+		end
+	end
+	if self._suppressDefaultLocomotion and #self._tracked == 0 then
+		local restore = self._locomotionRestore
+		if restore then
+			self._locomotionRestore = nil
+			restore()
 		end
 	end
 end
@@ -253,6 +269,11 @@ function MT.destroy(self: MoverState)
 	end
 	self._destroyed = true
 	self:cancelAll()
+	local restore = self._locomotionRestore
+	if restore then
+		self._locomotionRestore = nil
+		restore()
+	end
 	if self._heartbeat then
 		self._heartbeat:Disconnect()
 		self._heartbeat = nil
@@ -264,7 +285,7 @@ function MT.destroy(self: MoverState)
 	self._attachment:Destroy()
 end
 
-local function createMover(character: Model, movementBinders: MovementBinders): Mover
+local function createMover(character: Model, movementBinders: MovementBinders, options: Types.CreateMoverOptions?): Mover
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root or not root:IsA("BasePart") then
 		error('[RootMotion] Model must contain a BasePart named "HumanoidRootPart"')
@@ -305,6 +326,8 @@ local function createMover(character: Model, movementBinders: MovementBinders): 
 	alignPosition.Enabled = false
 	alignPosition.Parent = root
 
+	local suppressLocomotion = if options and options.suppressDefaultLocomotion == false then false else true
+
 	local self: MoverState = {
 		_character = character,
 		_root = root,
@@ -320,6 +343,8 @@ local function createMover(character: Model, movementBinders: MovementBinders): 
 		_heartbeat = nil,
 		_tracked = {},
 		_destroyed = false,
+		_suppressDefaultLocomotion = suppressLocomotion,
+		_locomotionRestore = nil,
 	}
 
 	setmetatable(self, { __index = MT })

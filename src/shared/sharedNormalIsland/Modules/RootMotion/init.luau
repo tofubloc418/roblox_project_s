@@ -5,6 +5,7 @@
 
 	local RootMotion = require(ReplicatedStorage.Modules.RootMotion)
 	local mover = RootMotion.createMover(character)
+	local mover = RootMotion.createMover(character, { suppressDefaultLocomotion = false })
 	local token = mover:dash({ direction = look, distance = 12, duration = 0.25 })
 	token.Completed:Connect(function(ok) end)
 ]]
@@ -29,7 +30,7 @@ local Teleport = req(s.Movements.Teleport)
 local Orbit = req(s.Movements.Orbit)
 local SpringTo = req(s.Movements.SpringTo)
 
-local function createMover(character: Model)
+local function createMover(character: Model, options: { suppressDefaultLocomotion: boolean? }?)
 	return MoverLib.create(character, {
 		translate = function(m, p)
 			return Translate.run(m, p)
@@ -67,7 +68,7 @@ local function createMover(character: Model)
 		springTo = function(m, p)
 			return SpringTo.run(m, p)
 		end,
-	})
+	}, options)
 end
 
 return {

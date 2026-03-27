@@ -23,8 +23,10 @@ local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NA
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
 local WeaponBasicAttackProfiles = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
+local MovementControlLocks = require(
+	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
+) :: any
 local WeaponAttackRootMotion = require((script.Parent :: Instance):WaitForChild("WeaponAttackRootMotion") :: ModuleScript) :: any
-local MovementLock = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock")) :: any
 
 -- Remotes are created by the server in WeaponService.Initialize().
 local weaponRemotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
@@ -36,6 +38,8 @@ local WeaponController = {}
 WeaponController.__index = WeaponController
 
 local debugEnabled = false
+
+local WEAPON_ATTACK_WALK_SPEED_MULTIPLIER = 0.2
 
 local function debugLog(templateId: string, message: string)
 	if not debugEnabled then
@@ -183,7 +187,7 @@ local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: n
 
 	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
 	self._attackLockTags[lockTag] = true
-	MovementLock.Lock(lockTag, movementLocks, attackEntry.hitDuration)
+	MovementControlLocks.Lock(lockTag, movementLocks, attackEntry.hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -426,7 +430,7 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 	table.clear(self._connections)
 
 	for lockTag in pairs(self._attackLockTags) do
-		MovementLock.Unlock(lockTag)
+		MovementControlLocks.Unlock(lockTag)
 	end
 	table.clear(self._attackLockTags)
 

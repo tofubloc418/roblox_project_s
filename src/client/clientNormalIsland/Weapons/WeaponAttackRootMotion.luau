@@ -82,6 +82,22 @@ local function pickOptionalDuration(sync: boolean, hitDur: number?, configured: 
 	return configured
 end
 
+local function getLocomotionVelocity(humanoid: Humanoid): Vector3
+	local moveDirection = humanoid.MoveDirection
+	if moveDirection.Magnitude < 1e-4 then
+		return Vector3.zero
+	end
+	local speed = humanoid.WalkSpeed
+	if speed <= 0 then
+		return Vector3.zero
+	end
+	local flatDirection = Vector3.new(moveDirection.X, 0, moveDirection.Z)
+	if flatDirection.Magnitude < 1e-4 then
+		return Vector3.zero
+	end
+	return flatDirection.Unit * speed
+end
+
 --[[
 	Returns ActiveMovement token or nil when motion is none / invalid.
 ]]
@@ -111,6 +127,9 @@ function WeaponAttackRootMotion.run(mover: any, character: Model, motion: any, c
 			distance = motion.distance,
 			duration = pickDuration(sync, hitDur, motion.duration),
 			accelerationMultiplier = motion.accelerationMultiplier,
+			additionalVelocity = function()
+				return getLocomotionVelocity(humanoid)
+			end,
 		})
 	elseif kind == "dash" then
 		local dir = resolveDirection(motion.direction, hrp, humanoid)
@@ -120,6 +139,9 @@ function WeaponAttackRootMotion.run(mover: any, character: Model, motion: any, c
 			duration = pickDuration(sync, hitDur, motion.duration),
 			easing = motion.easing,
 			accelerationMultiplier = motion.accelerationMultiplier,
+			additionalVelocity = function()
+				return getLocomotionVelocity(humanoid)
+			end,
 		})
 	elseif kind == "lunge" then
 		local dir = resolveDirection(motion.direction, hrp, humanoid)

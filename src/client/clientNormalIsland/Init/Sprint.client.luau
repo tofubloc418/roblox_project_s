@@ -9,31 +9,19 @@ local setSprintRemote: RemoteEvent = inputRemotes:WaitForChild("SetSprint")
 local jumpPressedRemote: RemoteEvent = inputRemotes:WaitForChild("JumpPressed")
 
 local player = Players.LocalPlayer
-local ROOT_MOTION_LOCOMOTION_ATTR = "RootMotion_LocomotionLock"
-
-local function isRootMotionLocomotionLocked(): boolean
-	if player:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true then
-		return true
-	end
-	local ch = player.Character
-	return ch ~= nil and ch:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true
-end
 
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
 local KeybindIds = requireAny(keybindsFolder:WaitForChild("KeybindIds"))
 local KeybindsClient = requireAny(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
-local MovementLock = requireAny(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock"))
+local MovementLock = requireAny(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementLock"))
 local PlayerConfig = requireAny(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 
 local function isSprintLocked(): boolean
-	return player:GetAttribute("SprintLocked") == true
-		or MovementLock.IsLocked("Sprint")
-		or MovementLock.IsLocked("Walk")
-		or isRootMotionLocomotionLocked()
+	return player:GetAttribute("SprintLocked") == true or MovementLock.IsLocked("Sprint")
 end
 
 local function isJumpLocked(): boolean
-	return MovementLock.IsLocked("Jump") or isRootMotionLocomotionLocked()
+	return MovementLock.IsLocked("Jump")
 end
 
 local function setSprint(desired: boolean)
@@ -42,18 +30,6 @@ local function setSprint(desired: boolean)
 	end
 
 	player:SetAttribute("WantsSprint", desired)
-	local character = player.Character
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if humanoid and PlayerConfig then
-		if isRootMotionLocomotionLocked() then
-			humanoid.WalkSpeed = 0
-		else
-			local stamina = player:GetAttribute("Stamina") or (PlayerConfig.baseMaxStamina or 100)
-			local canRun = stamina > 0
-			local want = desired and canRun
-			humanoid.WalkSpeed = want and (PlayerConfig.runSpeed or 20) or (PlayerConfig.walkSpeed or 14)
-		end
-	end
 	setSprintRemote:FireServer(desired)
 end
 
@@ -78,7 +54,7 @@ UserInputService.InputEnded:Connect(function(input, gp)
 end)
 
 MovementLock.Changed:Connect(function(lockedFlags)
-	if lockedFlags.Walk or lockedFlags.Sprint then
+	if lockedFlags.Sprint then
 		setSprint(false)
 	end
 end)
@@ -87,16 +63,6 @@ player:GetAttributeChangedSignal("Stamina"):Connect(function()
 	local stamina = player:GetAttribute("Stamina") or 0
 	if stamina <= 0 then
 		setSprint(false)
-	end
-	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if humanoid then
-		if isRootMotionLocomotionLocked() then
-			humanoid.JumpPower = 0
-		else
-			local cost = PlayerConfig.jumpStaminaCost or 20
-			local allow = stamina >= cost
-			humanoid.JumpPower = allow and (PlayerConfig.jumpPower or 50) or 0
-		end
 	end
 end)
 

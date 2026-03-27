@@ -13,7 +13,9 @@ local RunService = game:GetService("RunService")
 
 local AbilityRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("AbilityRegistry")) :: any
 local EffectAssets = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("EffectAssets")) :: any
-local MovementLock = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock")) :: any
+local MovementControlLocks = require(
+	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks")
+) :: any
 local VfxHelpers = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("VfxHelpers")) :: any
 
 type AbilityClientContext = {
@@ -867,7 +869,7 @@ function PrayerfulStrike.OnStarted(context: AbilityClientContext)
 		return
 	end
 
-	MovementLock.Lock(LOCK_TAG, { "All" }, dur)
+	MovementControlLocks.Lock(LOCK_TAG, { "All" }, dur)
 	track.Priority = Enum.AnimationPriority.Action4
 	track.Looped = false
 

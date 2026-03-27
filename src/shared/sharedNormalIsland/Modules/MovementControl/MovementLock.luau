@@ -4,10 +4,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Signal = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("Signal")) :: any
 
-export type MovementType = "Walk" | "Sprint" | "Jump" | "Swim"
-export type LockFlag = MovementType | "All"
+export type MovementType = "Sprint" | "Jump" | "Swim"
+export type LockFlag = MovementType
 export type LockedFlags = {
-	Walk: boolean,
 	Sprint: boolean,
 	Jump: boolean,
 	Swim: boolean,
@@ -18,23 +17,19 @@ type LockEntry = {
 }
 
 local MOVEMENT_TYPES: { MovementType } = {
-	"Walk",
 	"Sprint",
 	"Jump",
 	"Swim",
 }
 
 local VALID_MOVEMENT_TYPES: { [string]: boolean } = {
-	Walk = true,
 	Sprint = true,
 	Jump = true,
 	Swim = true,
-	All = true,
 }
 
 local function newLockedFlags(): LockedFlags
 	return {
-		Walk = false,
 		Sprint = false,
 		Jump = false,
 		Swim = false,
@@ -43,7 +38,6 @@ end
 
 local function cloneLockedFlags(flags: LockedFlags): LockedFlags
 	return {
-		Walk = flags.Walk == true,
 		Sprint = flags.Sprint == true,
 		Jump = flags.Jump == true,
 		Swim = flags.Swim == true,
@@ -74,13 +68,7 @@ local function normalizeFlags(flags: { LockFlag }): LockedFlags
 
 	for _, rawFlag in pairs(flags) do
 		if type(rawFlag) == "string" and VALID_MOVEMENT_TYPES[rawFlag] then
-			if rawFlag == "All" then
-				for _, movementType in ipairs(MOVEMENT_TYPES) do
-					normalized[movementType] = true
-				end
-			else
-				normalized[rawFlag :: MovementType] = true
-			end
+			normalized[rawFlag :: MovementType] = true
 		end
 	end
 

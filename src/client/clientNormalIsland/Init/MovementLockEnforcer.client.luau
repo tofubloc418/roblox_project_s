@@ -5,7 +5,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 type LockedFlags = {
-	Walk: boolean,
 	Sprint: boolean,
 	Jump: boolean,
 	Swim: boolean,
@@ -14,58 +13,27 @@ type LockedFlags = {
 type MovementLockModule = {
 	Changed: any,
 	GetLockedFlags: () -> LockedFlags,
-	IsLocked: (flag: "Walk" | "Sprint" | "Jump" | "Swim") -> boolean,
+	IsLocked: (flag: "Sprint" | "Jump" | "Swim") -> boolean,
+}
+
+type MovementSpeedMultipliersModule = {
+	Changed: any,
+	GetMultiplier: () -> number,
 }
 
 local Modules = ReplicatedStorage:WaitForChild("Modules")
 local Configs = ReplicatedStorage:WaitForChild("Configs")
+local MovementControl = Modules:WaitForChild("MovementControl")
 
-local MovementLock = require(Modules:WaitForChild("MovementLock")) :: MovementLockModule
+local MovementLock = require(MovementControl:WaitForChild("MovementLock")) :: MovementLockModule
+local MovementSpeedMultipliers = require(MovementControl:WaitForChild("MovementSpeedMultipliers")) :: MovementSpeedMultipliersModule
 local PlayerConfig = require(Configs:WaitForChild("PlayerConfig")) :: any
-
-type MovementAnimCfg = {
-	LocomotionIdSet: { [number]: boolean },
-	ParseAssetIdNumber: (string?) -> number?,
-}
-local MovementAnimationConfig = require(Configs:WaitForChild("MovementAnimationConfig")) :: MovementAnimCfg
 
 local localPlayer = Players.LocalPlayer
 local activeHumanoid: Humanoid? = nil
 local activeConnections: { RBXScriptConnection } = {}
-local cachedControls: any = nil
-local controlsDisabledByLock = false
 
 local RENDER_STEP_BIND_NAME = "NormalIsland_MovementLockEnforcer"
-local ROOT_MOTION_LOCOMOTION_ATTR = "RootMotion_LocomotionLock"
-
-local function isRootMotionLocomotionLocked(humanoid: Humanoid): boolean
-	if localPlayer:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true then
-		return true
-	end
-	local ch = humanoid.Parent
-	return ch ~= nil and ch:IsA("Model") and ch:GetAttribute(ROOT_MOTION_LOCOMOTION_ATTR) == true
-end
-
-local function suppressRootMotionLocomotionTracks(humanoid: Humanoid)
-	if not isRootMotionLocomotionLocked(humanoid) then
-		return
-	end
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		return
-	end
-	local bumpSet = MovementAnimationConfig.LocomotionIdSet
-	local parse = MovementAnimationConfig.ParseAssetIdNumber
-	for _, track in animator:GetPlayingAnimationTracks() do
-		local anim = track.Animation
-		if anim then
-			local num = parse(anim.AnimationId)
-			if num and bumpSet[num] then
-				track:AdjustWeight(0, 0)
-			end
-		end
-	end
-end
 
 local function disconnectActiveConnections()
 	pcall(function()
@@ -75,32 +43,6 @@ local function disconnectActiveConnections()
 		connection:Disconnect()
 	end
 	table.clear(activeConnections)
-end
-
-local function getControls()
-	if cachedControls ~= nil then
-		return cachedControls
-	end
-
-	local playerScripts = localPlayer:FindFirstChildOfClass("PlayerScripts")
-		or (localPlayer:WaitForChild("PlayerScripts", 15) :: PlayerScripts?)
-	if not playerScripts then
-		return nil
-	end
-
-	local playerModule = playerScripts:FindFirstChild("PlayerModule")
-		or (playerScripts:WaitForChild("PlayerModule", 15) :: ModuleScript?)
-	if not playerModule then
-		return nil
-	end
-
-	local ok, module = pcall(require, playerModule)
-	if not ok or type(module) ~= "table" or type((module :: any).GetControls) ~= "function" then
-		return nil
-	end
-
-	cachedControls = (module :: any):GetControls()
-	return cachedControls
 end
 
 local function getJumpPower(): number
@@ -113,46 +55,52 @@ local function hasJumpStamina(): boolean
 	return stamina >= cost
 end
 
-local function hasAnyLocks(flags: LockedFlags): boolean
-	return flags.Walk or flags.Sprint or flags.Jump or flags.Swim
+local function getWalkSpeed(): number
+	return (localPlayer:GetAttribute("WalkSpeed") or PlayerConfig.walkSpeed or 14) :: number
 end
 
-local function setLocomotionInputSuppressed(suppressed: boolean)
-	local controls = getControls()
-	if not controls then
-		return
+local function getRunSpeed(): number
+	return (localPlayer:GetAttribute("RunSpeed") or PlayerConfig.runSpeed or 20) :: number
+end
+
+local function hasAnyLocks(flags: LockedFlags): boolean
+	return flags.Sprint or flags.Jump or flags.Swim
+end
+
+local function getEffectiveSpeed(flags: LockedFlags, speedMultiplier: number): number
+	if speedMultiplier <= 0 then
+		return 0
 	end
 
-	if suppressed then
-		if not controlsDisabledByLock then
-			controlsDisabledByLock = true
-			controls:Disable()
-		end
-	elseif controlsDisabledByLock then
-		controlsDisabledByLock = false
-		controls:Enable()
+	local humanoid = activeHumanoid
+	if humanoid and flags.Swim and humanoid:GetState() == Enum.HumanoidStateType.Swimming then
+		return 0
 	end
+
+	local wantsSprint = localPlayer:GetAttribute("WantsSprint") == true
+	local stamina = (localPlayer:GetAttribute("Stamina") or 0) :: number
+	local baseSpeed = getWalkSpeed()
+	if not flags.Sprint and wantsSprint and stamina > 0 then
+		baseSpeed = getRunSpeed()
+	end
+
+	return baseSpeed * speedMultiplier
 end
 
 local function applyLockState()
 	local humanoid = activeHumanoid
 	if not humanoid then
-		setLocomotionInputSuppressed(false)
 		localPlayer:SetAttribute("SprintLocked", false)
 		return
 	end
 
 	local lockedFlags = MovementLock.GetLockedFlags()
-	local rootMotionLock = isRootMotionLocomotionLocked(humanoid)
-	local locomotionInputSuppressed = rootMotionLock
-		or lockedFlags.Walk
-		or (lockedFlags.Swim and humanoid:GetState() == Enum.HumanoidStateType.Swimming)
-	local sprintLocked = lockedFlags.Sprint or lockedFlags.Walk or rootMotionLock
-	local jumpAllowed = not lockedFlags.Jump and hasJumpStamina() and not rootMotionLock
+	local speedMultiplier = MovementSpeedMultipliers.GetMultiplier()
+	local sprintLocked = lockedFlags.Sprint
+	local jumpAllowed = not lockedFlags.Jump and hasJumpStamina()
 
-	setLocomotionInputSuppressed(locomotionInputSuppressed)
 	localPlayer:SetAttribute("SprintLocked", sprintLocked)
-
+	humanoid.WalkSpeed = getEffectiveSpeed(lockedFlags, speedMultiplier)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, jumpAllowed)
 	humanoid.JumpPower = if jumpAllowed then getJumpPower() else 0
 	if not jumpAllowed and humanoid.Jump then
@@ -189,24 +137,25 @@ local function bindCharacter(character: Model)
 			return
 		end
 		local lockedFlags = MovementLock.GetLockedFlags()
-		if hasAnyLocks(lockedFlags) or isRootMotionLocomotionLocked(h) then
+		if hasAnyLocks(lockedFlags) or MovementSpeedMultipliers.GetMultiplier() ~= 1 then
 			applyLockState()
 		end
-		if isRootMotionLocomotionLocked(h) then
-			suppressRootMotionLocomotionTracks(h)
-		end
 	end)
-
-	table.insert(activeConnections, localPlayer:GetAttributeChangedSignal(ROOT_MOTION_LOCOMOTION_ATTR):Connect(applyLockState))
 end
 
 MovementLock.Changed:Connect(function()
 	applyLockState()
 end)
 
-localPlayer:GetAttributeChangedSignal("Stamina"):Connect(function()
+MovementSpeedMultipliers.Changed:Connect(function()
 	applyLockState()
 end)
+
+for _, attributeName in ipairs({ "Stamina", "WantsSprint", "WalkSpeed", "RunSpeed" }) do
+	localPlayer:GetAttributeChangedSignal(attributeName):Connect(function()
+		applyLockState()
+	end)
+end
 
 if localPlayer.Character then
 	task.spawn(bindCharacter, localPlayer.Character)

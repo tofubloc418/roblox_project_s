@@ -12,7 +12,9 @@ local player = Players.LocalPlayer
 
 local keybindsFolder = ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Keybinds")
 local KeybindIds = requireAny(keybindsFolder:WaitForChild("KeybindIds"))
-local KeybindsClient = requireAny(script.Parent.Parent:WaitForChild("Input"):WaitForChild("KeybindsClient"))
+local initFolder = assert(script.Parent, "Sprint: Init folder missing")
+local clientNormalIslandRoot = assert(initFolder.Parent, "Sprint: clientNormalIsland root missing")
+local KeybindsClient = requireAny(clientNormalIslandRoot:WaitForChild("Input"):WaitForChild("KeybindsClient"))
 local MovementLock = requireAny(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementLock"))
 local PlayerConfig = requireAny(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("PlayerConfig"))
 

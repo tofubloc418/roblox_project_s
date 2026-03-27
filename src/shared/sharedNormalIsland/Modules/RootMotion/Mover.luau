@@ -350,7 +350,6 @@ local function createMover(character: Model, movementBinders: MovementBinders, o
 	setmetatable(self, { __index = MT })
 
 	local mover = self :: Mover
-	-- Methods are stored on the state table; it is widened only for these assignments.
 	local withMovements = self :: any
 	withMovements.translate = function(_: Mover, params: Types.TranslateParams): ActiveMovement
 		return movementBinders.translate(mover, params)

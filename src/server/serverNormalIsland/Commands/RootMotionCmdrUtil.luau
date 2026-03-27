@@ -1,5 +1,5 @@
 --!strict
--- Dev helpers for RootMotion Cmdr commands (ServerScriptService only).
+-- Server-only helpers for RootMotion Cmdr commands.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

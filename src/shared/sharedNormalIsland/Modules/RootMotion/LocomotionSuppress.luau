@@ -1,5 +1,5 @@
 --!strict
--- Snapshots Humanoid locomotion; sets RootMotion_LocomotionLock on the character and owning Player for client sync.
+-- Snapshot/restore Humanoid locomotion; sets RootMotion_LocomotionLock on character + owning Player for clients.
 
 local Players = game:GetService("Players")
 

@@ -21,10 +21,7 @@ local function rayParamsFrom(pathParams: any?, rootModel: Model): RaycastParams
 	return p
 end
 
---[[
-	Casts an oriented block from originCFrame along displacement (world).
-	Returns a CFrame translated along the path up to the first obstruction.
-]]
+-- Blockcasts an oriented box along displacement; returns CFrame short of first hit (or full path if clear).
 function Validation.shapecastPath(
 	originCFrame: CFrame,
 	displacement: Vector3,
@@ -43,9 +40,7 @@ function Validation.shapecastPath(
 
 	local dir = displacement.Unit
 	local params = rayParamsFrom(pathParams, rootModel)
-	local castLength = dist
-
-	local result = Workspace:Blockcast(originCFrame, rootSize, dir * castLength, params)
+	local result = Workspace:Blockcast(originCFrame, rootSize, dir * dist, params)
 	if not result then
 		return {
 			safeCFrame = originCFrame + displacement,

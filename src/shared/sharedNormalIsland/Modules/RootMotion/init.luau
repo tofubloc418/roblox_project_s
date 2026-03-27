@@ -1,21 +1,11 @@
 --!strict
+-- Public entry: ReplicatedStorage.Modules.RootMotion — physics constraints on HumanoidRootPart.
 
---[[
-	Standalone physics-root motion helpers. Require from ReplicatedStorage.Modules.RootMotion.
-
-	local RootMotion = require(ReplicatedStorage.Modules.RootMotion)
-	local mover = RootMotion.createMover(character)
-	local mover = RootMotion.createMover(character, { suppressDefaultLocomotion = false })
-	local token = mover:dash({ direction = look, distance = 12, duration = 0.25 })
-	token.Completed:Connect(function(ok) end)
-]]
-
--- `script` is typed as `LuaSourceContainer` (no children). `require(script....)` is not always a
--- supported static path in the analyzer. `:: any` keeps Studio/LSP behavior aligned with runtime.
 local req = require :: any
 local s = script :: any
 
 local MoverLib = req(s.Mover)
+local Types = req(s.Types)
 
 local Translate = req(s.Movements.Translate)
 local Dash = req(s.Movements.Dash)
@@ -30,7 +20,7 @@ local Teleport = req(s.Movements.Teleport)
 local Orbit = req(s.Movements.Orbit)
 local SpringTo = req(s.Movements.SpringTo)
 
-local function createMover(character: Model, options: { suppressDefaultLocomotion: boolean? }?)
+local function createMover(character: Model, options: Types.CreateMoverOptions?)
 	return MoverLib.create(character, {
 		translate = function(m, p)
 			return Translate.run(m, p)
@@ -74,7 +64,7 @@ end
 return {
 	createMover = createMover,
 	DEFAULT_ACCEL_MULT = MoverLib.DEFAULT_ACCEL_MULT,
-	Types = req(s.Types),
+	Types = Types,
 	Validation = req(s.Validation),
 	PhysicsHelpers = req(s.PhysicsHelpers),
 	Easing = req(s.Easing),

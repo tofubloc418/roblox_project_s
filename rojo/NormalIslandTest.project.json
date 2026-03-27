@@ -1,0 +1,34 @@
+{
+  "name": "NormalIslandTest",
+  "servePlaceIds": [92325006006400],
+  "tree": {
+    "$className": "DataModel",
+    "$ignoreUnknownInstances": true,
+    "ReplicatedStorage": {
+      "$path": "../src/shared/sharedNormalIsland",
+      "$ignoreUnknownInstances": true,
+      "Packages": {
+        "$path": "../Packages"
+      },
+      "Cmdr": {
+        "$path": "../Cmdr/Cmdr"
+      }
+    },
+    "ServerScriptService": {
+      "$path": "../src/server/serverNormalIsland",
+      "$ignoreUnknownInstances": true
+    },
+    "StarterPlayer": {
+      "$ignoreUnknownInstances": true,
+      "$properties": {
+        "EnableMouseLockOption": false,
+        "CameraMinZoomDistance": 0.5,
+        "CameraMaxZoomDistance": 24
+      },
+      "StarterPlayerScripts": {
+        "$path": "../src/client/clientNormalIsland",
+        "$ignoreUnknownInstances": true
+      }
+    }
+  }
+}

@@ -12,6 +12,7 @@ Technical specifications for the core backend systems of Project S. These docs d
 | [Data Persistence](./data-persistence.md) | PlayerData schema (including ability presets), serialized item format, DataStore architecture, session locking, save/load pipeline, InventoryService API, client-server sync remotes, stash system |
 | [ReplicatedStorage Layout](./replicated-storage.md) | Full folder tree (items, abilities, consumables), asset specs, asset resolver API, Rojo sync mapping, naming conventions, performance considerations |
 | [Movement Lock](./movement-lock.md) | Client-side movement interruption (walk/sprint/jump/swim), `MovementLock` registry, enforcer, weapon `movementLocks`, ability usage |
+| [Root Motion](./root-motion/README.md) | Physics-driven character displacement (`LinearVelocity` / `VectorForce` / `AlignPosition`), movement catalog, locomotion suppression, Cmdr dev helpers |
 
 ## Reading Order
 

@@ -1,23 +1,67 @@
 ---
-description: Luau --!strict — require() vs WaitForChild chains and type checker
+description: Luau --!strict — require(), Instance?, narrowing, and LSP tradeoffs
 globs: src/**/*.luau
 alwaysApply: false
 ---
 
-# Strict mode: `require()` and `WaitForChild`
+# Strict mode: `require()`, types, and the checker
 
-In **`--!strict`**, Luau only type-checks `require(...)` when the argument has a **supported structure** the analyzer can resolve (e.g. certain `script`/`game` paths). If the argument is not supported, you get a type error; Roblox documents silencing that with **`:: any` on the `require` result**.
+## When `require` is analyzed
+
+In **`--!strict`**, Luau only type-checks `require(...)` when the argument has a **supported structure** the analyzer can resolve (often `script`/`game` paths tied to your Rojo sourcemap). If the argument is not supported, you get a type error; Roblox documents silencing the **result** with **`:: any`** on the value from `require`.
 
 **Why chained `WaitForChild` fails:** each `WaitForChild` is typed as returning **`Instance`**, not `ModuleScript`. After chaining, the checker cannot prove the value is a module, so `require(ReplicatedStorage:WaitForChild(...):WaitForChild(...))` is rejected even though it works at runtime.
 
-**Do this instead (pick one):**
+**Do this for dynamic paths (pick one):**
 
 1. **Cast the module instance** so `require` sees a `ModuleScript`, then annotate the binding if inference is weak:
    - `local m = path:WaitForChild("SfxIndex") :: ModuleScript`
    - `local SfxIndex = require(m)`
-2. **Silence strict require on dynamic paths** (documented escape hatch):  
-   `local SfxIndex = require(...) :: any`  
-   If you need a real type, add an `export type` in the module and annotate the local binding.
-3. **Prefer `require(script...)`** (relative under known hierarchy) when the module lives under the same tree — those paths are usually analyzable.
+2. **Silence strict require on the value:**  
+   `local SfxIndex = require(...) :: any`
+3. **Prefer `require(script...)`** when the module lives under the same tree **and** your LSP/sourcemap resolves it — if the IDE still reports "unknown require" / unsupported path, that is often **tooling** (stale `sourcemap.json`, project root), not necessarily wrong runtime code.
 
-Avoid adding long `WaitForChild` chains directly inside `require(...)` in new `!strict` code unless you also apply (1) or (2).
+Avoid long `WaitForChild` chains directly inside `require(...)` in new `!strict` code unless you also apply (1) or (2).
+
+---
+
+## `require :: any` (the function) erases **module** types
+
+Casting **`require` itself** (e.g. `local req = require :: any`) makes every **`req(moduleScript)`** load **opaque** to the type checker. **Values** still work at runtime; **type paths** derived from those locals do not.
+
+Consequences:
+
+- `type T = SomeModule.SomeExport` fails with **Unknown type** if `SomeModule` came from `req(...)`.
+- **`export type`** blocks that mention `Types.FooParams` or `ActiveMovementLib.ActiveMovement` built from `req(...)` **cascade** squiggles — one broken alias, many lines.
+
+Do **not** treat "copy the whole exported type into every file" as the default fix unless the team explicitly wants that maintenance cost. Prefer one of:
+
+- Accept **`any`** on **internal** boundaries (e.g. movement runners, glue code) while keeping **one** canonical `export type` surface for **consumers** (`Types.luau`, public APIs).
+- Use **typed** `require(actualModuleScript)` only where the analyzer reliably resolves the path (often easier for entrypoints than for every sibling under `Movements/`).
+
+---
+
+## `Instance?` and `Parent`
+
+Roblox typings model **`Instance.Parent`** as **`Instance?`**. Chaining **`script.Parent.Parent`** without narrowing can produce **"could be nil"** in `--!strict`, even when Rojo guarantees the hierarchy.
+
+**Fixes:** `assert(script.Parent, "...")` (and again for the next hop), split locals with asserts, or — if you intentionally opt out of that checking — cast the **folder** to `any` (knowing you are trading safety for silence).
+
+---
+
+## Narrowing optional **values** before mutating (not only `require`)
+
+If a local is **`T?`** and you assign **`T`** inside `if not x then ... end`, the checker may still treat later **property writes** as **`nil`** (e.g. **"Expected type table, got 'nil' instead"**).
+
+**Fix:** declare **`local x: T`** and assign in mutually exclusive branches (`if optional then x = optional else x = T.new(); ... end`), or otherwise narrow so **`x`** is **`T`** on every path before use.
+
+---
+
+## Summary
+
+| Situation | Typical approach |
+|-----------|------------------|
+| Dynamic `WaitForChild` → `require` | Cast to `ModuleScript` or `require(...) :: any` |
+| `req = require :: any` + sibling modules | Expect **no** `Module.Foo` **types**; use `any` internally or typed requires where LSP works |
+| `script.Parent` chain | Assert or cast; don't assume the checker knows your tree |
+| `T?` then mutate fields | Use `local v: T` + clear branches |

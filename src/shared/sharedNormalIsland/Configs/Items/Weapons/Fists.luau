@@ -1,5 +1,5 @@
 --!strict
-local ItemEnums = require(script.Parent.Parent:WaitForChild("ItemEnums")) :: any
+local ItemEnums = require(((script.Parent :: any).Parent :: any):WaitForChild("ItemEnums")) :: any
 
 local Fists = {
 	["Fists"] = {
@@ -34,7 +34,7 @@ local Fists = {
 		equipAnimationId   = "rbxassetid://0",
 		unequipAnimationId = "rbxassetid://0",
 		attackSequence = {
-			{ animationId = "rbxassetid://0", hitDuration = 0.5 },
+			{ attackMotionId = "Fists_Attack_01", hitDuration = 0.5 },
 		},
 		blockAnimationId = nil,
 

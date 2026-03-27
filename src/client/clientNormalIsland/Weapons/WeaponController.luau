@@ -21,7 +21,12 @@ local SHAPECAST_HITBOX_MODULE_NAME = "shapecasthitbox"
 local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NAME)) :: any
 
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
-local MovementLock = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock")) :: any
+local WeaponBasicAttackProfiles = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
+local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
+local MovementControlLocks = require(
+	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
+) :: any
+local WeaponAttackRootMotion = require((script.Parent :: Instance):WaitForChild("WeaponAttackRootMotion") :: ModuleScript) :: any
 
 -- Remotes are created by the server in WeaponService.Initialize().
 local weaponRemotes = ReplicatedStorage:WaitForChild("WeaponRemotes")
@@ -33,6 +38,8 @@ local WeaponController = {}
 WeaponController.__index = WeaponController
 
 local debugEnabled = false
+
+local WEAPON_ATTACK_WALK_SPEED_MULTIPLIER = 0.2
 
 local function debugLog(templateId: string, message: string)
 	if not debugEnabled then
@@ -55,7 +62,9 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	equipTrack: AnimationTrack?,
 	unequipTrack: AnimationTrack?,
 	blockTrack: AnimationTrack?,
-	attackTracks: { AnimationTrack },
+	_attackAnimByAssetId: { [string]: AnimationTrack },
+	_rootMotionMover: any,
+	_rootMotionToken: any,
 	-- Sounds (created at runtime)
 	swingSound: Sound?,
 	hitSound: Sound?,
@@ -106,7 +115,9 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.equipTrack = nil
 	self.unequipTrack = nil
 	self.blockTrack = nil
-	self.attackTracks = {}
+	self._attackAnimByAssetId = {}
+	self._rootMotionMover = nil
+	self._rootMotionToken = nil
 
 	-- Sounds
 	self.swingSound = nil
@@ -151,6 +162,23 @@ local function connect(self: WeaponControllerInstance, conn: RBXScriptConnection
 	table.insert(self._connections, conn)
 end
 
+local function cancelAttackRootMotion(self: WeaponControllerInstance)
+	local tok = self._rootMotionToken
+	self._rootMotionToken = nil
+	if tok and type(tok) == "table" and type(tok.IsActive) == "function" and tok:IsActive() then
+		tok:Cancel()
+	end
+end
+
+local function ensureRootMotionMover(self: WeaponControllerInstance)
+	if self._rootMotionMover then
+		return self._rootMotionMover
+	end
+	local m = RootMotion.createMover(self.character)
+	self._rootMotionMover = m
+	return m
+end
+
 local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, attackEntry: any)
 	local movementLocks = attackEntry.movementLocks
 	if type(movementLocks) ~= "table" or next(movementLocks) == nil then
@@ -159,7 +187,7 @@ local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: n
 
 	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
 	self._attackLockTags[lockTag] = true
-	MovementLock.Lock(lockTag, movementLocks, attackEntry.hitDuration)
+	MovementControlLocks.Lock(lockTag, movementLocks, attackEntry.hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -180,11 +208,18 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 		self.blockTrack = loadAnimationFromId(animator, stats.blockAnimationId)
 	end
 
-	self.attackTracks = {}
+	table.clear(self._attackAnimByAssetId)
 	for _, entry in ipairs(stats.attackSequence or {}) do
-		local track = loadAnimationFromId(animator, entry.animationId)
-		if track then
-			table.insert(self.attackTracks, track)
+		local attackMotionId = entry.attackMotionId
+		assert(type(attackMotionId) == "string" and #attackMotionId > 0, "[WeaponController] attackSequence entry missing attackMotionId")
+		local profile = WeaponBasicAttackProfiles.GetProfile(attackMotionId)
+		assert(profile, "[WeaponController] unknown attackMotionId: " .. attackMotionId)
+		local assetId = profile.animationId
+		if not self._attackAnimByAssetId[assetId] then
+			local track = loadAnimationFromId(animator, assetId)
+			if track then
+				self._attackAnimByAssetId[assetId] = track
+			end
 		end
 	end
 
@@ -277,17 +312,38 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	local attackEntry = sequence[attackIndex]
 	if not attackEntry then return end
 
+	local attackMotionId = attackEntry.attackMotionId
+	if type(attackMotionId) ~= "string" or attackMotionId == "" then
+		return
+	end
+	local profile = WeaponBasicAttackProfiles.GetProfile(attackMotionId)
+	if not profile then
+		warn("[WeaponController] unknown attackMotionId: " .. attackMotionId)
+		return
+	end
+
 	self.sequenceIndex = attackIndex
 
 	self.nextAttackTime = now + attackEntry.hitDuration
 	self.comboExpireTime = now + (attackEntry.comboTimeLimit or attackEntry.hitDuration)
 	lockAttackMovement(self, attackIndex, attackEntry)
 
-	-- Play animation
-	local track = self.attackTracks[attackIndex]
+	cancelAttackRootMotion(self)
+
+	-- Play animation (+ optional RootMotion from profile)
+	local track = self._attackAnimByAssetId[profile.animationId]
 	if track then
 		debugLog(self.templateId, string.format("attack anim %d", attackIndex))
 		track:Play()
+	end
+
+	if WeaponAttackRootMotion.profileUsesRootMotion(profile) then
+		local mover = ensureRootMotionMover(self)
+		self._rootMotionToken = WeaponAttackRootMotion.run(mover, self.character, profile.motion, {
+			humanoid = self.humanoid,
+			hitDuration = attackEntry.hitDuration,
+			syncMotionDurationFromHit = profile.syncMotionDurationFromHit == true,
+		})
 	end
 
 	-- Play swing sound
@@ -339,6 +395,16 @@ end
 function WeaponController.Destroy(self: WeaponControllerInstance)
 	self.equipped = false
 
+	cancelAttackRootMotion(self)
+	if self._rootMotionMover then
+		(self._rootMotionMover :: any):destroy()
+		self._rootMotionMover = nil
+	end
+	for _, tr in pairs(self._attackAnimByAssetId) do
+		tr:Stop()
+	end
+	table.clear(self._attackAnimByAssetId)
+
 	-- Play unequip animation (fire-and-forget)
 	if self.unequipTrack then
 		debugLog(self.templateId, "unequip anim")
@@ -364,7 +430,7 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 	table.clear(self._connections)
 
 	for lockTag in pairs(self._attackLockTags) do
-		MovementLock.Unlock(lockTag)
+		MovementControlLocks.Unlock(lockTag)
 	end
 	table.clear(self._attackLockTags)
 

@@ -27,7 +27,7 @@ export type Mover = {
 	getRoot: (self: Mover) -> BasePart,
 	getCharacter: (self: Mover) -> Model,
 	getCachedMass: (self: Mover) -> number,
-	acquireLinearVelocity: (self: Mover, owner: ActiveMovement, vectorVelocity: Vector3, maxForce: number) -> (),
+	acquireLinearVelocity: (self: Mover, owner: ActiveMovement, vectorVelocity: Vector3, maxForce: number, horizontalPlane: boolean?) -> (),
 	releaseLinearVelocity: (self: Mover, owner: ActiveMovement) -> (),
 	acquireVectorForce: (self: Mover, owner: ActiveMovement, force: Vector3) -> (),
 	releaseVectorForce: (self: Mover, owner: ActiveMovement) -> (),
@@ -121,11 +121,19 @@ function MT.getCachedMass(self: MoverState): number
 	return self._mass
 end
 
-function MT.acquireLinearVelocity(self: MoverState, owner: ActiveMovement, vectorVelocity: Vector3, maxForce: number)
+function MT.acquireLinearVelocity(self: MoverState, owner: ActiveMovement, vectorVelocity: Vector3, maxForce: number, horizontalPlane: boolean?)
 	stealLinear(self, owner)
 	self._linearOwner = owner
 	local lv = self._linearVelocity
-	lv.VectorVelocity = vectorVelocity
+	if horizontalPlane == true then
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Plane
+		lv.PrimaryTangentAxis = Vector3.xAxis
+		lv.SecondaryTangentAxis = Vector3.zAxis
+		lv.PlaneVelocity = Vector2.new(vectorVelocity.X, vectorVelocity.Z)
+	else
+		lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
+		lv.VectorVelocity = vectorVelocity
+	end
 	lv.MaxForce = maxForce
 	lv.Enabled = true
 end
@@ -137,6 +145,8 @@ function MT.releaseLinearVelocity(self: MoverState, owner: ActiveMovement)
 	local lv = self._linearVelocity
 	lv.Enabled = false
 	lv.VectorVelocity = Vector3.zero
+	lv.PlaneVelocity = Vector2.zero
+	lv.VelocityConstraintMode = Enum.VelocityConstraintMode.Vector
 	self._linearOwner = nil
 end
 

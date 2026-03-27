@@ -23,7 +23,7 @@ local function run(mover: any, params: any): any
 	end)
 
 	mover:trackActive(token)
-	mover:acquireLinearVelocity(token, dir * speed, mf)
+	mover:acquireLinearVelocity(token, dir * speed, mf, true)
 
 	task.delay(duration, function()
 		if not token:IsActive() then

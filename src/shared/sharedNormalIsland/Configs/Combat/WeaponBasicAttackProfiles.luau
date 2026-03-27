@@ -159,47 +159,65 @@ export type WeaponBasicAttackProfile = {
 	syncMotionDurationFromHit: boolean?,
 }
 
+-- Small in-place step along flat look (≈ one foot forward while swinging). Duration follows hit window when sync is on.
+local BASIC_ATTACK_STEP: MotionTranslate = {
+	kind = "translate",
+	direction = "HumanoidRootPartLookFlat",
+	distance = 2.25,
+	duration = 0.2,
+}
+
 -- Keys: <WeaponTag>_Attack_<NN> (NN = 01, 02, …) — aligns with ItemEnums.WeaponTag for shared basic attacks.
 local profiles: { [string]: WeaponBasicAttackProfile } = {
 	["Dagger_Attack_01"] = {
 		animationId = "rbxassetid://120794561550510",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Dagger_Attack_02"] = {
 		animationId = "rbxassetid://96019133363181",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Axe_Attack_01"] = {
 		animationId = "rbxassetid://107791038673413",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Axe_Attack_02"] = {
 		animationId = "rbxassetid://75612209059589",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Axe_Attack_03"] = {
 		animationId = "rbxassetid://82850857726878",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Fists_Attack_01"] = {
 		animationId = "rbxassetid://0",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Greatsword_Attack_01"] = {
 		animationId = "rbxassetid://0",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["Greatsword_Attack_02"] = {
 		animationId = "rbxassetid://0",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["ThrustingSword_Attack_01"] = {
 		animationId = "rbxassetid://0",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 	["ThrustingSword_Attack_02"] = {
 		animationId = "rbxassetid://0",
-		motion = { kind = "none" },
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
 	},
 }
 

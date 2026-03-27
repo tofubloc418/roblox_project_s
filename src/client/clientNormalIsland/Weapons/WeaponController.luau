@@ -23,7 +23,7 @@ local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NA
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
 local WeaponBasicAttackProfiles = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
-local WeaponAttackRootMotion = require(script:WaitForChild("WeaponAttackRootMotion") :: ModuleScript) :: any
+local WeaponAttackRootMotion = require((script.Parent :: Instance):WaitForChild("WeaponAttackRootMotion") :: ModuleScript) :: any
 local MovementLock = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementLock")) :: any
 
 -- Remotes are created by the server in WeaponService.Initialize().

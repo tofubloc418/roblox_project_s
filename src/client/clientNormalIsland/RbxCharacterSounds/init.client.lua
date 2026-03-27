@@ -41,11 +41,12 @@ local SOUND_DATA : { [string]: {[string]: any}} = {
 	Landing = {
 		SoundId = "rbxasset://sounds/action_jump_land.mp3",
 	},
-	Running = {
-		SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3",
-		Looped = true,
-		Pitch = 1.85,
-	},
+	-- Running: default ground footstep loop (disabled for Normal Island)
+	-- Running = {
+	-- 	SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+	-- 	Looped = true,
+	-- 	Pitch = 1.85,
+	-- },
 	Splash = {
 		SoundId = "rbxasset://sounds/impact_water.mp3",
 	},
@@ -77,11 +78,11 @@ local AUDIOPLAYER_DATA : { [string]: {[string]: any}} = {
 	Landing = {
 		AssetId = "rbxasset://sounds/action_jump_land.mp3",
 	},
-	Running = {
-		AssetId = "rbxasset://sounds/action_footsteps_plastic.mp3",
-		Looping = true,
-		PlaybackSpeed = 1.85,
-	},
+	-- Running = {
+	-- 	AssetId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+	-- 	Looping = true,
+	-- 	PlaybackSpeed = 1.85,
+	-- },
 	Splash = {
 		AssetId = "rbxasset://sounds/impact_water.mp3",
 	},
@@ -298,9 +299,14 @@ local function initializeSoundSystem(instances: { [string]: Instance })
 		end,
 
 		[Enum.HumanoidStateType.Running] = function()
-			stopPlayingLoopedSounds(sounds.Running)
-			playSound(sounds.Running, true)
-			playingLoopedSounds[sounds.Running] = true
+			-- No Running sound instance when footstep loop is disabled
+			if sounds.Running then
+				stopPlayingLoopedSounds(sounds.Running)
+				playSound(sounds.Running, true)
+				playingLoopedSounds[sounds.Running] = true
+			else
+				stopPlayingLoopedSounds()
+			end
 		end,
 
 		[Enum.HumanoidStateType.Climbing] = function()
@@ -340,11 +346,12 @@ local function initializeSoundSystem(instances: { [string]: Instance })
 				(sound :: any).Volume = 0
 			end
 		end,
-
-		[sounds.Running] = function(dt: number, sound: Playable, vel: Vector3)
-			playSoundIf(sound, vel.Magnitude > 0.5 and humanoid.MoveDirection.Magnitude > 0.5)
-		end,
 	}
+	if sounds.Running then
+		loopedSoundUpdaters[sounds.Running] = function(dt: number, sound: Playable, vel: Vector3)
+			playSoundIf(sound, vel.Magnitude > 0.5 and humanoid.MoveDirection.Magnitude > 0.5)
+		end
+	end
 
 	-- state substitutions to avoid duplicating entries in the state table
 	local stateRemap: {[Enum.HumanoidStateType]: Enum.HumanoidStateType} = {

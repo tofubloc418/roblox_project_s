@@ -6,6 +6,8 @@ local ItemEnums = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild
 
 local FRAMES_AT_60 = 220
 local TOTAL_DURATION_SECONDS = FRAMES_AT_60 / 60
+-- Used for surge client VFX condense and for RootMotion lunge delay after the Powerup marker.
+local SURGE_CONDENSE_DURATION_SECONDS = 39 / 60
 
 local PrayerfulStrike = {
 	{
@@ -21,16 +23,16 @@ local PrayerfulStrike = {
 			cooldownSeconds = 5,
 			surgeMaxScale = 10,
 			surgeMinScale = 1,
-			surgeCondenseDurationSeconds = 39 / 60,
+			surgeCondenseDurationSeconds = SURGE_CONDENSE_DURATION_SECONDS,
 			-- Must match Animation Editor marker names on the ability animation.
 			markerPowerup = "Powerup",
 			markerImpact = "Impact",
-			-- Server RootMotion: flat forward from HumanoidRootPart look (markers Powerup / Impact).
-			-- Lunge default is slightly more than a typical ~4 stud walk stride.
-			rootMotionPowerupForwardStuds = 0.55,
-			rootMotionPowerupDurationSeconds = 0.12,
-			rootMotionLungeForwardStuds = 5,
-			rootMotionLungeDurationSeconds = 0.2,
+			-- RootMotion: phase1 anim start→Powerup; delay then phase2 (lunge start→Impact). Flat HRP look.
+			rootMotionPhase1ForwardStuds = 0.55,
+			rootMotionPhase1DurationSeconds = 1.0,
+			rootMotionLungeDelayAfterPowerupSeconds = SURGE_CONDENSE_DURATION_SECONDS,
+			rootMotionPhase2ForwardStuds = 5,
+			rootMotionPhase2DurationSeconds = 0.5,
 			-- Magic circle VFX at Powerup (MiddleFeetAttachment): local Y offset, studs; total lifetime.
 			magicCircleOffsetY = -0.2,
 			magicCircleLifetimeSeconds = 60 / 60,

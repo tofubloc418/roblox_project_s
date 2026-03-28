@@ -1,8 +1,5 @@
 --!strict
---[[
-	Server PrayerfulStrike: session gating, cooldowns, server-authoritative root motion
-	at animation markers, and visual relay. VFX/SFX play on clients via relay + shared playback.
-]]
+-- Session, cooldowns, server RootMotion, visual relay. Tunables: PrayerfulStrike params (rootMotion*).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +23,7 @@ type ExecutionContext = { player: Player, abilityId: string }
 
 local ABILITY_ID = "PrayerfulStrike"
 local MAIN_TRACK = "main"
+local PHASE1_START_MARKER = "__PrayerfulStrikePhase1Start"
 
 local function cfgMarkers(): (string, string)
 	local c = AbilityRegistry.GetAbility(ABILITY_ID)
@@ -57,36 +55,50 @@ local function flatLook(root: BasePart): Vector3
 end
 
 local function rootMotionTune(): (number, number, number, number)
-	local powerupStuds, powerupDur = 0.55, 0.12
-	local lungeStuds, lungeDur = 5, 0.2
+	local p1Studs, p1Dur = 0.55, 1.0
+	local p2Studs, p2Dur = 5, 0.5
 	local c = AbilityRegistry.GetAbility(ABILITY_ID)
 	local p = c and c.params
 	if type(p) == "table" then
 		local t = p :: any
-		if type(t.rootMotionPowerupForwardStuds) == "number" and t.rootMotionPowerupForwardStuds > 0 then
-			powerupStuds = t.rootMotionPowerupForwardStuds
+		if type(t.rootMotionPhase1ForwardStuds) == "number" and t.rootMotionPhase1ForwardStuds > 0 then
+			p1Studs = t.rootMotionPhase1ForwardStuds
 		end
-		if type(t.rootMotionPowerupDurationSeconds) == "number" and t.rootMotionPowerupDurationSeconds > 0 then
-			powerupDur = t.rootMotionPowerupDurationSeconds
+		if type(t.rootMotionPhase1DurationSeconds) == "number" and t.rootMotionPhase1DurationSeconds > 0 then
+			p1Dur = t.rootMotionPhase1DurationSeconds
 		end
-		if type(t.rootMotionLungeForwardStuds) == "number" and t.rootMotionLungeForwardStuds > 0 then
-			lungeStuds = t.rootMotionLungeForwardStuds
+		if type(t.rootMotionPhase2ForwardStuds) == "number" and t.rootMotionPhase2ForwardStuds > 0 then
+			p2Studs = t.rootMotionPhase2ForwardStuds
 		end
-		if type(t.rootMotionLungeDurationSeconds) == "number" and t.rootMotionLungeDurationSeconds > 0 then
-			lungeDur = t.rootMotionLungeDurationSeconds
+		if type(t.rootMotionPhase2DurationSeconds) == "number" and t.rootMotionPhase2DurationSeconds > 0 then
+			p2Dur = t.rootMotionPhase2DurationSeconds
 		end
 	end
-	return powerupStuds, powerupDur, lungeStuds, lungeDur
+	return p1Studs, p1Dur, p2Studs, p2Dur
+end
+
+local function lungeDelayAfterPowerupSeconds(): number
+	local delaySec = 39 / 60
+	local c = AbilityRegistry.GetAbility(ABILITY_ID)
+	local p = c and c.params
+	if type(p) == "table" then
+		local t = p :: any
+		if type(t.rootMotionLungeDelayAfterPowerupSeconds) == "number" and t.rootMotionLungeDelayAfterPowerupSeconds >= 0 then
+			delaySec = t.rootMotionLungeDelayAfterPowerupSeconds
+		end
+	end
+	return delaySec
 end
 
 type Session = {
 	exp: number,
+	didPhase1Start: boolean,
 	didP: boolean,
 	didI: boolean,
 	mover: any?,
 }
 
-local function tryApplyForwardRootMotion(session: Session, character: Model, forwardStuds: number, durationSec: number, destroyMoverWhenDone: boolean)
+local function tryApplyForwardRootMotion(session: Session, character: Model, forwardStuds: number, durationSec: number)
 	if forwardStuds <= 0 or durationSec <= 0 then
 		return
 	end
@@ -119,15 +131,16 @@ local function tryApplyForwardRootMotion(session: Session, character: Model, for
 		session.mover = nil
 		return
 	end
-	token.Completed:Connect(function()
-		if destroyMoverWhenDone and session.mover then
-			local m = session.mover
-			pcall(function()
-				m:destroy()
-			end)
-			session.mover = nil
-		end
-	end)
+end
+
+local function stopRootMotion(session: Session)
+	if session.mover then
+		pcall(function()
+			session.mover:cancelAll()
+			session.mover:destroy()
+		end)
+		session.mover = nil
+	end
 end
 
 local sessions: { [Player]: Session } = {}
@@ -152,10 +165,8 @@ end
 
 Players.PlayerRemoving:Connect(function(plr: Player)
 	local s = sessions[plr]
-	if s and s.mover then
-		pcall(function()
-			s.mover:destroy()
-		end)
+	if s then
+		stopRootMotion(s)
 	end
 	sessions[plr] = nil
 end)
@@ -168,13 +179,12 @@ end
 
 function PrayerfulStrike.Execute(player: Player, context: ExecutionContext): boolean
 	local prev = sessions[player]
-	if prev and prev.mover then
-		pcall(function()
-			prev.mover:destroy()
-		end)
+	if prev then
+		stopRootMotion(prev)
 	end
 	local sess: Session = {
 		exp = os.clock() + sessionWindow(),
+		didPhase1Start = false,
 		didP = false,
 		didI = false,
 		mover = nil,
@@ -186,33 +196,63 @@ end
 
 function PrayerfulStrike.OnAnimationMarker(player: Player, markerName: string)
 	local markPowerup, markImpact = cfgMarkers()
-	if markerName ~= markPowerup and markerName ~= markImpact then
-		return
-	end
 	local s = sessions[player]
 	if not s or os.clock() > s.exp then
 		return
 	end
 	local character = player.Character
+
+	if markerName == PHASE1_START_MARKER then
+		if s.didPhase1Start or s.didP then
+			return
+		end
+		s.didPhase1Start = true
+		if character then
+			local p1s, p1d, _, _ = rootMotionTune()
+			tryApplyForwardRootMotion(s, character, p1s, p1d)
+		end
+		return
+	end
+
+	if markerName ~= markPowerup and markerName ~= markImpact then
+		return
+	end
+
 	if markerName == markPowerup then
 		if s.didP then
 			return
 		end
 		s.didP = true
 		if character then
-			local ps, pd, _, _ = rootMotionTune()
-			tryApplyForwardRootMotion(s, character, ps, pd, false)
+			local sessionRef = s
+			local delaySec = lungeDelayAfterPowerupSeconds()
+			local function beginLunge()
+				if sessions[player] ~= sessionRef or os.clock() > sessionRef.exp or sessionRef.didI then
+					return
+				end
+				local ch = player.Character
+				if not ch then
+					return
+				end
+				local _, _, p2s, p2d = rootMotionTune()
+				tryApplyForwardRootMotion(sessionRef, ch, p2s, p2d)
+			end
+			if delaySec <= 0 then
+				beginLunge()
+			else
+				task.delay(delaySec, beginLunge)
+			end
 		end
 		AbilityVisualRelayService.FireAll(player, ABILITY_ID, markerName)
 		return
 	end
+
 	if s.didI then
 		return
 	end
 	s.didI = true
 	if character then
-		local _, _, ls, ld = rootMotionTune()
-		tryApplyForwardRootMotion(s, character, ls, ld, true)
+		stopRootMotion(s)
 	end
 	AbilityVisualRelayService.FireAll(player, ABILITY_ID, markerName)
 end

@@ -1,16 +1,26 @@
 --!strict
 --[[
-	Server PrayerfulStrike: session gating, cooldowns, and visual relay.
-	All VFX/SFX are played on clients via AbilityVisualRelayService + shared playback.
+	Server PrayerfulStrike: session gating, cooldowns, server-authoritative root motion
+	at animation markers, and visual relay. VFX/SFX play on clients via relay + shared playback.
 ]]
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local AbilityRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("AbilityRegistry")) :: any
-local AbilityStateRuntime = require(script.Parent.Parent:WaitForChild("AbilityStateRuntime")) :: any
-local AbilityVisualRelayService =
-	require(script.Parent.Parent.Parent:WaitForChild("Effects"):WaitForChild("AbilityVisualRelayService")) :: any
+local scriptsFolder = script.Parent
+assert(scriptsFolder, "[PrayerfulStrike] script.Parent missing")
+local abilitiesFolder = scriptsFolder.Parent
+assert(abilitiesFolder, "[PrayerfulStrike] Abilities folder missing")
+local serverNormalIslandFolder = abilitiesFolder.Parent
+assert(serverNormalIslandFolder, "[PrayerfulStrike] serverNormalIsland folder missing")
+
+local AbilityRegistry =
+	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Abilities"):WaitForChild("AbilityRegistry") :: ModuleScript) :: any
+local AbilityStateRuntime = require(abilitiesFolder:WaitForChild("AbilityStateRuntime") :: ModuleScript) :: any
+local AbilityVisualRelayService = require(
+	serverNormalIslandFolder:WaitForChild("Effects"):WaitForChild("AbilityVisualRelayService") :: ModuleScript
+) :: any
+local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
 
 type ExecutionContext = { player: Player, abilityId: string }
 
@@ -37,11 +47,88 @@ local function cfgMarkers(): (string, string)
 	return mpu, mpi
 end
 
+local function flatLook(root: BasePart): Vector3
+	local look = root.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 1e-4 then
+		return Vector3.zAxis
+	end
+	return flat.Unit
+end
+
+local function rootMotionTune(): (number, number, number, number)
+	local powerupStuds, powerupDur = 0.55, 0.12
+	local lungeStuds, lungeDur = 5, 0.2
+	local c = AbilityRegistry.GetAbility(ABILITY_ID)
+	local p = c and c.params
+	if type(p) == "table" then
+		local t = p :: any
+		if type(t.rootMotionPowerupForwardStuds) == "number" and t.rootMotionPowerupForwardStuds > 0 then
+			powerupStuds = t.rootMotionPowerupForwardStuds
+		end
+		if type(t.rootMotionPowerupDurationSeconds) == "number" and t.rootMotionPowerupDurationSeconds > 0 then
+			powerupDur = t.rootMotionPowerupDurationSeconds
+		end
+		if type(t.rootMotionLungeForwardStuds) == "number" and t.rootMotionLungeForwardStuds > 0 then
+			lungeStuds = t.rootMotionLungeForwardStuds
+		end
+		if type(t.rootMotionLungeDurationSeconds) == "number" and t.rootMotionLungeDurationSeconds > 0 then
+			lungeDur = t.rootMotionLungeDurationSeconds
+		end
+	end
+	return powerupStuds, powerupDur, lungeStuds, lungeDur
+end
+
 type Session = {
 	exp: number,
 	didP: boolean,
 	didI: boolean,
+	mover: any?,
 }
+
+local function tryApplyForwardRootMotion(session: Session, character: Model, forwardStuds: number, durationSec: number, destroyMoverWhenDone: boolean)
+	if forwardStuds <= 0 or durationSec <= 0 then
+		return
+	end
+	local hrp = character:FindFirstChild("HumanoidRootPart")
+	if not hrp or not hrp:IsA("BasePart") then
+		return
+	end
+	if not session.mover then
+		local okMover, mover = pcall(function()
+			return RootMotion.createMover(character)
+		end)
+		if not okMover or mover == nil then
+			return
+		end
+		session.mover = mover
+	end
+	local mover = assert(session.mover, "[PrayerfulStrike] root motion mover expected")
+	local dir = flatLook(hrp :: BasePart)
+	local okTok, token = pcall(function()
+		return mover:translate({
+			direction = dir,
+			distance = forwardStuds,
+			duration = durationSec,
+		})
+	end)
+	if not okTok or token == nil then
+		pcall(function()
+			mover:destroy()
+		end)
+		session.mover = nil
+		return
+	end
+	token.Completed:Connect(function()
+		if destroyMoverWhenDone and session.mover then
+			local m = session.mover
+			pcall(function()
+				m:destroy()
+			end)
+			session.mover = nil
+		end
+	end)
+end
 
 local sessions: { [Player]: Session } = {}
 
@@ -64,6 +151,12 @@ local function cooldownSec(): number
 end
 
 Players.PlayerRemoving:Connect(function(plr: Player)
+	local s = sessions[plr]
+	if s and s.mover then
+		pcall(function()
+			s.mover:destroy()
+		end)
+	end
 	sessions[plr] = nil
 end)
 
@@ -74,10 +167,17 @@ function PrayerfulStrike.CanUse(player: Player, context: ExecutionContext): bool
 end
 
 function PrayerfulStrike.Execute(player: Player, context: ExecutionContext): boolean
+	local prev = sessions[player]
+	if prev and prev.mover then
+		pcall(function()
+			prev.mover:destroy()
+		end)
+	end
 	local sess: Session = {
 		exp = os.clock() + sessionWindow(),
 		didP = false,
 		didI = false,
+		mover = nil,
 	}
 	sessions[player] = sess
 	AbilityStateRuntime.StartCooldown(player, context.abilityId, MAIN_TRACK, cooldownSec())
@@ -93,11 +193,16 @@ function PrayerfulStrike.OnAnimationMarker(player: Player, markerName: string)
 	if not s or os.clock() > s.exp then
 		return
 	end
+	local character = player.Character
 	if markerName == markPowerup then
 		if s.didP then
 			return
 		end
 		s.didP = true
+		if character then
+			local ps, pd, _, _ = rootMotionTune()
+			tryApplyForwardRootMotion(s, character, ps, pd, false)
+		end
 		AbilityVisualRelayService.FireAll(player, ABILITY_ID, markerName)
 		return
 	end
@@ -105,6 +210,10 @@ function PrayerfulStrike.OnAnimationMarker(player: Player, markerName: string)
 		return
 	end
 	s.didI = true
+	if character then
+		local _, _, ls, ld = rootMotionTune()
+		tryApplyForwardRootMotion(s, character, ls, ld, true)
+	end
 	AbilityVisualRelayService.FireAll(player, ABILITY_ID, markerName)
 end
 

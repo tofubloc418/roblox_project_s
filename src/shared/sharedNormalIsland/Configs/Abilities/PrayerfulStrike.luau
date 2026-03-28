@@ -25,6 +25,12 @@ local PrayerfulStrike = {
 			-- Must match Animation Editor marker names on the ability animation.
 			markerPowerup = "Powerup",
 			markerImpact = "Impact",
+			-- Server RootMotion: flat forward from HumanoidRootPart look (markers Powerup / Impact).
+			-- Lunge default is slightly more than a typical ~4 stud walk stride.
+			rootMotionPowerupForwardStuds = 0.55,
+			rootMotionPowerupDurationSeconds = 0.12,
+			rootMotionLungeForwardStuds = 5,
+			rootMotionLungeDurationSeconds = 0.2,
 			-- Magic circle VFX at Powerup (MiddleFeetAttachment): local Y offset, studs; total lifetime.
 			magicCircleOffsetY = -0.2,
 			magicCircleLifetimeSeconds = 60 / 60,

@@ -1,9 +1,7 @@
 --!strict
 --[[
-	Client ability script for PrayerfulStrike.
-	- OnStarted: all clients start surge VFX on the caster's character;
-	  LocalPlayer additionally plays animation, locks movement, and fires markers.
-	- OnRelay: all clients play SFX/VFX for marker names from params (server relay).
+	Surge VFX for all clients on start. LocalPlayer: anim, movement lock, then PHASE1_START_MARKER + editor markers
+	to the server. OnRelay: marker SFX/VFX from server relay.
 ]]
 
 local Debris = game:GetService("Debris")
@@ -27,6 +25,7 @@ type AbilityClientContext = {
 }
 
 local ABILITY_ID = "PrayerfulStrike"
+local PHASE1_START_MARKER = "__PrayerfulStrikePhase1Start"
 local LOCK_TAG = "Ability_PrayerfulStrike"
 local WEAPON_MODEL_NAME = "EquippedWeapon"
 
@@ -895,6 +894,7 @@ function PrayerfulStrike.OnStarted(context: AbilityClientContext)
 		track.Stopped:Connect(off)
 	)
 
+	remote:FireServer(ABILITY_ID, PHASE1_START_MARKER)
 	track:Play(0.05, 1, 1)
 end
 

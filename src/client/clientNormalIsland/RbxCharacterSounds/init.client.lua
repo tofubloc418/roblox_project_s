@@ -102,8 +102,7 @@ local function getRelativeVelocity(cm, velocity)
 	if not cm then
 		return velocity
 	end
-	local activeSensor = cm.ActiveController and
-	(
+	local activeSensor = cm.ActiveController and (
 		(cm.ActiveController:IsA("GroundController") and cm.GroundSensor) or
 		(cm.ActiveController:IsA("ClimbController") and cm.ClimbSensor)
 	)

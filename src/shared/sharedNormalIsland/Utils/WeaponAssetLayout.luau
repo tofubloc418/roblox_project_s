@@ -1,5 +1,6 @@
 --!strict
--- ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId> 
+-- ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId>
+-- Unique weapons are stored under ReplicatedStorage.Items.Weapons/Unique/<templateId>.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -16,7 +17,9 @@ function WeaponAssetLayout.GetWeaponItemFolder(weaponsRoot: Instance, templateId
 	if type(tag) ~= "string" or tag == "" then
 		return nil
 	end
-	local tagFolder = weaponsRoot:FindFirstChild(tag)
+	local subcategory = (template :: any).subcategory
+	local tagFolderName = if subcategory == "UniqueWeapon" then "Unique" else tag
+	local tagFolder = weaponsRoot:FindFirstChild(tagFolderName)
 	if not tagFolder then
 		return nil
 	end

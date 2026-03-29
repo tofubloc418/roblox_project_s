@@ -59,9 +59,10 @@ ItemEnums.EquipmentSlot = {
 }
 
 -- ── Weapon Tags ───────────────────────────────────────────────────────────────
--- Each weapon template has exactly ONE weaponTag that abilities use for compatibility
--- and for ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId> asset layout.
--- Unique weapon tags are derived as "Unique_<templateId>" and need not be listed here.
+-- Each weapon template has exactly ONE weaponTag that abilities use for compatibility.
+-- Standard weapons use ReplicatedStorage.Items.Weapons/<weaponTag>/<templateId>.
+-- Unique weapons still use a derived tag like "Unique_<templateId>", but their assets
+-- live under ReplicatedStorage.Items.Weapons/Unique/<templateId>.
 ItemEnums.WeaponTag = {
 	Dagger        = "Dagger",
 	StraightSword = "StraightSword",

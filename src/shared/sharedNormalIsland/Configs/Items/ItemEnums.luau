@@ -81,6 +81,8 @@ ItemEnums.WeaponTag = {
 	Crossbow      = "Crossbow",
 	ThrustingSword = "ThrustingSword",
 	Quarterstaff  = "Quarterstaff",
+	Katana        = "Katana",
+	Scythe        = "Scythe",
 }
 
 -- ── Weapon Tag Display Names ──────────────────────────────────────────────────
@@ -103,6 +105,8 @@ ItemEnums.WeaponTagDisplayName = {
 	[ItemEnums.WeaponTag.Crossbow]      = "Crossbow",
 	[ItemEnums.WeaponTag.ThrustingSword] = "Thrusting Sword",
 	[ItemEnums.WeaponTag.Quarterstaff]  = "Quarterstaff",
+	[ItemEnums.WeaponTag.Katana]        = "Katana",
+	[ItemEnums.WeaponTag.Scythe]        = "Scythe",
 }
 
 return ItemEnums

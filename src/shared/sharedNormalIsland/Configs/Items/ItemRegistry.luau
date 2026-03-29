@@ -180,5 +180,13 @@ registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Daggers"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Axes"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("ThrustingSwords"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Fists"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Spears"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Katanas"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Staves"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Quarterstaves"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Halberds"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Greathammers"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Scythes"))
+registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Unique"):WaitForChild("UniqueWeapons"))
 
 return ItemRegistry

@@ -14,6 +14,7 @@ export type WeaponStanceAnimationProfile = {
 local WT = ItemEnums.WeaponTag
 
 local ZERO = "rbxassetid://0"
+local UNIQUE_WUKONG_JINGUBANG = "Unique_WukongsJingubang"
 
 local profiles: { [string]: WeaponStanceAnimationProfile } = {
 	[WT.Dagger .. "_Idle"] = { animationId = "rbxassetid://135819574207330" },
@@ -41,6 +42,46 @@ local profiles: { [string]: WeaponStanceAnimationProfile } = {
 	[WT.ThrustingSword .. "_Equip"] = { animationId = ZERO },
 	[WT.ThrustingSword .. "_Unequip"] = { animationId = ZERO },
 	[WT.ThrustingSword .. "_Block"] = { animationId = ZERO },
+
+	[WT.Staff .. "_Idle"] = { animationId = ZERO },
+	[WT.Staff .. "_Equip"] = { animationId = ZERO },
+	[WT.Staff .. "_Unequip"] = { animationId = ZERO },
+	[WT.Staff .. "_Block"] = { animationId = ZERO },
+
+	[WT.Spear .. "_Idle"] = { animationId = ZERO },
+	[WT.Spear .. "_Equip"] = { animationId = ZERO },
+	[WT.Spear .. "_Unequip"] = { animationId = ZERO },
+	[WT.Spear .. "_Block"] = { animationId = ZERO },
+
+	[WT.Halberd .. "_Idle"] = { animationId = ZERO },
+	[WT.Halberd .. "_Equip"] = { animationId = ZERO },
+	[WT.Halberd .. "_Unequip"] = { animationId = ZERO },
+	[WT.Halberd .. "_Block"] = { animationId = ZERO },
+
+	[WT.GreatHammer .. "_Idle"] = { animationId = ZERO },
+	[WT.GreatHammer .. "_Equip"] = { animationId = ZERO },
+	[WT.GreatHammer .. "_Unequip"] = { animationId = ZERO },
+	[WT.GreatHammer .. "_Block"] = { animationId = ZERO },
+
+	[WT.Quarterstaff .. "_Idle"] = { animationId = ZERO },
+	[WT.Quarterstaff .. "_Equip"] = { animationId = ZERO },
+	[WT.Quarterstaff .. "_Unequip"] = { animationId = ZERO },
+	[WT.Quarterstaff .. "_Block"] = { animationId = ZERO },
+
+	[WT.Katana .. "_Idle"] = { animationId = ZERO },
+	[WT.Katana .. "_Equip"] = { animationId = ZERO },
+	[WT.Katana .. "_Unequip"] = { animationId = ZERO },
+	[WT.Katana .. "_Block"] = { animationId = ZERO },
+
+	[WT.Scythe .. "_Idle"] = { animationId = ZERO },
+	[WT.Scythe .. "_Equip"] = { animationId = ZERO },
+	[WT.Scythe .. "_Unequip"] = { animationId = ZERO },
+	[WT.Scythe .. "_Block"] = { animationId = ZERO },
+
+	[UNIQUE_WUKONG_JINGUBANG .. "_Idle"] = { animationId = ZERO },
+	[UNIQUE_WUKONG_JINGUBANG .. "_Equip"] = { animationId = ZERO },
+	[UNIQUE_WUKONG_JINGUBANG .. "_Unequip"] = { animationId = ZERO },
+	[UNIQUE_WUKONG_JINGUBANG .. "_Block"] = { animationId = ZERO },
 }
 
 local WeaponStanceAnimationProfiles = {}

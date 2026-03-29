@@ -230,6 +230,41 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 	},
+	["Spear_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Spear_Attack_02"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Katana_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Katana_Attack_02"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Katana_Attack_03"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Quarterstaff_Attack_01"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Quarterstaff_Attack_02"] = {
+		animationId = "rbxassetid://0",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
 }
 
 local WeaponBasicAttackProfiles = {}

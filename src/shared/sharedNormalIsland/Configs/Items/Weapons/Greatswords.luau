@@ -67,6 +67,67 @@ local Greatswords = {
 		gripC0 = CFrame.new(0, 0, 0),
 		gripC1 = CFrame.new(-0.058, -2.378, 0) * CFrame.fromOrientation(math.rad(90), math.rad(-90), 0),
 	},
+	["Claymore"] = {
+		templateId = "Claymore",
+		displayName = "Claymore",
+		description = "A broad two-handed blade favored for crushing guards and breaking lines.",
+		category = ItemEnums.Category.Weapon,
+		subcategory = ItemEnums.Subcategory.MeleeWeapon,
+		rarity = ItemEnums.Rarity.Common,
+		weaponTag = ItemEnums.WeaponTag.Greatsword,
+		modelAssetId = "rbxassetid://0",
+		iconId = "rbxassetid://0",
+		stackMax = 1,
+		sellValue = 180,
+		canDrop = true,
+		canTrade = true,
+		baseAD = 128,
+		baseMD = 0,
+		strengthScaling = 1.25,
+		dexterityScaling = 0.28,
+		intelligenceScaling = 0.0,
+		blockPower = 42,
+		parryMultiplier = 1.45,
+		strengthRequirement = 14,
+		dexterityRequirement = 9,
+		intelligenceRequirement = 0,
+
+		idleMotionId    = ItemEnums.WeaponTag.Greatsword .. "_Idle",
+		equipMotionId   = ItemEnums.WeaponTag.Greatsword .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.Greatsword .. "_Unequip",
+		attackSequence = {
+			{
+				attackMotionId = "Greatsword_Attack_01",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
+			{
+				attackMotionId = "Greatsword_Attack_02",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
+			{
+				attackMotionId = "Greatsword_Attack_03",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
+		},
+		blockMotionId = ItemEnums.WeaponTag.Greatsword .. "_Block",
+
+		swingSoundId = "rbxassetid://0",
+		hitSoundId   = "rbxassetid://0",
+		castType = "Blockcast",
+		castSize = Vector3.new(1, 4.576, 0.356),
+		castRadius = nil,
+
+		reach = 14,
+
+		gripC0 = CFrame.new(0, 0, 0),
+		gripC1 = CFrame.new(-0.058, -2.378, 0) * CFrame.fromOrientation(math.rad(90), math.rad(-90), 0),
+	},
 }
 
 return Greatswords

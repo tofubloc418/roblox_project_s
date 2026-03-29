@@ -29,14 +29,14 @@ local ThrustingSwords = {
 		intelligenceRequirement = 0,
 
 		-- Hitbox and Animation Stats
-		idleAnimationId    = "rbxassetid://0",
-		equipAnimationId   = "rbxassetid://0",
-		unequipAnimationId = "rbxassetid://0",
+		idleMotionId    = ItemEnums.WeaponTag.ThrustingSword .. "_Idle",
+		equipMotionId   = ItemEnums.WeaponTag.ThrustingSword .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Unequip",
 		attackSequence = {
 			{ attackMotionId = "ThrustingSword_Attack_01", hitDuration = 0.2 },
 			{ attackMotionId = "ThrustingSword_Attack_02", hitDuration = 0.2 },
 		},
-		blockAnimationId = "rbxassetid://0",
+		blockMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Block",
 
 		swingSoundId = "rbxassetid://0",
 		hitSoundId   = "rbxassetid://0",

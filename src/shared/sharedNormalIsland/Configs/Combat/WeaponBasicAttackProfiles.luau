@@ -1,6 +1,7 @@
 --!strict
 -- Shared library: basic attack profile id → animation + RootMotion motion spec (or none).
 -- Consumed by client WeaponController + WeaponAttackRootMotion. Do not duplicate animationId on weapon entries.
+-- Idle / equip / unequip / block: see WeaponStanceAnimationProfiles.luau (idleMotionId, … on templates).
 
 export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
 
@@ -195,17 +196,27 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		syncMotionDurationFromHit = true,
 	},
 	["Fists_Attack_01"] = {
-		animationId = "rbxassetid://0",
+		animationId = "rbxassetid://75340875929110",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Fists_Attack_02"] = {
+		animationId = "rbxassetid://139690446894863",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 	},
 	["Greatsword_Attack_01"] = {
-		animationId = "rbxassetid://0",
+		animationId = "rbxassetid://131503597112629",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 	},
 	["Greatsword_Attack_02"] = {
-		animationId = "rbxassetid://0",
+		animationId = "rbxassetid://76915436584618",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+	},
+	["Greatsword_Attack_03"] = {
+		animationId = "rbxassetid://91378915906650",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 	},

@@ -30,14 +30,23 @@ local Fists = {
 		intelligenceRequirement = 0,
 		
 		-- Hitbox and Animation Stats
-		idleAnimationId    = "rbxassetid://0",
-		equipAnimationId   = "rbxassetid://0",
-		unequipAnimationId = "rbxassetid://0",
+		idleMotionId    = ItemEnums.WeaponTag.Fists .. "_Idle",
+		equipMotionId   = ItemEnums.WeaponTag.Fists .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.Fists .. "_Unequip",
 		attackSequence = {
-			{ attackMotionId = "Fists_Attack_01", hitDuration = 0.5 },
+			{
+				attackMotionId = "Fists_Attack_01",
+				hitDuration = 12 / 60,
+				comboTimeLimit = 30 / 60,
+				movementLocks = { "All" },
+			},
+			{
+				attackMotionId = "Fists_Attack_02",
+				hitDuration = 12 / 60,
+				comboTimeLimit = 30 / 60,
+				movementLocks = { "All" },
+			},
 		},
-		blockAnimationId = nil,
-
 		swingSoundId = "rbxassetid://0",
 		hitSoundId   = "rbxassetid://0",
 		castType = "Spherecast",

@@ -10,7 +10,7 @@ local Greatswords = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Greatsword,
-		modelAssetId = "rbxassetid://0",
+		modelAssetId = "rbxassetid://81113787250917",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 150,
@@ -29,22 +29,43 @@ local Greatswords = {
 		intelligenceRequirement = 0,
 		
 		-- Hitbox and Animation Stats
-		idleAnimationId    = "rbxassetid://0",
-		equipAnimationId   = "rbxassetid://0",
-		unequipAnimationId = "rbxassetid://0",
+		idleMotionId    = ItemEnums.WeaponTag.Greatsword .. "_Idle",
+		equipMotionId   = ItemEnums.WeaponTag.Greatsword .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.Greatsword .. "_Unequip",
 		attackSequence = {
-			{ attackMotionId = "Greatsword_Attack_01", hitDuration = 0.2 },
-			{ attackMotionId = "Greatsword_Attack_02", hitDuration = 0.2 },
+			{
+				attackMotionId = "Greatsword_Attack_01",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
+			{
+				attackMotionId = "Greatsword_Attack_02",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
+			{
+				attackMotionId = "Greatsword_Attack_03",
+				hitDuration = 30/60,
+				comboTimeLimit = 60/60,
+				movementLocks = { "All" },
+			},
 		},
-		blockAnimationId = "rbxassetid://0",
+		blockMotionId = ItemEnums.WeaponTag.Greatsword .. "_Block",
 
 		swingSoundId = "rbxassetid://0",
 		hitSoundId   = "rbxassetid://0",
-		castType = "Raycast",
-		castSize = nil,
+		-- Blockcast from each DmgPoint; box is centered on the attachment. Replace castSize when blade dims are final.
+		castType = "Blockcast",
+		castSize = Vector3.new(1, 4.576, 0.356),
 		castRadius = nil,
 
-		reach = 0,
+		reach = 14,
+
+		-- RightGrip C1 from Studio (Handle space): Position + Orientation (deg).
+		gripC0 = CFrame.new(0, 0, 0),
+		gripC1 = CFrame.new(-0.058, -2.378, 0) * CFrame.fromOrientation(math.rad(90), math.rad(-90), 0),
 	},
 }
 

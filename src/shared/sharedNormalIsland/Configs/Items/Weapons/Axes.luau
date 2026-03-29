@@ -29,9 +29,9 @@ local Axes = {
 		intelligenceRequirement = 0,
 
 		-- Hitbox and Animation Stats
-		idleAnimationId = "rbxassetid://112151615655157",
-		equipAnimationId = "rbxassetid://79058443592728",
-		unequipAnimationId = "rbxassetid://83081513554352",
+		idleMotionId = ItemEnums.WeaponTag.Axe .. "_Idle",
+		equipMotionId = ItemEnums.WeaponTag.Axe .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.Axe .. "_Unequip",
 		attackSequence = {
 			{
 				attackMotionId = "Axe_Attack_01",
@@ -52,7 +52,7 @@ local Axes = {
 				movementLocks = { "All" },
 			},
 		},
-		blockAnimationId = "rbxassetid://0",
+		blockMotionId = ItemEnums.WeaponTag.Axe .. "_Block",
 
 		swingSoundId = "rbxassetid://0",
 		hitSoundId = "rbxassetid://0",

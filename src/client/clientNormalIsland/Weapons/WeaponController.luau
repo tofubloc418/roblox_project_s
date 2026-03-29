@@ -22,6 +22,8 @@ local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NA
 
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
 local WeaponBasicAttackProfiles = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
+local WeaponStanceAnimationProfiles =
+	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponStanceAnimationProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
 local MovementControlLocks = require(
 	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
@@ -200,12 +202,12 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 	local animator = self.animator
 
 	-- Load animations --------------------------------------------------------
-	self.idleTrack = loadAnimationFromId(animator, stats.idleAnimationId)
-	self.equipTrack = loadAnimationFromId(animator, stats.equipAnimationId)
-	self.unequipTrack = loadAnimationFromId(animator, stats.unequipAnimationId)
+	self.idleTrack = loadAnimationFromId(animator, WeaponStanceAnimationProfiles.GetAnimationId(stats.idleMotionId))
+	self.equipTrack = loadAnimationFromId(animator, WeaponStanceAnimationProfiles.GetAnimationId(stats.equipMotionId))
+	self.unequipTrack = loadAnimationFromId(animator, WeaponStanceAnimationProfiles.GetAnimationId(stats.unequipMotionId))
 
-	if stats.blockAnimationId then
-		self.blockTrack = loadAnimationFromId(animator, stats.blockAnimationId)
+	if stats.blockMotionId then
+		self.blockTrack = loadAnimationFromId(animator, WeaponStanceAnimationProfiles.GetAnimationId(stats.blockMotionId))
 	end
 
 	table.clear(self._attackAnimByAssetId)

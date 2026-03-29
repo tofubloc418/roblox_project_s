@@ -28,25 +28,25 @@ local Daggers = {
 		dexterityRequirement = 10,
 		intelligenceRequirement = 0,
 
-		-- Hitbox and Animation Stats
-		idleAnimationId    = "rbxassetid://0",
-		equipAnimationId   = "rbxassetid://0",
-		unequipAnimationId = "rbxassetid://0",
+		-- Hitbox and Animation Stats (stance keys → Configs/Combat/WeaponStanceAnimationProfiles)
+		idleMotionId    = ItemEnums.WeaponTag.Dagger .. "_Idle",
+		equipMotionId   = ItemEnums.WeaponTag.Dagger .. "_Equip",
+		unequipMotionId = ItemEnums.WeaponTag.Dagger .. "_Unequip",
 		attackSequence = {
 			{
 				attackMotionId = "Dagger_Attack_01",
-				hitDuration = 12 / 60,
-				comboTimeLimit = 30 / 60,
+				hitDuration = 30 / 60,
+				comboTimeLimit = 50 / 60,
 				movementLocks = { "All" },
 			},
 			{
 				attackMotionId = "Dagger_Attack_02",
-				hitDuration = 12 / 60,
-				comboTimeLimit = 30 / 60,
+				hitDuration = 30 / 60,
+				comboTimeLimit = 40 / 60,
 				movementLocks = { "All" },
 			},
 		},
-		blockAnimationId = "rbxassetid://0",
+		blockMotionId = ItemEnums.WeaponTag.Dagger .. "_Block",
 
 		swingSoundId = "rbxassetid://0",
 		hitSoundId   = "rbxassetid://0",

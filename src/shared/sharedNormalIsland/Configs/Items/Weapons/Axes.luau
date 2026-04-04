@@ -33,24 +33,9 @@ local Axes = {
 		equipMotionId = ItemEnums.WeaponTag.Axe .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Axe .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Axe_Attack_01",
-				hitDuration = 28 / 60,
-				comboTimeLimit = 43 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Axe_Attack_02",
-				hitDuration = 28 / 60,
-				comboTimeLimit = 43 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Axe_Attack_03",
-				hitDuration = 45 / 60,
-				comboTimeLimit = 60 / 60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Axe_Attack_01" },
+			{ attackMotionId = "Axe_Attack_02" },
+			{ attackMotionId = "Axe_Attack_03" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Axe .. "_Block",
 

@@ -14,6 +14,8 @@ local Workspace = game:GetService("Workspace")
 
 local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitForChild("DamageService"))
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
+local WeaponBasicAttackProfiles =
+	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout"))
 local WeaponModelAssetLoader = require(script.Parent:WaitForChild("WeaponModelAssetLoader"))
@@ -245,8 +247,12 @@ function WeaponService:_HandleHitClaim(attacker: Player, templateId: string, tar
 
 	local minCooldown = math.huge
 	for _, entry in ipairs(stats.attackSequence or {}) do
-		if entry.hitDuration < minCooldown then
-			minCooldown = entry.hitDuration
+		local motionId = entry.attackMotionId
+		if type(motionId) == "string" and motionId ~= "" then
+			local attackProfile = WeaponBasicAttackProfiles.GetProfile(motionId)
+			if attackProfile and attackProfile.hitDuration < minCooldown then
+				minCooldown = attackProfile.hitDuration
+			end
 		end
 	end
 

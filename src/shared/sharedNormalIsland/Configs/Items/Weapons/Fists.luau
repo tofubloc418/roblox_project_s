@@ -34,18 +34,8 @@ local Fists = {
 		equipMotionId   = ItemEnums.WeaponTag.Fists .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Fists .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Fists_Attack_01",
-				hitDuration = 12 / 60,
-				comboTimeLimit = 30 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Fists_Attack_02",
-				hitDuration = 12 / 60,
-				comboTimeLimit = 30 / 60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Fists_Attack_01" },
+			{ attackMotionId = "Fists_Attack_02" },
 		},
 		swingSoundId = "rbxassetid://0",
 		hitSoundId   = "rbxassetid://0",

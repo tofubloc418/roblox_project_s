@@ -1,5 +1,5 @@
 --!strict
--- Bridges WeaponBasicAttackProfiles motion specs → RootMotion Mover API (no edits under Modules/RootMotion).
+-- Bridges Configs/AnimationProfiles/WeaponBasicAttackProfiles motion specs → RootMotion Mover API (no edits under Modules/RootMotion).
 
 export type MotionRunContext = {
 	humanoid: Humanoid,

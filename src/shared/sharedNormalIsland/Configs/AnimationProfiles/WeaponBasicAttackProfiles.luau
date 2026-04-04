@@ -1,9 +1,11 @@
 --!strict
--- Shared library: basic attack profile id → animation + RootMotion motion spec (or none).
--- Consumed by client WeaponController + WeaponAttackRootMotion. Do not duplicate animationId on weapon entries.
--- Idle / equip / unequip / block: see WeaponStanceAnimationProfiles.luau (idleMotionId, … on templates).
+-- Shared library: basic attack profile id → animation + hit timing + movement locks + RootMotion motion spec.
+-- Consumed by client WeaponController + WeaponAttackRootMotion; server WeaponService (cooldown). Do not duplicate on weapon entries.
+-- Idle / equip / unequip / block: WeaponStanceAnimationProfiles.luau (idleMotionId, … on templates).
 
 export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
+
+export type MovementLockFlag = "Walk" | "Sprint" | "Jump" | "Swim" | "All"
 
 export type DirectionRef = "HumanoidRootPartLookFlat" | "HumanoidRootPartLook" | "HumanoidMoveDirection"
 
@@ -156,8 +158,12 @@ export type WeaponBasicAttackMotionSpec =
 export type WeaponBasicAttackProfile = {
 	animationId: string,
 	motion: WeaponBasicAttackMotionSpec,
-	--- When true, motion duration-like fields are overridden by the weapon step's hitDuration when running the attack.
+	--- When true, motion duration-like fields are overridden by this profile's hitDuration when running the attack.
 	syncMotionDurationFromHit: boolean?,
+	hitDuration: number,
+	--- If nil, combo expiry uses hitDuration (see WeaponController).
+	comboTimeLimit: number?,
+	movementLocks: { MovementLockFlag }?,
 }
 
 -- Small in-place step along flat look (≈ one foot forward while swinging). Duration follows hit window when sync is on.
@@ -168,102 +174,157 @@ local BASIC_ATTACK_STEP: MotionTranslate = {
 	duration = 0.2,
 }
 
+local LOCK_ALL: { MovementLockFlag } = { "All" }
+
 -- Keys: <WeaponTag>_Attack_<NN> (NN = 01, 02, …) — aligns with ItemEnums.WeaponTag for shared basic attacks.
 local profiles: { [string]: WeaponBasicAttackProfile } = {
 	["Dagger_Attack_01"] = {
 		animationId = "rbxassetid://120794561550510",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 30 / 60,
+		comboTimeLimit = 50 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Dagger_Attack_02"] = {
 		animationId = "rbxassetid://96019133363181",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 30 / 60,
+		comboTimeLimit = 40 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_01"] = {
 		animationId = "rbxassetid://107791038673413",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 28 / 60,
+		comboTimeLimit = 43 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_02"] = {
 		animationId = "rbxassetid://75612209059589",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 28 / 60,
+		comboTimeLimit = 43 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_03"] = {
 		animationId = "rbxassetid://82850857726878",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 45 / 60,
+		comboTimeLimit = 60 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Fists_Attack_01"] = {
 		animationId = "rbxassetid://75340875929110",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 12 / 60,
+		comboTimeLimit = 30 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Fists_Attack_02"] = {
 		animationId = "rbxassetid://139690446894863",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 12 / 60,
+		comboTimeLimit = 30 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_01"] = {
 		animationId = "rbxassetid://131503597112629",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 30 / 60,
+		comboTimeLimit = 60 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_02"] = {
 		animationId = "rbxassetid://76915436584618",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 30 / 60,
+		comboTimeLimit = 60 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_03"] = {
 		animationId = "rbxassetid://91378915906650",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 30 / 60,
+		comboTimeLimit = 60 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["ThrustingSword_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 0.2,
 	},
 	["ThrustingSword_Attack_02"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 0.2,
 	},
 	["Spear_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 26 / 60,
+		comboTimeLimit = 50 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Spear_Attack_02"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 26 / 60,
+		comboTimeLimit = 50 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 24 / 60,
+		comboTimeLimit = 52 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_02"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 24 / 60,
+		comboTimeLimit = 52 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_03"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 32 / 60,
+		comboTimeLimit = 60 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Quarterstaff_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 22 / 60,
+		comboTimeLimit = 48 / 60,
+		movementLocks = LOCK_ALL,
 	},
 	["Quarterstaff_Attack_02"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
+		hitDuration = 24 / 60,
+		comboTimeLimit = 52 / 60,
+		movementLocks = LOCK_ALL,
 	},
 }
 

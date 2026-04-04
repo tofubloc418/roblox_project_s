@@ -31,24 +31,9 @@ local Katanas = {
 		equipMotionId   = ItemEnums.WeaponTag.Katana .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Katana .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Katana_Attack_01",
-				hitDuration = 24 / 60,
-				comboTimeLimit = 52 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Katana_Attack_02",
-				hitDuration = 24 / 60,
-				comboTimeLimit = 52 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Katana_Attack_03",
-				hitDuration = 32 / 60,
-				comboTimeLimit = 60 / 60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Katana_Attack_01" },
+			{ attackMotionId = "Katana_Attack_02" },
+			{ attackMotionId = "Katana_Attack_03" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Katana .. "_Block",
 

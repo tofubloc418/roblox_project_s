@@ -33,8 +33,8 @@ local ThrustingSwords = {
 		equipMotionId   = ItemEnums.WeaponTag.ThrustingSword .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Unequip",
 		attackSequence = {
-			{ attackMotionId = "ThrustingSword_Attack_01", hitDuration = 0.2 },
-			{ attackMotionId = "ThrustingSword_Attack_02", hitDuration = 0.2 },
+			{ attackMotionId = "ThrustingSword_Attack_01" },
+			{ attackMotionId = "ThrustingSword_Attack_02" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Block",
 
@@ -75,8 +75,8 @@ local ThrustingSwords = {
 		equipMotionId   = ItemEnums.WeaponTag.ThrustingSword .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Unequip",
 		attackSequence = {
-			{ attackMotionId = "ThrustingSword_Attack_01", hitDuration = 0.22 },
-			{ attackMotionId = "ThrustingSword_Attack_02", hitDuration = 0.22 },
+			{ attackMotionId = "ThrustingSword_Attack_01" },
+			{ attackMotionId = "ThrustingSword_Attack_02" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.ThrustingSword .. "_Block",
 

@@ -31,18 +31,8 @@ local Spears = {
 		equipMotionId   = ItemEnums.WeaponTag.Spear .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Spear .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Spear_Attack_01",
-				hitDuration = 26 / 60,
-				comboTimeLimit = 50 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Spear_Attack_02",
-				hitDuration = 26 / 60,
-				comboTimeLimit = 50 / 60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Spear_Attack_01" },
+			{ attackMotionId = "Spear_Attack_02" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Spear .. "_Block",
 

@@ -34,18 +34,8 @@ local UniqueWeapons = {
 		equipMotionId   = UNIQUE_WUKONG_TAG .. "_Equip",
 		unequipMotionId = UNIQUE_WUKONG_TAG .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Quarterstaff_Attack_01",
-				hitDuration = 22 / 60,
-				comboTimeLimit = 48 / 60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Quarterstaff_Attack_02",
-				hitDuration = 24 / 60,
-				comboTimeLimit = 52 / 60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Quarterstaff_Attack_01" },
+			{ attackMotionId = "Quarterstaff_Attack_02" },
 		},
 		blockMotionId = UNIQUE_WUKONG_TAG .. "_Block",
 

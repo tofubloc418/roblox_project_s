@@ -21,9 +21,10 @@ local SHAPECAST_HITBOX_MODULE_NAME = "shapecasthitbox"
 local ShapecastHitbox = require(Packages:WaitForChild(SHAPECAST_HITBOX_MODULE_NAME)) :: any
 
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry")) :: any
-local WeaponBasicAttackProfiles = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
+local WeaponBasicAttackProfiles =
+	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
 local WeaponStanceAnimationProfiles =
-	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Combat"):WaitForChild("WeaponStanceAnimationProfiles") :: ModuleScript) :: any
+	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponStanceAnimationProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
 local MovementControlLocks = require(
 	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
@@ -181,15 +182,15 @@ local function ensureRootMotionMover(self: WeaponControllerInstance)
 	return m
 end
 
-local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, attackEntry: any)
-	local movementLocks = attackEntry.movementLocks
+local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, profile: any)
+	local movementLocks = profile.movementLocks
 	if type(movementLocks) ~= "table" or next(movementLocks) == nil then
 		return
 	end
 
 	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
 	self._attackLockTags[lockTag] = true
-	MovementControlLocks.Lock(lockTag, movementLocks, attackEntry.hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
+	MovementControlLocks.Lock(lockTag, movementLocks, profile.hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -326,9 +327,10 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 
 	self.sequenceIndex = attackIndex
 
-	self.nextAttackTime = now + attackEntry.hitDuration
-	self.comboExpireTime = now + (attackEntry.comboTimeLimit or attackEntry.hitDuration)
-	lockAttackMovement(self, attackIndex, attackEntry)
+	local hitDuration = profile.hitDuration
+	self.nextAttackTime = now + hitDuration
+	self.comboExpireTime = now + (profile.comboTimeLimit or hitDuration)
+	lockAttackMovement(self, attackIndex, profile)
 
 	cancelAttackRootMotion(self)
 
@@ -343,7 +345,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 		local mover = ensureRootMotionMover(self)
 		self._rootMotionToken = WeaponAttackRootMotion.run(mover, self.character, profile.motion, {
 			humanoid = self.humanoid,
-			hitDuration = attackEntry.hitDuration,
+			hitDuration = hitDuration,
 			syncMotionDurationFromHit = profile.syncMotionDurationFromHit == true,
 		})
 	end
@@ -386,7 +388,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 			cleanCallbacks()
 		end)
 
-		self.hitbox:HitStart(attackEntry.hitDuration)
+		self.hitbox:HitStart(hitDuration)
 	end
 end
 

@@ -33,24 +33,9 @@ local Greatswords = {
 		equipMotionId   = ItemEnums.WeaponTag.Greatsword .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Greatsword .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Greatsword_Attack_01",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Greatsword_Attack_02",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Greatsword_Attack_03",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Greatsword_Attack_01" },
+			{ attackMotionId = "Greatsword_Attack_02" },
+			{ attackMotionId = "Greatsword_Attack_03" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Greatsword .. "_Block",
 
@@ -96,24 +81,9 @@ local Greatswords = {
 		equipMotionId   = ItemEnums.WeaponTag.Greatsword .. "_Equip",
 		unequipMotionId = ItemEnums.WeaponTag.Greatsword .. "_Unequip",
 		attackSequence = {
-			{
-				attackMotionId = "Greatsword_Attack_01",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Greatsword_Attack_02",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
-			{
-				attackMotionId = "Greatsword_Attack_03",
-				hitDuration = 30/60,
-				comboTimeLimit = 60/60,
-				movementLocks = { "All" },
-			},
+			{ attackMotionId = "Greatsword_Attack_01" },
+			{ attackMotionId = "Greatsword_Attack_02" },
+			{ attackMotionId = "Greatsword_Attack_03" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Greatsword .. "_Block",
 

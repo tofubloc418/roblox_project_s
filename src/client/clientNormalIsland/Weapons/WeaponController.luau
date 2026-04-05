@@ -1,16 +1,5 @@
 --!strict
---[[
-	WeaponController (Client)
-	Reusable helper used by weapon Logic modules to provide standard melee:
-	animations, combo sequencing, ShapecastHitbox hit detection, and sounds.
-
-	USAGE (from a weapon's Logic.luau):
-	  local WeaponController = require(...)
-	  local controller = WeaponController.new(weaponModel, player, templateId)
-	  controller:Equip()
-	  -- ...
-	  controller:Destroy()  -- on unequip
-]]
+-- Client melee: stance/basic attacks, ShapecastHitbox; hit/combo are absolute seconds from profile (optional clip-derived auto timing).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -26,6 +15,8 @@ local WeaponBasicAttackProfiles =
 local WeaponStanceAnimationProfiles =
 	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponStanceAnimationProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
+local AnimationAttackTiming = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationAttackTiming") :: ModuleScript) :: any
+local AnimationClipLengthCache = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationClipLengthCache") :: ModuleScript) :: any
 local MovementControlLocks = require(
 	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
 ) :: any
@@ -66,6 +57,7 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	unequipTrack: AnimationTrack?,
 	blockTrack: AnimationTrack?,
 	_attackAnimByAssetId: { [string]: AnimationTrack },
+	_attackTimingsByMotionId: { [string]: { hitDuration: number, comboTimeLimit: number } },
 	_rootMotionMover: any,
 	_rootMotionToken: any,
 	-- Sounds (created at runtime)
@@ -119,6 +111,7 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.unequipTrack = nil
 	self.blockTrack = nil
 	self._attackAnimByAssetId = {}
+	self._attackTimingsByMotionId = {}
 	self._rootMotionMover = nil
 	self._rootMotionToken = nil
 
@@ -182,7 +175,7 @@ local function ensureRootMotionMover(self: WeaponControllerInstance)
 	return m
 end
 
-local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, profile: any)
+local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, profile: any, hitDuration: number)
 	local movementLocks = profile.movementLocks
 	if type(movementLocks) ~= "table" or next(movementLocks) == nil then
 		return
@@ -190,7 +183,7 @@ local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: n
 
 	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
 	self._attackLockTags[lockTag] = true
-	MovementControlLocks.Lock(lockTag, movementLocks, profile.hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
+	MovementControlLocks.Lock(lockTag, movementLocks, hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -212,6 +205,7 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 	end
 
 	table.clear(self._attackAnimByAssetId)
+	table.clear(self._attackTimingsByMotionId)
 	for _, entry in ipairs(stats.attackSequence or {}) do
 		local attackMotionId = entry.attackMotionId
 		assert(type(attackMotionId) == "string" and #attackMotionId > 0, "[WeaponController] attackSequence entry missing attackMotionId")
@@ -223,6 +217,25 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 			if track then
 				self._attackAnimByAssetId[assetId] = track
 			end
+		end
+	end
+
+	for _, entry in ipairs(stats.attackSequence or {}) do
+		local motionId = entry.attackMotionId
+		assert(type(motionId) == "string" and #motionId > 0)
+		if not self._attackTimingsByMotionId[motionId] then
+			local prof = WeaponBasicAttackProfiles.GetProfile(motionId) :: any
+			assert(prof)
+			local track = self._attackAnimByAssetId[prof.animationId]
+			local trackLen = AnimationAttackTiming.tryGetClipLengthSecondsFromTrack(track)
+			if trackLen then
+				AnimationClipLengthCache.set(prof.animationId, trackLen)
+			end
+			local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
+				trackLength = trackLen,
+				cachedLength = AnimationClipLengthCache.get(prof.animationId),
+			})
+			self._attackTimingsByMotionId[motionId] = AnimationAttackTiming.resolveBasicAttackTimings(prof, clipLen, motionId)
 		end
 	end
 
@@ -327,10 +340,26 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 
 	self.sequenceIndex = attackIndex
 
-	local hitDuration = profile.hitDuration
+	local timings = self._attackTimingsByMotionId[attackMotionId]
+	if not timings then
+		local track = self._attackAnimByAssetId[profile.animationId]
+		local trackLen = AnimationAttackTiming.tryGetClipLengthSecondsFromTrack(track)
+		if trackLen then
+			AnimationClipLengthCache.set(profile.animationId, trackLen)
+		end
+		local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
+			trackLength = trackLen,
+			cachedLength = AnimationClipLengthCache.get(profile.animationId),
+		})
+		timings = AnimationAttackTiming.resolveBasicAttackTimings(profile :: any, clipLen, attackMotionId)
+		self._attackTimingsByMotionId[attackMotionId] = timings
+	end
+	local hitDuration = timings.hitDuration
+	local comboLimit = timings.comboTimeLimit
+
 	self.nextAttackTime = now + hitDuration
-	self.comboExpireTime = now + (profile.comboTimeLimit or hitDuration)
-	lockAttackMovement(self, attackIndex, profile)
+	self.comboExpireTime = now + comboLimit
+	lockAttackMovement(self, attackIndex, profile, hitDuration)
 
 	cancelAttackRootMotion(self)
 
@@ -408,6 +437,7 @@ function WeaponController.Destroy(self: WeaponControllerInstance)
 		tr:Stop()
 	end
 	table.clear(self._attackAnimByAssetId)
+	table.clear(self._attackTimingsByMotionId)
 
 	-- Play unequip animation (fire-and-forget)
 	if self.unequipTrack then

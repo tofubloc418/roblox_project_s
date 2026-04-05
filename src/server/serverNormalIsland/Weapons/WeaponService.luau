@@ -1,12 +1,5 @@
 --!strict
---[[
-	WeaponService (Server)
-	- Validates client hit claims sent via `WeaponAttackRequest`.
-	- Owns replicated weapon visuals via `WeaponVisualEquipRequest` so other
-	  players can see equipped weapons.
-
-	INITIALISED BY: Initializer.server.luau  →  WeaponService:Initialize()
-]]
+-- Hit-claim validation, weapon visual replication, cooldown uses same timing resolution as client (AnimationAttackTiming).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -16,6 +9,11 @@ local DamageService = require(script.Parent.Parent:WaitForChild("Combat"):WaitFo
 local ItemRegistry = require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("Items"):WaitForChild("ItemRegistry"))
 local WeaponBasicAttackProfiles =
 	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
+local AnimationAttackTiming =
+	require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationAttackTiming") :: ModuleScript) :: any
+local AnimationClipLengthCache =
+	require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationClipLengthCache") :: ModuleScript) :: any
+local AnimationClipLengthPreload = require(script.Parent:WaitForChild("AnimationClipLengthPreload") :: ModuleScript) :: any
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout"))
 local WeaponModelAssetLoader = require(script.Parent:WaitForChild("WeaponModelAssetLoader"))
@@ -175,6 +173,13 @@ local WeaponService = ({
 } :: any) :: WeaponService
 
 function WeaponService:Initialize()
+	local preloadOk, preloadErr = pcall(function()
+		AnimationClipLengthPreload.preloadWeaponBasicAttackLibrary()
+	end)
+	if not preloadOk then
+		warn("[WeaponService] Animation clip preload failed: ", preloadErr)
+	end
+
 	weaponAttackRemote.OnServerEvent:Connect(function(attacker: Player, templateId: string, targetPlayer: Player, claimedHitPos: Vector3)
 		self:_HandleHitClaim(attacker, templateId, targetPlayer, claimedHitPos)
 	end)
@@ -250,8 +255,14 @@ function WeaponService:_HandleHitClaim(attacker: Player, templateId: string, tar
 		local motionId = entry.attackMotionId
 		if type(motionId) == "string" and motionId ~= "" then
 			local attackProfile = WeaponBasicAttackProfiles.GetProfile(motionId)
-			if attackProfile and attackProfile.hitDuration < minCooldown then
-				minCooldown = attackProfile.hitDuration
+			if attackProfile then
+				local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
+					cachedLength = AnimationClipLengthCache.get(attackProfile.animationId),
+				})
+				local hit = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, clipLen, motionId).hitDuration
+				if hit < minCooldown then
+					minCooldown = hit
+				end
 			end
 		end
 	end

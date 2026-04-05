@@ -1,7 +1,6 @@
 --!strict
--- Shared library: basic attack profile id → animation + hit timing + movement locks + RootMotion motion spec.
--- Consumed by client WeaponController + WeaponAttackRootMotion; server WeaponService (cooldown). Do not duplicate on weapon entries.
--- Idle / equip / unequip / block: WeaponStanceAnimationProfiles.luau (idleMotionId, … on templates).
+-- Basic attack id → animation, motion, hit timing (absolute seconds; use X/60 for frame counts), movement locks.
+-- Stance: WeaponStanceAnimationProfiles. Optional timingDerivedFromAnimationClip + clip length → auto absolute times (AnimationAttackTiming).
 
 export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
 
@@ -158,15 +157,14 @@ export type WeaponBasicAttackMotionSpec =
 export type WeaponBasicAttackProfile = {
 	animationId: string,
 	motion: WeaponBasicAttackMotionSpec,
-	--- When true, motion duration-like fields are overridden by this profile's hitDuration when running the attack.
+	--- When true, root-motion step length tracks the resolved hit duration at runtime.
 	syncMotionDurationFromHit: boolean?,
 	hitDuration: number,
-	--- If nil, combo expiry uses hitDuration (see WeaponController).
 	comboTimeLimit: number?,
+	timingDerivedFromAnimationClip: boolean?,
 	movementLocks: { MovementLockFlag }?,
 }
 
--- Small in-place step along flat look (≈ one foot forward while swinging). Duration follows hit window when sync is on.
 local BASIC_ATTACK_STEP: MotionTranslate = {
 	kind = "translate",
 	direction = "HumanoidRootPartLookFlat",
@@ -176,7 +174,6 @@ local BASIC_ATTACK_STEP: MotionTranslate = {
 
 local LOCK_ALL: { MovementLockFlag } = { "All" }
 
--- Keys: <WeaponTag>_Attack_<NN> (NN = 01, 02, …) — aligns with ItemEnums.WeaponTag for shared basic attacks.
 local profiles: { [string]: WeaponBasicAttackProfile } = {
 	["Dagger_Attack_01"] = {
 		animationId = "rbxassetid://120794561550510",

@@ -1,5 +1,5 @@
 --!strict
--- Bridges Configs/AnimationProfiles/WeaponBasicAttackProfiles motion specs → RootMotion Mover API (no edits under Modules/RootMotion).
+-- Weapon basic-attack motion specs → RootMotion Mover (WeaponController passes resolved hitDuration in context).
 
 export type MotionRunContext = {
 	humanoid: Humanoid,

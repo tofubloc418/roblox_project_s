@@ -56,7 +56,8 @@ local function getLogicModuleForTemplateId(templateId: string): any?
 end
 
 local function waitForMatchingWeaponModel(character: Model, templateId: string, desiredSeq: number): Model?
-	local deadline = os.clock() + 2
+	-- Allow time for server visual equip + replication; must outlast worst-case slot/hydration delays.
+	local deadline = os.clock() + 10
 	while os.clock() <= deadline do
 		if equipRequestSeq ~= desiredSeq then
 			return nil

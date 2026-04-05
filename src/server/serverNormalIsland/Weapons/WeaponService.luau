@@ -173,13 +173,10 @@ local WeaponService = ({
 } :: any) :: WeaponService
 
 function WeaponService:Initialize()
-	local preloadOk, preloadErr = pcall(function()
-		AnimationClipLengthPreload.preloadWeaponBasicAttackLibrary()
-	end)
-	if not preloadOk then
-		warn("[WeaponService] Animation clip preload failed: ", preloadErr)
-	end
-
+	-- Remote handlers must register before any long-running preload. Otherwise early client
+	-- WeaponVisualEquipRequest / CharacterAdded flows can fire while Initialize still yields in
+	-- probeAndCache; the client gives up after waitForMatchingWeaponModel's deadline and never
+	-- runs weapon Logic.Equip (no attack input) until a slot change retries equip.
 	weaponAttackRemote.OnServerEvent:Connect(function(attacker: Player, templateId: string, targetPlayer: Player, claimedHitPos: Vector3)
 		self:_HandleHitClaim(attacker, templateId, targetPlayer, claimedHitPos)
 	end)
@@ -209,6 +206,15 @@ function WeaponService:Initialize()
 	-- Clean up cooldowns when a player leaves
 	Players.PlayerRemoving:Connect(function(player)
 		self._cooldowns[player] = nil
+	end)
+
+	task.spawn(function()
+		local preloadOk, preloadErr = pcall(function()
+			AnimationClipLengthPreload.preloadWeaponBasicAttackLibrary()
+		end)
+		if not preloadOk then
+			warn("[WeaponService] Animation clip preload failed: ", preloadErr)
+		end
 	end)
 end
 
@@ -260,11 +266,15 @@ function WeaponService:_HandleHitClaim(attacker: Player, templateId: string, tar
 					cachedLength = AnimationClipLengthCache.get(attackProfile.animationId),
 				})
 				local hit = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, clipLen, motionId).hitDuration
-				if hit < minCooldown then
+				if type(hit) == "number" and hit == hit and hit > 0 and hit < minCooldown then
 					minCooldown = hit
 				end
 			end
 		end
+	end
+
+	if minCooldown == math.huge or minCooldown <= 0 or minCooldown ~= minCooldown then
+		minCooldown = 0.25
 	end
 
 	if now - lastAttack < (minCooldown * 0.8) then

@@ -1,5 +1,5 @@
 --!strict
--- Hit-claim validation, weapon visual replication, cooldown uses same timing resolution as client (AnimationAttackTiming).
+-- Hit-claim validation, weapon visual replication; attack cooldown uses WeaponBasicAttackProfiles + AnimationAttackTiming (config timings).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -11,9 +11,6 @@ local WeaponBasicAttackProfiles =
 	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponBasicAttackProfiles") :: ModuleScript) :: any
 local AnimationAttackTiming =
 	require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationAttackTiming") :: ModuleScript) :: any
-local AnimationClipLengthCache =
-	require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationClipLengthCache") :: ModuleScript) :: any
-local AnimationClipLengthPreload = require(script.Parent:WaitForChild("AnimationClipLengthPreload") :: ModuleScript) :: any
 local InventoryService = require(script.Parent.Parent:WaitForChild("Inventory"):WaitForChild("InventoryService"))
 local WeaponAssetLayout = require(ReplicatedStorage:WaitForChild("Utils"):WaitForChild("WeaponAssetLayout"))
 local WeaponModelAssetLoader = require(script.Parent:WaitForChild("WeaponModelAssetLoader"))
@@ -173,10 +170,6 @@ local WeaponService = ({
 } :: any) :: WeaponService
 
 function WeaponService:Initialize()
-	-- Remote handlers must register before any long-running preload. Otherwise early client
-	-- WeaponVisualEquipRequest / CharacterAdded flows can fire while Initialize still yields in
-	-- probeAndCache; the client gives up after waitForMatchingWeaponModel's deadline and never
-	-- runs weapon Logic.Equip (no attack input) until a slot change retries equip.
 	weaponAttackRemote.OnServerEvent:Connect(function(attacker: Player, templateId: string, targetPlayer: Player, claimedHitPos: Vector3)
 		self:_HandleHitClaim(attacker, templateId, targetPlayer, claimedHitPos)
 	end)
@@ -206,15 +199,6 @@ function WeaponService:Initialize()
 	-- Clean up cooldowns when a player leaves
 	Players.PlayerRemoving:Connect(function(player)
 		self._cooldowns[player] = nil
-	end)
-
-	task.spawn(function()
-		local preloadOk, preloadErr = pcall(function()
-			AnimationClipLengthPreload.preloadWeaponBasicAttackLibrary()
-		end)
-		if not preloadOk then
-			warn("[WeaponService] Animation clip preload failed: ", preloadErr)
-		end
 	end)
 end
 
@@ -262,10 +246,7 @@ function WeaponService:_HandleHitClaim(attacker: Player, templateId: string, tar
 		if type(motionId) == "string" and motionId ~= "" then
 			local attackProfile = WeaponBasicAttackProfiles.GetProfile(motionId)
 			if attackProfile then
-				local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
-					cachedLength = AnimationClipLengthCache.get(attackProfile.animationId),
-				})
-				local hit = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, clipLen, motionId).hitDuration
+				local hit = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, motionId).hitDuration
 				if type(hit) == "number" and hit == hit and hit > 0 and hit < minCooldown then
 					minCooldown = hit
 				end

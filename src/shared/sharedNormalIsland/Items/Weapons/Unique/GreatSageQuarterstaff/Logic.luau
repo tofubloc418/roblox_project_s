@@ -1,7 +1,7 @@
 --!strict
 --[[
-	WukongsJingubang / Logic
-	Thin per-weapon script that wires the Jingubang model to the generic
+	GreatSageQuarterstaff / Logic
+	Thin per-weapon script that wires the quarterstaff model to the generic
 	WeaponController.
 
 	Called by the equip pipeline:
@@ -9,7 +9,7 @@
 	  Logic.Unequip()
 ]]
 
-local TEMPLATE_ID = "WukongsJingubang"
+local TEMPLATE_ID = "GreatSageQuarterstaff"
 
 local Logic = {}
 

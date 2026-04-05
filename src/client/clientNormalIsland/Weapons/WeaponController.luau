@@ -1,5 +1,5 @@
 --!strict
--- Client melee: stance/basic attacks, ShapecastHitbox; hit/combo are absolute seconds from profile (optional clip-derived auto timing).
+-- Client melee: stance/basic attacks, ShapecastHitbox; hit/combo seconds from WeaponBasicAttackProfiles (AnimationAttackTiming).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
@@ -16,7 +16,6 @@ local WeaponStanceAnimationProfiles =
 	require(ReplicatedStorage:WaitForChild("Configs"):WaitForChild("AnimationProfiles"):WaitForChild("WeaponStanceAnimationProfiles") :: ModuleScript) :: any
 local RootMotion = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("RootMotion") :: ModuleScript) :: any
 local AnimationAttackTiming = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationAttackTiming") :: ModuleScript) :: any
-local AnimationClipLengthCache = require(ReplicatedStorage:WaitForChild("Modules"):WaitForChild("AnimationClipLengthCache") :: ModuleScript) :: any
 local MovementControlLocks = require(
 	ReplicatedStorage:WaitForChild("Modules"):WaitForChild("MovementControl"):WaitForChild("MovementControlLocks") :: ModuleScript
 ) :: any
@@ -226,16 +225,7 @@ function WeaponController.Equip(self: WeaponControllerInstance)
 		if not self._attackTimingsByMotionId[motionId] then
 			local prof = WeaponBasicAttackProfiles.GetProfile(motionId) :: any
 			assert(prof)
-			local track = self._attackAnimByAssetId[prof.animationId]
-			local trackLen = AnimationAttackTiming.tryGetClipLengthSecondsFromTrack(track)
-			if trackLen then
-				AnimationClipLengthCache.set(prof.animationId, trackLen)
-			end
-			local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
-				trackLength = trackLen,
-				cachedLength = AnimationClipLengthCache.get(prof.animationId),
-			})
-			self._attackTimingsByMotionId[motionId] = AnimationAttackTiming.resolveBasicAttackTimings(prof, clipLen, motionId)
+			self._attackTimingsByMotionId[motionId] = AnimationAttackTiming.resolveBasicAttackTimings(prof, motionId)
 		end
 	end
 
@@ -342,16 +332,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 
 	local timings = self._attackTimingsByMotionId[attackMotionId]
 	if not timings then
-		local track = self._attackAnimByAssetId[profile.animationId]
-		local trackLen = AnimationAttackTiming.tryGetClipLengthSecondsFromTrack(track)
-		if trackLen then
-			AnimationClipLengthCache.set(profile.animationId, trackLen)
-		end
-		local clipLen = AnimationAttackTiming.resolveClipLengthSeconds({
-			trackLength = trackLen,
-			cachedLength = AnimationClipLengthCache.get(profile.animationId),
-		})
-		timings = AnimationAttackTiming.resolveBasicAttackTimings(profile :: any, clipLen, attackMotionId)
+		timings = AnimationAttackTiming.resolveBasicAttackTimings(profile :: any, attackMotionId)
 		self._attackTimingsByMotionId[attackMotionId] = timings
 	end
 	local hitDuration = timings.hitDuration

@@ -1,6 +1,6 @@
 --!strict
 -- Basic attack id → animation, motion, hit timing (absolute seconds; use X/60 for frame counts), movement locks.
--- Stance: WeaponStanceAnimationProfiles. Optional timingDerivedFromAnimationClip + clip length → auto absolute times (AnimationAttackTiming).
+-- Stance: WeaponStanceAnimationProfiles. Timing: hitDuration / comboTimeLimit (see AnimationAttackTiming for defaults if omitted).
 
 export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
 
@@ -159,9 +159,8 @@ export type WeaponBasicAttackProfile = {
 	motion: WeaponBasicAttackMotionSpec,
 	--- When true, root-motion step length tracks the resolved hit duration at runtime.
 	syncMotionDurationFromHit: boolean?,
-	hitDuration: number,
+	hitDuration: number?,
 	comboTimeLimit: number?,
-	timingDerivedFromAnimationClip: boolean?,
 	movementLocks: { MovementLockFlag }?,
 }
 
@@ -321,6 +320,30 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		syncMotionDurationFromHit = true,
 		hitDuration = 24 / 60,
 		comboTimeLimit = 52 / 60,
+		movementLocks = LOCK_ALL,
+	},
+	["GreatSageQuarterstaff_Attack_01"] = {
+		animationId = "rbxassetid://105352510281942",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+		hitDuration = 60 / 60,
+		comboTimeLimit = 75 / 60,
+		movementLocks = LOCK_ALL,
+	},
+	["GreatSageQuarterstaff_Attack_02"] = {
+		animationId = "rbxassetid://71121279249417",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+		hitDuration = 60 / 60,
+		comboTimeLimit = 75 / 60,
+		movementLocks = LOCK_ALL,
+	},
+	["GreatSageQuarterstaff_Attack_03"] = {
+		animationId = "rbxassetid://106474276062391",
+		motion = BASIC_ATTACK_STEP,
+		syncMotionDurationFromHit = true,
+		hitDuration = 60 / 60,
+		comboTimeLimit = 75 / 60,
 		movementLocks = LOCK_ALL,
 	},
 }

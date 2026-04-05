@@ -174,6 +174,20 @@ local function registerFile(moduleScript: Instance)
 	end
 end
 
+-- Every ModuleScript directly under Weapons/Unique is treated as a weapon config module
+-- (returns a table of templateId → template). Add new unique weapons only as files there.
+local function registerAllWeaponModulesInFolder(folder: Instance)
+	local children = folder:GetChildren()
+	table.sort(children, function(a, b)
+		return a.Name < b.Name
+	end)
+	for _, child in ipairs(children) do
+		if child:IsA("ModuleScript") then
+			registerFile(child)
+		end
+	end
+end
+
 registerFile(script.Parent:WaitForChild("TestItems"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Greatswords"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Daggers"))
@@ -187,6 +201,6 @@ registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Quarterstaves")
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Halberds"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Greathammers"))
 registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Scythes"))
-registerFile(script.Parent:WaitForChild("Weapons"):WaitForChild("Unique"):WaitForChild("UniqueWeapons"))
+registerAllWeaponModulesInFolder(script.Parent:WaitForChild("Weapons"):WaitForChild("Unique"))
 
 return ItemRegistry

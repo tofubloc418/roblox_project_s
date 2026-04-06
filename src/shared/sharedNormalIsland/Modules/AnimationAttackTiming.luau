@@ -1,15 +1,21 @@
 --!strict
--- Basic-attack timing: hitDuration / comboTimeLimit (seconds) come from WeaponBasicAttackProfiles.
--- If hitDuration is missing or invalid, uses 60/60 and 75/60. If hit is valid but comboTimeLimit is missing, combo = hit.
+-- Timings from WeaponBasicAttackProfiles (seconds):
+--   hitDuration → hitbox + movement lock duration on swing
+--   comboTimeLimitMin → min time before next attack input (nextAttackTime)
+--   comboTimeLimitMax → combo chain window (comboExpireTime)
+-- Missing / invalid hitDuration → DEFAULT_HIT_DURATION (60/60) for hit; min = that hit; max = DEFAULT_COMBO_TIME_LIMIT (75/60).
+-- Valid hitDuration, omit min → comboTimeLimitMin = hitDuration. Omit max → comboTimeLimitMax = hitDuration.
 
 export type BasicAttackTimingProfile = {
 	hitDuration: number?,
-	comboTimeLimit: number?,
+	comboTimeLimitMin: number?,
+	comboTimeLimitMax: number?,
 }
 
 export type ResolvedBasicAttackTimings = {
 	hitDuration: number,
-	comboTimeLimit: number,
+	comboTimeLimitMin: number,
+	comboTimeLimitMax: number,
 }
 
 local DEFAULT_HIT_DURATION = 60 / 60
@@ -25,17 +31,23 @@ local function isFinitePositive(n: number): boolean
 end
 
 function AnimationAttackTiming.resolveBasicAttackTimings(profile: BasicAttackTimingProfile, _debugLabel: string?): ResolvedBasicAttackTimings
-	local h = profile.hitDuration
-	local c = profile.comboTimeLimit
-	if type(h) == "number" and isFinitePositive(h) then
-		if type(c) == "number" and isFinitePositive(c) then
-			return { hitDuration = h, comboTimeLimit = c }
-		end
-		return { hitDuration = h, comboTimeLimit = h }
+	local hRaw = profile.hitDuration
+	if type(hRaw) ~= "number" or not isFinitePositive(hRaw) then
+		return {
+			hitDuration = DEFAULT_HIT_DURATION,
+			comboTimeLimitMin = DEFAULT_HIT_DURATION,
+			comboTimeLimitMax = DEFAULT_COMBO_TIME_LIMIT,
+		}
 	end
+	local h = hRaw
+	local minV = profile.comboTimeLimitMin
+	local maxV = profile.comboTimeLimitMax
+	local minOut = if type(minV) == "number" and isFinitePositive(minV) then minV else h
+	local maxOut = if type(maxV) == "number" and isFinitePositive(maxV) then maxV else h
 	return {
-		hitDuration = DEFAULT_HIT_DURATION,
-		comboTimeLimit = DEFAULT_COMBO_TIME_LIMIT,
+		hitDuration = h,
+		comboTimeLimitMin = minOut,
+		comboTimeLimitMax = maxOut,
 	}
 end
 

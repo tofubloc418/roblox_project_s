@@ -246,9 +246,9 @@ function WeaponService:_HandleHitClaim(attacker: Player, templateId: string, tar
 		if type(motionId) == "string" and motionId ~= "" then
 			local attackProfile = WeaponBasicAttackProfiles.GetProfile(motionId)
 			if attackProfile then
-				local hit = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, motionId).hitDuration
-				if type(hit) == "number" and hit == hit and hit > 0 and hit < minCooldown then
-					minCooldown = hit
+				local minGap = AnimationAttackTiming.resolveBasicAttackTimings(attackProfile :: any, motionId).comboTimeLimitMin
+				if type(minGap) == "number" and minGap == minGap and minGap > 0 and minGap < minCooldown then
+					minCooldown = minGap
 				end
 			end
 		end

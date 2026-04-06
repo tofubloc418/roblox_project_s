@@ -56,7 +56,9 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	unequipTrack: AnimationTrack?,
 	blockTrack: AnimationTrack?,
 	_attackAnimByAssetId: { [string]: AnimationTrack },
-	_attackTimingsByMotionId: { [string]: { hitDuration: number, comboTimeLimit: number } },
+	_attackTimingsByMotionId: {
+		[string]: { hitDuration: number, comboTimeLimitMin: number, comboTimeLimitMax: number },
+	},
 	_rootMotionMover: any,
 	_rootMotionToken: any,
 	-- Sounds (created at runtime)
@@ -336,10 +338,12 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 		self._attackTimingsByMotionId[attackMotionId] = timings
 	end
 	local hitDuration = timings.hitDuration
-	local comboLimit = timings.comboTimeLimit
+	local comboMin = timings.comboTimeLimitMin
+	local comboMax = timings.comboTimeLimitMax
 
-	self.nextAttackTime = now + hitDuration
-	self.comboExpireTime = now + comboLimit
+	self.nextAttackTime = now + comboMin
+	self.comboExpireTime = now + comboMax
+	print(string.format("[WeaponAttack] %s step %d (%s)", self.templateId, attackIndex, attackMotionId))
 	lockAttackMovement(self, attackIndex, profile, hitDuration)
 
 	cancelAttackRootMotion(self)

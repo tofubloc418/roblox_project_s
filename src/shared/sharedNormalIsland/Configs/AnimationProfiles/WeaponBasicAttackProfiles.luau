@@ -1,6 +1,6 @@
 --!strict
 -- Basic attack id → animation, motion, hit timing (absolute seconds; use X/60 for frame counts), movement locks.
--- Stance: WeaponStanceAnimationProfiles. Timing: hitDuration / comboTimeLimit (see AnimationAttackTiming for defaults if omitted).
+-- Stance: WeaponStanceAnimationProfiles. Timing: hitDuration (hitbox + movement lock), comboTimeLimitMin (attack input cooldown), comboTimeLimitMax (combo chain window).
 
 export type MotionEasingId = "linear" | "quadOut" | "quadIn" | "cubicOut" | "cubicIn"
 
@@ -160,7 +160,8 @@ export type WeaponBasicAttackProfile = {
 	--- When true, root-motion step length tracks the resolved hit duration at runtime.
 	syncMotionDurationFromHit: boolean?,
 	hitDuration: number?,
-	comboTimeLimit: number?,
+	comboTimeLimitMin: number?,
+	comboTimeLimitMax: number?,
 	movementLocks: { MovementLockFlag }?,
 }
 
@@ -179,7 +180,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 30 / 60,
-		comboTimeLimit = 50 / 60,
+		comboTimeLimitMin = 30 / 60,
+		comboTimeLimitMax = 50 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Dagger_Attack_02"] = {
@@ -187,7 +189,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 30 / 60,
-		comboTimeLimit = 40 / 60,
+		comboTimeLimitMin = 30 / 60,
+		comboTimeLimitMax = 40 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_01"] = {
@@ -195,7 +198,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 28 / 60,
-		comboTimeLimit = 43 / 60,
+		comboTimeLimitMin = 28 / 60,
+		comboTimeLimitMax = 43 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_02"] = {
@@ -203,7 +207,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 28 / 60,
-		comboTimeLimit = 43 / 60,
+		comboTimeLimitMin = 28 / 60,
+		comboTimeLimitMax = 43 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Axe_Attack_03"] = {
@@ -211,7 +216,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 45 / 60,
-		comboTimeLimit = 60 / 60,
+		comboTimeLimitMin = 45 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Fists_Attack_01"] = {
@@ -219,7 +225,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 12 / 60,
-		comboTimeLimit = 30 / 60,
+		comboTimeLimitMin = 12 / 60,
+		comboTimeLimitMax = 30 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Fists_Attack_02"] = {
@@ -227,7 +234,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 12 / 60,
-		comboTimeLimit = 30 / 60,
+		comboTimeLimitMin = 12 / 60,
+		comboTimeLimitMax = 30 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_01"] = {
@@ -235,7 +243,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 30 / 60,
-		comboTimeLimit = 60 / 60,
+		comboTimeLimitMin = 30 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_02"] = {
@@ -243,7 +252,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 30 / 60,
-		comboTimeLimit = 60 / 60,
+		comboTimeLimitMin = 30 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Greatsword_Attack_03"] = {
@@ -251,27 +261,29 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 30 / 60,
-		comboTimeLimit = 60 / 60,
+		comboTimeLimitMin = 30 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["ThrustingSword_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
-		hitDuration = 0.2,
+		movementLocks = LOCK_ALL,
 	},
 	["ThrustingSword_Attack_02"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
-		hitDuration = 0.2,
+		movementLocks = LOCK_ALL,
 	},
 	["Spear_Attack_01"] = {
 		animationId = "rbxassetid://0",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 26 / 60,
-		comboTimeLimit = 50 / 60,
+		comboTimeLimitMin = 26 / 60,
+		comboTimeLimitMax = 50 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Spear_Attack_02"] = {
@@ -279,7 +291,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 26 / 60,
-		comboTimeLimit = 50 / 60,
+		comboTimeLimitMin = 26 / 60,
+		comboTimeLimitMax = 50 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_01"] = {
@@ -287,7 +300,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 24 / 60,
-		comboTimeLimit = 52 / 60,
+		comboTimeLimitMin = 24 / 60,
+		comboTimeLimitMax = 52 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_02"] = {
@@ -295,7 +309,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 24 / 60,
-		comboTimeLimit = 52 / 60,
+		comboTimeLimitMin = 24 / 60,
+		comboTimeLimitMax = 52 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Katana_Attack_03"] = {
@@ -303,7 +318,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 32 / 60,
-		comboTimeLimit = 60 / 60,
+		comboTimeLimitMin = 32 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Quarterstaff_Attack_01"] = {
@@ -311,7 +327,8 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 22 / 60,
-		comboTimeLimit = 48 / 60,
+		comboTimeLimitMin = 22 / 60,
+		comboTimeLimitMax = 48 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["Quarterstaff_Attack_02"] = {
@@ -319,31 +336,35 @@ local profiles: { [string]: WeaponBasicAttackProfile } = {
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
 		hitDuration = 24 / 60,
-		comboTimeLimit = 52 / 60,
+		comboTimeLimitMin = 24 / 60,
+		comboTimeLimitMax = 52 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["GreatSageQuarterstaff_Attack_01"] = {
 		animationId = "rbxassetid://105352510281942",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
-		hitDuration = 60 / 60,
-		comboTimeLimit = 75 / 60,
+		hitDuration = 20 / 60,
+		comboTimeLimitMin = 20 / 60,
+		comboTimeLimitMax = 50 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["GreatSageQuarterstaff_Attack_02"] = {
 		animationId = "rbxassetid://71121279249417",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
-		hitDuration = 60 / 60,
-		comboTimeLimit = 75 / 60,
+		hitDuration = 25 / 60,
+		comboTimeLimitMin = 25 / 60,
+		comboTimeLimitMax = 50 / 60,
 		movementLocks = LOCK_ALL,
 	},
 	["GreatSageQuarterstaff_Attack_03"] = {
 		animationId = "rbxassetid://106474276062391",
 		motion = BASIC_ATTACK_STEP,
 		syncMotionDurationFromHit = true,
-		hitDuration = 60 / 60,
-		comboTimeLimit = 75 / 60,
+		hitDuration = 30 / 60,
+		comboTimeLimitMin = 70 / 60,
+		comboTimeLimitMax = 60 / 60,
 		movementLocks = LOCK_ALL,
 	},
 }

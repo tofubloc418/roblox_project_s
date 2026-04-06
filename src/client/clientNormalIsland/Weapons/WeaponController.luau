@@ -167,6 +167,19 @@ local function cancelAttackRootMotion(self: WeaponControllerInstance)
 	end
 end
 
+local function stopAllAttackAnimationTracks(self: WeaponControllerInstance)
+	for _, tr in pairs(self._attackAnimByAssetId) do
+		tr:Stop()
+	end
+end
+
+local function clearAttackMovementLocks(self: WeaponControllerInstance)
+	for lockTag in pairs(self._attackLockTags) do
+		MovementControlLocks.Unlock(lockTag)
+	end
+	table.clear(self._attackLockTags)
+end
+
 local function ensureRootMotionMover(self: WeaponControllerInstance)
 	if self._rootMotionMover then
 		return self._rootMotionMover
@@ -344,15 +357,22 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	self.nextAttackTime = now + comboMin
 	self.comboExpireTime = now + comboMax
 	print(string.format("[WeaponAttack] %s step %d (%s)", self.templateId, attackIndex, attackMotionId))
-	lockAttackMovement(self, attackIndex, profile, hitDuration)
 
 	cancelAttackRootMotion(self)
+	stopAllAttackAnimationTracks(self)
+
+	if self.hitbox and (self.hitbox :: any).Active then
+		(self.hitbox :: any):HitStop()
+	end
+	clearAttackMovementLocks(self)
+
+	lockAttackMovement(self, attackIndex, profile, hitDuration)
 
 	-- Play animation (+ optional RootMotion from profile)
 	local track = self._attackAnimByAssetId[profile.animationId]
 	if track then
 		debugLog(self.templateId, string.format("attack anim %d", attackIndex))
-		track:Play()
+		track:Play(0)
 	end
 
 	if WeaponAttackRootMotion.profileUsesRootMotion(profile) then

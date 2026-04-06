@@ -32,7 +32,7 @@ WeaponController.__index = WeaponController
 
 local debugEnabled = false
 
-local WEAPON_ATTACK_WALK_SPEED_MULTIPLIER = 0.2
+local WEAPON_ATTACK_WALK_SPEED_MULTIPLIER = 0.05
 
 local function debugLog(templateId: string, message: string)
 	if not debugEnabled then

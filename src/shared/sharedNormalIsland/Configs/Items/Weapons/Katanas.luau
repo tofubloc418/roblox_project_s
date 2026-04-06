@@ -10,7 +10,7 @@ local Katanas = {
 		subcategory = ItemEnums.Subcategory.MeleeWeapon,
 		rarity = ItemEnums.Rarity.Common,
 		weaponTag = ItemEnums.WeaponTag.Katana,
-		modelAssetId = "rbxassetid://0",
+		modelAssetId = "rbxassetid://99336584119841",
 		iconId = "rbxassetid://0",
 		stackMax = 1,
 		sellValue = 125,
@@ -33,7 +33,6 @@ local Katanas = {
 		attackSequence = {
 			{ attackMotionId = "Katana_Attack_01" },
 			{ attackMotionId = "Katana_Attack_02" },
-			{ attackMotionId = "Katana_Attack_03" },
 		},
 		blockMotionId = ItemEnums.WeaponTag.Katana .. "_Block",
 
@@ -46,7 +45,7 @@ local Katanas = {
 		reach = 11,
 
 		gripC0 = CFrame.new(0, 0, 0),
-		gripC1 = CFrame.new(0.1, -1.1, 0) * CFrame.fromOrientation(math.rad(90), math.rad(90), 0),
+		gripC1 = CFrame.new(-0.025, -1.909, 0) * CFrame.fromOrientation(math.rad(90), math.rad(-90), 0),
 	},
 }
 

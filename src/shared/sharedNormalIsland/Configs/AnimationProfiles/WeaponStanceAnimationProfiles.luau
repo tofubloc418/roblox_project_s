@@ -68,7 +68,7 @@ local profiles: { [string]: WeaponStanceAnimationProfile } = {
 	[WT.Quarterstaff .. "_Unequip"] = { animationId = ZERO },
 	[WT.Quarterstaff .. "_Block"] = { animationId = ZERO },
 
-	[WT.Katana .. "_Idle"] = { animationId = ZERO },
+	[WT.Katana .. "_Idle"] = { animationId = "rbxassetid://106260066664983" },
 	[WT.Katana .. "_Equip"] = { animationId = ZERO },
 	[WT.Katana .. "_Unequip"] = { animationId = ZERO },
 	[WT.Katana .. "_Block"] = { animationId = ZERO },

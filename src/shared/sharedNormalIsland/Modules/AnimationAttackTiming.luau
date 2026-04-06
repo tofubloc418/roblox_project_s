@@ -1,19 +1,15 @@
 --!strict
--- Timings from WeaponBasicAttackProfiles (seconds):
---   hitDuration → hitbox + movement lock duration on swing
---   comboTimeLimitMin → min time before next attack input (nextAttackTime)
---   comboTimeLimitMax → combo chain window (comboExpireTime)
--- Missing / invalid hitDuration → DEFAULT_HIT_DURATION (60/60) for hit; min = that hit; max = DEFAULT_COMBO_TIME_LIMIT (75/60).
--- Valid hitDuration, omit min → comboTimeLimitMin = hitDuration. Omit max → comboTimeLimitMax = hitDuration.
 
 export type BasicAttackTimingProfile = {
-	hitDuration: number?,
+	hitboxStartTime: number?,
+	hitboxEndTime: number?,
 	comboTimeLimitMin: number?,
 	comboTimeLimitMax: number?,
 }
 
 export type ResolvedBasicAttackTimings = {
-	hitDuration: number,
+	hitboxStartTime: number,
+	hitboxEndTime: number,
 	comboTimeLimitMin: number,
 	comboTimeLimitMax: number,
 }
@@ -31,21 +27,29 @@ local function isFinitePositive(n: number): boolean
 end
 
 function AnimationAttackTiming.resolveBasicAttackTimings(profile: BasicAttackTimingProfile, _debugLabel: string?): ResolvedBasicAttackTimings
-	local hRaw = profile.hitDuration
-	if type(hRaw) ~= "number" or not isFinitePositive(hRaw) then
+	local endRaw = profile.hitboxEndTime
+	if type(endRaw) ~= "number" or not isFinitePositive(endRaw) then
 		return {
-			hitDuration = DEFAULT_HIT_DURATION,
+			hitboxStartTime = 0,
+			hitboxEndTime = DEFAULT_HIT_DURATION,
 			comboTimeLimitMin = DEFAULT_HIT_DURATION,
 			comboTimeLimitMax = DEFAULT_COMBO_TIME_LIMIT,
 		}
 	end
-	local h = hRaw
+	local endT = endRaw
+	local sRaw = profile.hitboxStartTime
+	local startT = if type(sRaw) == "number" and sRaw == sRaw and sRaw >= 0 and sRaw < math.huge then sRaw else 0
+	if startT >= endT then
+		startT = 0
+	end
+	local h = endT
 	local minV = profile.comboTimeLimitMin
 	local maxV = profile.comboTimeLimitMax
 	local minOut = if type(minV) == "number" and isFinitePositive(minV) then minV else h
 	local maxOut = if type(maxV) == "number" and isFinitePositive(maxV) then maxV else h
 	return {
-		hitDuration = h,
+		hitboxStartTime = startT,
+		hitboxEndTime = endT,
 		comboTimeLimitMin = minOut,
 		comboTimeLimitMax = maxOut,
 	}

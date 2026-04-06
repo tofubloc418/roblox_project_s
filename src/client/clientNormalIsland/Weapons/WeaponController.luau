@@ -57,8 +57,14 @@ export type WeaponControllerInstance = typeof(setmetatable({} :: {
 	blockTrack: AnimationTrack?,
 	_attackAnimByAssetId: { [string]: AnimationTrack },
 	_attackTimingsByMotionId: {
-		[string]: { hitDuration: number, comboTimeLimitMin: number, comboTimeLimitMax: number },
+		[string]: {
+			hitboxStartTime: number,
+			hitboxEndTime: number,
+			comboTimeLimitMin: number,
+			comboTimeLimitMax: number,
+		},
 	},
+	_attackHitboxSeq: number,
 	_rootMotionMover: any,
 	_rootMotionToken: any,
 	-- Sounds (created at runtime)
@@ -113,6 +119,7 @@ function WeaponController.new(weaponModel: Model, player: Player, templateId: st
 	self.blockTrack = nil
 	self._attackAnimByAssetId = {}
 	self._attackTimingsByMotionId = {}
+	self._attackHitboxSeq = 0
 	self._rootMotionMover = nil
 	self._rootMotionToken = nil
 
@@ -189,7 +196,7 @@ local function ensureRootMotionMover(self: WeaponControllerInstance)
 	return m
 end
 
-local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, profile: any, hitDuration: number)
+local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: number, profile: any, lockDuration: number)
 	local movementLocks = profile.movementLocks
 	if type(movementLocks) ~= "table" or next(movementLocks) == nil then
 		return
@@ -197,7 +204,7 @@ local function lockAttackMovement(self: WeaponControllerInstance, attackIndex: n
 
 	local lockTag = string.format("Weapon_%s_%d", self.templateId, attackIndex)
 	self._attackLockTags[lockTag] = true
-	MovementControlLocks.Lock(lockTag, movementLocks, hitDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
+	MovementControlLocks.Lock(lockTag, movementLocks, lockDuration, WEAPON_ATTACK_WALK_SPEED_MULTIPLIER)
 end
 
 -- ── Public API ──────────────────────────────────────────────────────────────
@@ -350,7 +357,9 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 		timings = AnimationAttackTiming.resolveBasicAttackTimings(profile :: any, attackMotionId)
 		self._attackTimingsByMotionId[attackMotionId] = timings
 	end
-	local hitDuration = timings.hitDuration
+	local hitboxStart = timings.hitboxStartTime
+	local hitboxEnd = timings.hitboxEndTime
+	local hitboxActiveDur = math.max(0, hitboxEnd - hitboxStart)
 	local comboMin = timings.comboTimeLimitMin
 	local comboMax = timings.comboTimeLimitMax
 
@@ -366,7 +375,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 	end
 	clearAttackMovementLocks(self)
 
-	lockAttackMovement(self, attackIndex, profile, hitDuration)
+	lockAttackMovement(self, attackIndex, profile, hitboxEnd)
 
 	-- Play animation (+ optional RootMotion from profile)
 	local track = self._attackAnimByAssetId[profile.animationId]
@@ -379,7 +388,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 		local mover = ensureRootMotionMover(self)
 		self._rootMotionToken = WeaponAttackRootMotion.run(mover, self.character, profile.motion, {
 			humanoid = self.humanoid,
-			hitDuration = hitDuration,
+			hitDuration = hitboxEnd,
 			syncMotionDurationFromHit = profile.syncMotionDurationFromHit == true,
 		})
 	end
@@ -389,8 +398,7 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 		self.swingSound:Play()
 	end
 
-	-- Activate hitbox for the duration specified in this attack entry
-	if self.hitbox then
+	if self.hitbox and hitboxActiveDur > 0 then
 		local targetsHit: { [Model]: boolean } = {}
 
 		self.hitbox:BeforeStart(function()
@@ -408,12 +416,10 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 
 			targetsHit[hitModel] = true
 
-			-- Play hit sound locally
 			if self.hitSound then
 				self.hitSound:Play()
 			end
 
-			-- Fire hit claim to server for validation
 			local targetPlayer = Players:GetPlayerFromCharacter(hitModel)
 			if targetPlayer then
 				weaponAttackRemote:FireServer(self.templateId, targetPlayer, hitModel.PrimaryPart and hitModel.PrimaryPart.Position or hitInstance.Position)
@@ -422,7 +428,18 @@ function WeaponController.Attack(self: WeaponControllerInstance)
 			cleanCallbacks()
 		end)
 
-		self.hitbox:HitStart(hitDuration)
+		self._attackHitboxSeq += 1
+		local hitboxToken = self._attackHitboxSeq
+		if hitboxStart <= 0 then
+			self.hitbox:HitStart(hitboxActiveDur)
+		else
+			task.delay(hitboxStart, function()
+				if self._attackHitboxSeq ~= hitboxToken or not self.equipped or not self.hitbox then
+					return
+				end
+				self.hitbox:HitStart(hitboxActiveDur)
+			end)
+		end
 	end
 end
 
